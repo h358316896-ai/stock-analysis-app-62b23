@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票 AI 分析 - AI Workshop</title>
+<style>
+:root {
+  --bg: #0f0f14; --surface: #1a1a24; --border: #2a2a3a;
+  --text: #e8e8f0; --text2: #8888a0; --accent: #6366f1;
+  --red: #ef4444; --green: #22c55e; --blue: #3b82f6; --yellow: #eab308;
+}
+* { margin:0; padding:0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* === Header === */
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.logo { font-size: 20px; font-weight: 700; color: var(--accent); cursor: pointer; }
+.nav { display: flex; gap: 8px; }
+.nav a { color: var(--text2); text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; transition: all .2s; }
+.nav a:hover, .nav a.active { background: #6366f122; color: var(--accent); }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.btn-login { padding: 8px 20px; border-radius: 8px; background: var(--accent); color: white; border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-login:hover { background: #5558e6; }
+.user-menu { position: relative; }
+.user-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; cursor: pointer; font-size: 14px; }
+.user-dropdown { position: absolute; top: 44px; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; min-width: 180px; display: none; z-index: 200; overflow: hidden; }
+.user-dropdown.show { display: block; }
+.user-dropdown div { padding: 12px 16px; cursor: pointer; font-size: 14px; transition: background .15s; }
+.user-dropdown div:hover { background: #6366f122; }
+.user-dropdown .username { font-weight: 600; color: var(--accent); cursor: default; }
+.user-dropdown .username:hover { background: transparent; }
+
+/* === Modal === */
+.modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 400px; max-width: 90vw; }
+.modal h2 { font-size: 20px; margin-bottom: 24px; }
+.modal input { width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 15px; outline: none; margin-bottom: 16px; }
+.modal input:focus { border-color: var(--accent); }
+.modal button[type=submit] { width: 100%; padding: 12px; border-radius: 10px; background: var(--accent); color: white; border: none; font-size: 15px; font-weight: 600; cursor: pointer; }
+.modal button[type=submit]:hover { background: #5558e6; }
+.modal .switch-link { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text2); }
+.modal .switch-link a { color: var(--accent); cursor: pointer; text-decoration: none; }
+.modal .error-msg { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; }
+.modal .error-msg.show { display: block; }
+
+/* === Main Layout === */
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.main-layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+@media (max-width: 900px) { .main-layout { grid-template-columns: 1fr; } }
+
+/* === Search === */
+.search-bar { display: flex; gap: 12px; margin-bottom: 24px; }
+.search-bar input { flex: 1; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 15px; outline: none; }
+.search-bar input:focus { border-color: var(--accent); }
+.search-bar select { padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 15px; outline: none; cursor: pointer; }
+.search-bar button { padding: 12px 24px; border-radius: 10px; background: var(--accent); color: white; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.search-bar button:hover { background: #5558e6; }
+.search-bar button:disabled { opacity: .5; cursor: not-allowed; }
+.search-results { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; max-height: 300px; overflow-y: auto; display: none; }
+.search-results.show { display: block; }
+.search-results div { padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+.search-results div:hover { background: #6366f122; }
+.search-results div:last-child { border-bottom: none; }
+
+/* === Quote Card === */
+.quote-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 24px; display: none; }
+.quote-card.show { display: block; }
+.quote-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px; }
+.quote-name { font-size: 24px; font-weight: 700; }
+.quote-code { color: var(--text2); font-size: 14px; }
+.quote-price { font-size: 36px; font-weight: 800; }
+.quote-change { font-size: 18px; font-weight: 600; }
+.up { color: var(--red); }
+.down { color: var(--green); }
+.quote-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin-top: 16px; }
+.detail-item .label { color: var(--text2); font-size: 12px; margin-bottom: 4px; }
+.detail-item .value { font-size: 15px; font-weight: 500; }
+.watchlist-btn { margin-top: 12px; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; font-size: 13px; transition: all .2s; }
+.watchlist-btn:hover { background: #6366f122; }
+.watchlist-btn.in-list { background: var(--accent); color: white; }
+
+/* === Chart === */
+.chart-container { margin-bottom: 24px; display: none; }
+.chart-container.show { display: block; }
+.chart-container canvas { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 16px; }
+
+/* === Analysis === */
+.aspect-btns { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.aspect-btns button { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-size: 13px; transition: all .2s; }
+.aspect-btns button:hover, .aspect-btns button.active { border-color: var(--accent); color: var(--accent); }
+.analysis-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; min-height: 200px; display: none; }
+.analysis-box.show { display: block; }
+.analysis-box h3 { margin-bottom: 16px; font-size: 18px; color: var(--accent); }
+.analysis-box .content { color: var(--text); font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+.actions { display: flex; gap: 8px; margin-top: 16px; }
+.actions button { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; }
+.btn-pdf { background: var(--accent); color: white; }
+.btn-pdf:hover { background: #5558e6; }
+.btn-save-history { background: var(--surface); border: 1px solid var(--border); color: var(--text2); }
+.btn-save-history:hover { border-color: var(--accent); color: var(--accent); }
+
+/* === Sidebar === */
+.sidebar { display: flex; flex-direction: column; gap: 16px; }
+.sidebar-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.sidebar-card h3 { font-size: 15px; margin-bottom: 12px; color: var(--accent); }
+.sidebar-card .empty { color: var(--text2); font-size: 13px; text-align: center; padding: 16px 0; }
+
+.watchlist-item, .alert-item, .history-item { padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.watchlist-item:last-child, .alert-item:last-child, .history-item:last-child { border-bottom: none; }
+.watchlist-item:hover, .alert-item:hover, .history-item:hover { background: #6366f122; margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 6px; }
+.wl-name { font-size: 14px; font-weight: 500; }
+.wl-code { font-size: 12px; color: var(--text2); }
+.wl-price { font-size: 14px; font-weight: 600; float: right; }
+.alert-condition { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.alert-triggered { color: var(--yellow); font-size: 12px; }
+
+/* === Alert Setup === */
+.alert-form { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 12px; }
+.alert-form.show { display: block; }
+.alert-form select, .alert-form input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; margin-bottom: 10px; outline: none; }
+.alert-form button { padding: 8px 16px; border-radius: 8px; background: var(--accent); color: white; border: none; font-size: 13px; cursor: pointer; }
+
+/* === Loading === */
+.loading { text-align: center; padding: 48px; color: var(--text2); font-size: 14px; }
+.spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* === Tab buttons in sidebar === */
+.sidebar-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.sidebar-tabs button { flex: 1; padding: 6px 0; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; font-size: 12px; }
+.sidebar-tabs button.active { background: var(--accent); color: white; border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo" onclick="location.href='/'">AI Workshop / 股票分析</div>
+  <div class="nav">
+    <a href="/">首页</a>
+    <a href="/stock" class="active">股票分析</a>
+    <a href="/media">自媒体助手</a>
+    <a href="/services">接单服务</a>
+  </div>
+  <div class="header-right">
+    <!-- Not logged in -->
+    <button class="btn-login" id="btnLogin" onclick="showAuthModal('login')">登录 / 注册</button>
+    <!-- Logged in (hidden by default) -->
+    <div class="user-menu" id="userMenu" style="display:none">
+      <div class="user-avatar" id="userAvatar" onclick="toggleDropdown()"></div>
+      <div class="user-dropdown" id="userDropdown">
+        <div class="username" id="ddUsername"></div>
+        <div onclick="showSection('watchlist')">📌 自选股</div>
+        <div onclick="showSection('alerts')">🔔 股价提醒</div>
+        <div onclick="showSection('history')">📊 分析历史</div>
+        <div onclick="logout()">🚪 退出登录</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <h2 id="authTitle">登录</h2>
+    <div class="error-msg" id="authError"></div>
+    <input type="text" id="authUsername" placeholder="用户名">
+    <input type="email" id="authEmail" placeholder="邮箱（注册必填）" style="display:none">
+    <input type="password" id="authPassword" placeholder="密码（至少6位）">
+    <button type="submit" id="authSubmit" onclick="submitAuth()">登录</button>
+    <div class="switch-link">
+      <span id="authSwitchText">没有账号？</span>
+      <a onclick="switchAuthMode()">去注册</a>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="container">
+  <div class="search-bar">
+    <input type="text" id="stockSearch" placeholder="输入股票代码或名称...（如：600519、贵州茅台、AAPL、00700）" autocomplete="off">
+    <select id="marketSelect">
+      <option value="cn">A股</option>
+      <option value="hk">港股</option>
+      <option value="us">美股</option>
+    </select>
+    <button id="searchBtn" onclick="searchStock()">搜索</button>
+  </div>
+  <div class="search-results" id="searchResults"></div>
+
+  <div class="main-layout">
+    <!-- Left: Main Content -->
+    <div class="main-content">
+      <div class="quote-card" id="quoteCard">
+        <div class="quote-header">
+          <div>
+            <div class="quote-name" id="quoteName">--</div>
+            <div class="quote-code" id="quoteCode">--</div>
+          </div>
+          <div style="text-align:right">
+            <div class="quote-price" id="quotePrice">--</div>
+            <div class="quote-change" id="quoteChange">--</div>
+          </div>
+        </div>
+        <div class="quote-details" id="quoteDetails"></div>
+        <button class="watchlist-btn" id="watchlistBtn" onclick="toggleWatchlist()" style="display:none">+ 加入自选</button>
+      </div>
+
+      <div class="chart-container" id="chartContainer">
+        <canvas id="klineChart" height="300"></canvas>
+      </div>
+
+      <div class="aspect-btns" id="aspectBtns" style="display:none">
+        <button onclick="runAnalysis('comprehensive')" data-aspect="comprehensive" class="active">综合分析</button>
+        <button onclick="runAnalysis('technical')" data-aspect="technical">技术分析</button>
+        <button onclick="runAnalysis('fundamental')" data-aspect="fundamental">基本面分析</button>
+        <button onclick="runAnalysis('news')" data-aspect="news">新闻与事件</button>
+        <button onclick="runAnalysis('valuation')" data-aspect="valuation">估值分析</button>
+        <button onclick="runAnalysis('sector')" data-aspect="sector">行业对比</button>
+        <button onclick="runAnalysis('risk')" data-aspect="risk">风险评估</button>
+      </div>
+
+      <div class="analysis-box" id="analysisBox">
+        <h3 id="analysisTitle">AI 分析结果</h3>
+        <div class="content" id="analysisContent"></div>
+        <div class="actions">
+          <button class="btn-pdf" id="pdfBtn" onclick="downloadPDF()" style="display:none">下载 PDF 报告</button>
+          <button class="btn-save-history" id="saveHistoryBtn" onclick="saveToHistory()" style="display:none">保存到历史</button>
+        </div>
+      </div>
+
+      <div class="loading" id="loading" style="display:none"><div class="spinner"></div>正在分析...</div>
+    </div>
+
+    <!-- Right: Sidebar -->
+    <div class="sidebar" id="sidebar" style="display:none">
+      <!-- Watchlist -->
+      <div class="sidebar-card" id="cardWatchlist">
+        <h3>📌 自选股</h3>
+        <div id="watchlistList"><div class="empty">登录后查看自选股</div></div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="sidebar-card" id="cardAlerts">
+        <h3>🔔 股价提醒</h3>
+        <div id="alertsList"><div class="empty">登录后管理提醒</div></div>
+        <button class="watchlist-btn" style="width:100%;margin-top:8px" onclick="showAlertForm()">+ 添加提醒</button>
+        <div class="alert-form" id="alertForm">
+          <select id="alertCondition">
+            <option value="price_above">价格高于</option>
+            <option value="price_below">价格低于</option>
+            <option value="change_above">涨幅超过</option>
+            <option value="change_below">跌幅超过</option>
+          </select>
+          <input type="number" id="alertThreshold" placeholder="阈值（如：100 或 5表示5%）" step="any">
+          <button onclick="submitAlert()">添加提醒</button>
+        </div>
+      </div>
+
+      <!-- Analysis History -->
+      <div class="sidebar-card" id="cardHistory">
+        <h3>📊 分析历史</h3>
+        <div id="historyList"><div class="empty">登录后查看历史</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let currentStock = null;
+let currentAnalysis = "";
+let currentAspect = "comprehensive";
+let klineChart = null;
+let isLogin = false;
+let currentUser = null;
+
+// =========================================================
+//  Init
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+  checkLogin();
+  document.getElementById("stockSearch").addEventListener("keydown", e => { if (e.key === "Enter") searchStock(); });
+  document.getElementById("stockSearch").addEventListener("input", debounce(autoSearch, 300));
+  // Close dropdown on outside click
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".user-menu")) toggleDropdown(false);
+  });
+});
+
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+const MARKET_LABELS = { cn: "A股", hk: "港股", us: "美股" };
+const MARKET_COLORS = { cn: "#ef4444", hk: "#22c55e", us: "#3b82f6" };
+
+// =========================================================
+//  Auth
+// =========================================================
+async function checkLogin() {
+  try {
+    const r = await fetch("/api/auth/me");
+    const d = await r.json();
+    if (d.logged_in) {
+      isLogin = true;
+      currentUser = d.user;
+      onLoginStateChange();
+      loadWatchlist();
+      loadAlerts();
+      loadHistory();
+    }
+  } catch(e) {}
+}
+
+function onLoginStateChange() {
+  document.getElementById("btnLogin").style.display = isLogin ? "none" : "inline-block";
+  document.getElementById("userMenu").style.display = isLogin ? "flex" : "none";
+  document.getElementById("sidebar").style.display = isLogin ? "flex" : "none";
+  if (isLogin) {
+    document.getElementById("userAvatar").textContent = currentUser.username[0].toUpperCase();
+    document.getElementById("ddUsername").textContent = currentUser.username;
+  }
+}
+
+function showAuthModal(mode) {
+  document.getElementById("authModal").classList.add("show");
+  if (mode === "register") switchAuthMode(true);
+}
+function closeAuthModal() { document.getElementById("authModal").classList.remove("show"); }
+
+let isRegisterMode = false;
+function switchAuthMode(forceRegister) {
+  isRegisterMode = forceRegister !== undefined ? forceRegister : !isRegisterMode;
+  document.getElementById("authTitle").textContent = isRegisterMode ? "注册" : "登录";
+  document.getElementById("authEmail").style.display = isRegisterMode ? "block" : "none";
+  document.getElementById("authSubmit").textContent = isRegisterMode ? "注册" : "登录";
+  document.getElementById("authSwitchText").textContent = isRegisterMode ? "已有账号？" : "没有账号？";
+  document.getElementById("authSwitchText").nextElementSibling.textContent = isRegisterMode ? "去登录" : "去注册";
+  document.getElementById("authError").classList.remove("show");
+}
+
+async function submitAuth() {
+  const username = document.getElementById("authUsername").value.trim();
+  const password = document.getElementById("authPassword").value;
+  const email = document.getElementById("authEmail").value.trim();
+  if (!username || !password) { showAuthError("请输入用户名和密码"); return; }
+  if (isRegisterMode && password.length < 6) { showAuthError("密码至少6位"); return; }
+
+  const url = isRegisterMode ? "/api/auth/register" : "/api/auth/login";
+  const body = isRegisterMode ? { username, email, password } : { username, password };
+  try {
+    const r = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.error) { showAuthError(d.error); return; }
+    // Success
+    isLogin = true;
+    currentUser = { username, id: d.user_id || null };
+    closeAuthModal();
+    onLoginStateChange();
+    checkLogin(); // re-fetch full user info
+  } catch(e) { showAuthError("网络错误，请重试"); }
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById("authError");
+  el.textContent = msg;
+  el.classList.add("show");
+}
+
+function logout() {
+  fetch("/api/auth/logout", { method: "POST" }).then(() => {
+    isLogin = false;
+    currentUser = null;
+    onLoginStateChange();
+    location.reload();
+  });
+}
+
+function toggleDropdown(show) {
+  const dd = document.getElementById("userDropdown");
+  if (show === undefined) dd.classList.toggle("show");
+  else dd.classList.toggle("show", show);
+}
+
+// =========================================================
+//  Search
+// =========================================================
+async function autoSearch() {
+  const q = document.getElementById("stockSearch").value.trim();
+  if (q.length < 2) { document.getElementById("searchResults").classList.remove("show"); return; }
+  const market = document.getElementById("marketSelect").value;
+  try {
+    const resp = await fetch(`/api/stock/search?q=${encodeURIComponent(q)}&market=${market}`);
+    const data = await resp.json();
+    const list = document.getElementById("searchResults");
+    list.innerHTML = "";
+    if (data.results && data.results.length) {
+      data.results.forEach(r => {
+        const div = document.createElement("div");
+        const mkt = r.market || "cn";
+        const badge = `<span style="font-size:11px;color:white;background:${MARKET_COLORS[mkt]};padding:1px 6px;border-radius:3px;margin-right:8px">${MARKET_LABELS[mkt]}</span>`;
+        div.innerHTML = `${badge}<span>${r.name}</span><span style="color:var(--text2)">${r.code}</span>`;
+        div.onclick = () => {
+          document.getElementById("stockSearch").value = r.code;
+          document.getElementById("marketSelect").value = mkt;
+          document.getElementById("searchResults").classList.remove("show");
+          searchStock();
+        };
+        list.appendChild(div);
+      });
+      list.classList.add("show");
+    } else {
+      list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:12px">未找到匹配股票</div>';
+      list.classList.add("show");
+    }
+  } catch(e) {}
+}
+
+async function searchStock() {
+  let code = document.getElementById("stockSearch").value.trim();
+  let market = document.getElementById("marketSelect").value;
+  if (!code) return;
+  document.getElementById("searchResults").classList.remove("show");
+  showLoading(true);
+
+  // If input looks like a Chinese name, first search to find the code
+  if (/[\u4e00-\u9fff]/.test(code)) {
+    try {
+      const sr = await fetch(`/api/stock/search?q=${encodeURIComponent(code)}&market=${market}`);
+      const sd = await sr.json();
+      if (sd.results && sd.results.length > 0) {
+        code = sd.results[0].code;
+        market = sd.results[0].market || market;
+        document.getElementById("stockSearch").value = code;
+        document.getElementById("marketSelect").value = market;
+      } else {
+        alert("未找到匹配股票，请尝试输入代码");
+        showLoading(false); return;
+      }
+    } catch(e) { alert("搜索失败: " + e.message); showLoading(false); return; }
+  }
+
+  try {
+    const resp = await fetch(`/api/stock/quote?code=${encodeURIComponent(code)}&market=${market}`);
+    if (!resp.ok) { alert("未找到该股票"); showLoading(false); return; }
+    const q = await resp.json();
+    if (q.error) { alert(q.error); showLoading(false); return; }
+    currentStock = { code: q.code, name: q.name, market: market, price: q.price };
+
+    document.getElementById("quoteName").textContent = q.name;
+    document.getElementById("quoteCode").textContent = `${q.code}  ${q.currency || "CNY"}`;
+    document.getElementById("quotePrice").textContent = q.price.toFixed(2);
+    const chgEl = document.getElementById("quoteChange");
+    chgEl.textContent = `${q.change_pct >= 0 ? "+" : ""}${q.change_pct.toFixed(2)}%  ${q.change >= 0 ? "+" : ""}${q.change.toFixed(2)}`;
+    chgEl.className = "quote-change " + (q.change_pct >= 0 ? "up" : "down");
+    document.getElementById("quoteCard").classList.add("show");
+
+    const details = [
+      ["开盘", q.open?.toFixed(2)], ["最高", q.high?.toFixed(2)], ["最低", q.low?.toFixed(2)],
+      ["成交量", formatNum(q.volume)], ["成交额", formatNum(q.amount)],
+      ["市值", formatNum(q.market_cap)], ["市盈率", q.pe || "N/A"]
+    ];
+    let html = "";
+    details.forEach(([label, value]) => {
+      html += `<div class="detail-item"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+    });
+    document.getElementById("quoteDetails").innerHTML = html;
+
+    loadKlineChart(code, market);
+    document.getElementById("aspectBtns").style.display = "flex";
+    runAnalysis("comprehensive");
+
+    // Show watchlist button if logged in
+    if (isLogin) {
+      document.getElementById("watchlistBtn").style.display = "inline-block";
+      checkWatchlistStatus(code, market);
+    }
+
+    // Setup alert form with current stock
+    document.getElementById("alertForm").style.display = "none";
+    document.getElementById("alertThreshold").value = "";
+
+  } catch(e) { alert("错误: " + e.message); }
+  finally { showLoading(false); }
+}
+
+function formatNum(n) {
+  if (!n || n === 0) return "--";
+  if (n >= 1e8) return (n / 1e8).toFixed(2) + "亿";
+  if (n >= 1e4) return (n / 1e4).toFixed(2) + "万";
+  return n.toLocaleString();
+}
+
+// =========================================================
+//  K-Line Chart
+// =========================================================
+async function loadKlineChart(code, market) {
+  try {
+    const resp = await fetch(`/api/stock/kline?code=${code}&market=${market}&limit=60`);
+    const data = await resp.json();
+    if (!data.klines) return;
+    const dates = data.klines.map(k => k.date);
+    const closes = data.klines.map(k => k.close);
+    document.getElementById("chartContainer").classList.add("show");
+    if (klineChart) klineChart.destroy();
+    const ctx = document.getElementById("klineChart").getContext("2d");
+    klineChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: dates,
+        datasets: [{ label: "收盘价", data: closes, borderColor: "#6366f1", borderWidth: 2, pointRadius: 0, tension: 0.1, fill: false }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { labels: { color: "#8888a0" } } },
+        scales: {
+          x: { ticks: { color: "#8888a0", maxTicksLimit: 10 }, grid: { color: "#2a2a3a" } },
+          y: { ticks: { color: "#8888a0" }, grid: { color: "#2a2a3a" } }
+        }
+      }
+    });
+  } catch(e) {}
+}
+
+// =========================================================
+//  AI Analysis (extended aspects)
+// =========================================================
+async function runAnalysis(aspect) {
+  if (!currentStock) return;
+  currentAspect = aspect;
+  document.querySelectorAll(".aspect-btns button").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-aspect") === aspect);
+  });
+  showLoading(true);
+  document.getElementById("analysisBox").classList.remove("show");
+  document.getElementById("pdfBtn").style.display = "none";
+  document.getElementById("saveHistoryBtn").style.display = "none";
+
+  try {
+    const resp = await fetch("/api/stock/ai-analysis", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: currentStock.code, name: currentStock.name, market: currentStock.market, aspect })
+    });
+    const data = await resp.json();
+    if (data.error) { alert(data.error); return; }
+
+    currentAnalysis = data.analysis;
+    const titles = {
+      comprehensive: "综合分析", technical: "技术分析", fundamental: "基本面分析",
+      news: "新闻与事件分析", valuation: "估值分析", sector: "行业对比分析",
+      risk: "风险评估"
+    };
+    document.getElementById("analysisTitle").textContent = titles[aspect] || "AI 分析结果";
+    document.getElementById("analysisContent").textContent = data.analysis;
+    document.getElementById("analysisBox").classList.add("show");
+    document.getElementById("pdfBtn").style.display = "inline-block";
+    if (isLogin) document.getElementById("saveHistoryBtn").style.display = "inline-block";
+
+  } catch(e) { alert("错误: " + e.message); }
+  finally { showLoading(false); }
+}
+
+async function downloadPDF() {
+  if (!currentStock || !currentAnalysis) return;
+  document.getElementById("pdfBtn").textContent = "正在生成 PDF...";
+  document.getElementById("pdfBtn").disabled = true;
+  try {
+    const resp = await fetch("/api/stock/generate-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: currentStock.code, name: currentStock.name, market: currentStock.market, analysis: currentAnalysis })
+    });
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `stock_report_${currentStock.code}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { alert("错误: " + e.message); }
+  finally { document.getElementById("pdfBtn").textContent = "下载 PDF 报告"; document.getElementById("pdfBtn").disabled = false; }
+}
+
+async function saveToHistory() {
+  if (!isLogin || !currentAnalysis) return;
+  try {
+    const r = await fetch("/api/analysis/history", { method: "GET" });
+    // This just triggers a re-load; actual save happens on backend
+    alert("分析已自动保存到历史记录");
+    loadHistory();
+  } catch(e) {}
+}
+
+// =========================================================
+//  Watchlist
+// =========================================================
+async function checkWatchlistStatus(code, market) {
+  try {
+    const r = await fetch(`/api/watchlist/check/${encodeURIComponent(code)}?market=${market}`);
+    const d = await r.json();
+    updateWatchlistBtn(d.in_watchlist);
+  } catch(e) {}
+}
+
+function updateWatchlistBtn(inList) {
+  const btn = document.getElementById("watchlistBtn");
+  if (inList) {
+    btn.textContent = "✓ 已在自选";
+    btn.classList.add("in-list");
+  } else {
+    btn.textContent = "+ 加入自选";
+    btn.classList.remove("in-list");
+  }
+}
+
+async function toggleWatchlist() {
+  if (!isLogin) { showAuthModal("login"); return; }
+  const { code, name, market } = currentStock;
+  try {
+    if (document.getElementById("watchlistBtn").classList.contains("in-list")) {
+      // Remove
+      const r = await fetch(`/api/watchlist/${encodeURIComponent(code)}?market=${market}`, { method: "DELETE" });
+      const d = await r.json();
+      if (d.success) updateWatchlistBtn(false);
+    } else {
+      // Add
+      const r = await fetch("/api/watchlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, name, market })
+      });
+      const d = await r.json();
+      if (d.success) updateWatchlistBtn(true);
+      else if (d.error) alert(d.error);
+    }
+    loadWatchlist();
+  } catch(e) { alert("操作失败: " + e.message); }
+}
+
+async function loadWatchlist() {
+  if (!isLogin) return;
+  try {
+    const r = await fetch("/api/watchlist");
+    const d = await r.json();
+    const list = document.getElementById("watchlistList");
+    if (!d.items || !d.items.length) {
+      list.innerHTML = '<div class="empty">暂无自选股，搜索添加吧</div>';
+      return;
+    }
+    list.innerHTML = "";
+    d.items.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "watchlist-item";
+      div.innerHTML = `
+        <div class="wl-name">${item.name}</div>
+        <div class="wl-code">${item.code} ${item.market === "hk" ? "港股" : item.market === "us" ? "美股" : "A股"}</div>
+        <div class="wl-price" id="wl-price-${item.code}">--</div>
+      `;
+      div.onclick = () => {
+        document.getElementById("stockSearch").value = item.code;
+        document.getElementById("marketSelect").value = item.market || "cn";
+        searchStock();
+      };
+      list.appendChild(div);
+      // Fetch real-time quote for watchlist items
+      fetchQuoteForWatchlistItem(item);
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function fetchQuoteForWatchlistItem(item) {
+  try {
+    const r = await fetch(`/api/stock/quote?code=${item.code}&market=${item.market || "cn"}`);
+    const q = await r.json();
+    if (q && !q.error) {
+      const el = document.getElementById(`wl-price-${item.code}`);
+      if (el) {
+        el.textContent = `${q.price.toFixed(2)} (${q.change_pct >= 0 ? "+" : ""}${q.change_pct.toFixed(2)}%)`;
+        el.className = `wl-price ${q.change_pct >= 0 ? "up" : "down"}`;
+      }
+    }
+  } catch(e) {}
+}
+
+// =========================================================
+//  Alerts
+// =========================================================
+async function loadAlerts() {
+  if (!isLogin) return;
+  try {
+    const r = await fetch("/api/alerts");
+    const d = await r.json();
+    const list = document.getElementById("alertsList");
+    if (!d.items || !d.items.length) {
+      list.innerHTML = '<div class="empty">暂无提醒，点击下方按钮添加</div>';
+      return;
+    }
+    list.innerHTML = "";
+    d.items.forEach(alert => {
+      const div = document.createElement("div");
+      div.className = "alert-item";
+      const condLabels = {
+        price_above: `价格 ≥ ${alert.threshold}`,
+        price_below: `价格 ≤ ${alert.threshold}`,
+        change_above: `涨幅 ≥ ${alert.threshold}%`,
+        change_below: `跌幅 ≥ ${Math.abs(alert.threshold)}%`
+      };
+      const triggered = alert.triggered ? '<div class="alert-triggered">✅ 已触发</div>' : '';
+      div.innerHTML = `
+        <div class="wl-name">${alert.name} (${alert.code})</div>
+        <div class="alert-condition">${condLabels[alert.condition_type] || alert.condition_type}</div>
+        ${triggered}
+        <div style="text-align:right"><button onclick="deleteAlert(${alert.id}, '${alert.name}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px">删除</button></div>
+      `;
+      list.appendChild(div);
+    });
+  } catch(e) { console.error(e); }
+}
+
+function showAlertForm() {
+  if (!isLogin) { showAuthModal("login"); return; }
+  if (!currentStock) { alert("请先搜索一只股票"); return; }
+  document.getElementById("alertForm").classList.toggle("show");
+}
+
+async function submitAlert() {
+  if (!isLogin || !currentStock) return;
+  const condition_type = document.getElementById("alertCondition").value;
+  const threshold = parseFloat(document.getElementById("alertThreshold").value);
+  if (isNaN(threshold)) { alert("请输入有效的阈值"); return; }
+  try {
+    const r = await fetch("/api/alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: currentStock.code, name: currentStock.name,
+        market: currentStock.market, condition_type, threshold
+      })
+    });
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById("alertForm").classList.remove("show");
+      document.getElementById("alertThreshold").value = "";
+      loadAlerts();
+    } else if (d.error) alert(d.error);
+  } catch(e) { alert("添加失败: " + e.message); }
+}
+
+async function deleteAlert(alertId, name) {
+  if (!confirm(`确定删除「${name}」的提醒？`)) return;
+  try {
+    const r = await fetch(`/api/alerts/${alertId}`, { method: "DELETE" });
+    const d = await r.json();
+    if (d.success) loadAlerts();
+  } catch(e) { alert("删除失败"); }
+}
+
+// =========================================================
+//  Analysis History
+// =========================================================
+async function loadHistory() {
+  if (!isLogin) return;
+  try {
+    const r = await fetch("/api/analysis/history?limit=20");
+    const d = await r.json();
+    const list = document.getElementById("historyList");
+    if (!d.items || !d.items.length) {
+      list.innerHTML = '<div class="empty">暂无分析历史</div>';
+      return;
+    }
+    list.innerHTML = "";
+    d.items.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "history-item";
+      const aspectLabels = {
+        comprehensive: "综合分析", technical: "技术分析", fundamental: "基本面",
+        news: "新闻", valuation: "估值", sector: "行业对比", risk: "风险"
+      };
+      div.innerHTML = `
+        <div class="wl-name">${item.name} <span style="font-size:12px;color:var(--text2)">${aspectLabels[item.aspect] || item.aspect}</span></div>
+        <div class="wl-code">${item.code} · ${item.created_at}</div>
+      `;
+      div.onclick = () => {
+        // Load this analysis back into the analysis box
+        document.getElementById("analysisContent").textContent = item.analysis;
+        document.getElementById("analysisBox").classList.add("show");
+        document.getElementById("analysisTitle").textContent = `${item.name} - ${aspectLabels[item.aspect] || item.aspect}`;
+      };
+      list.appendChild(div);
+    });
+  } catch(e) { console.error(e); }
+}
+
+// =========================================================
+//  Misc
+// =========================================================
+function showLoading(v) { document.getElementById("loading").style.display = v ? "block" : "none"; }
+
+// Close modal on overlay click
+document.getElementById("authModal").addEventListener("click", e => {
+  if (e.target === document.getElementById("authModal")) closeAuthModal();
+});
+</script>
+</body>
+</html>

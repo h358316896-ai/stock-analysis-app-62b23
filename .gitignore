@@ -1,0 +1,25 @@
+# === 敏感文件 ===
+.env
+.env.example
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.Python
+
+# === 数据库（Render 上会重建）===
+app.db
+*.db
+
+# === 项目生成物 ===
+output/
+*.pdf
+backend.log
+
+# === 系统 ===
+.DS_Store
+Thumbs.db
+nul

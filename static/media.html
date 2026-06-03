@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自媒体 AI 助手 - AI Workshop</title>
+<style>
+:root {
+  --bg: #0f0f14; --surface: #1a1a24; --border: #2a2a3a;
+  --text: #e8e8f0; --text2: #8888a0; --accent: #6366f1;
+  --green: #22c55e; --red: #ef4444;
+}
+* { margin:0; padding:0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+.logo { font-size: 20px; font-weight: 700; color: var(--accent); }
+.nav { display: flex; gap: 8px; }
+.nav a { color: var(--text2); text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; transition: all .2s; }
+.nav a:hover, .nav a.active { background: #6366f122; color: var(--accent); }
+.container { max-width: 900px; margin: 0 auto; padding: 24px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+.card h2 { font-size: 18px; margin-bottom: 16px; color: var(--accent); }
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 8px 18px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-size: 14px; transition: all .2s; }
+.tab.active, .tab:hover { border-color: var(--accent); color: var(--accent); }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 14px; background: var(--bg); color: var(--text); font-family: inherit;
+}
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+.form-group textarea { min-height: 120px; resize: vertical; }
+.form-row { display: flex; gap: 12px; }
+.btn {
+  padding: 10px 24px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s;
+  background: var(--accent); color: white;
+}
+.btn:hover { background: #5558e6; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+.result-box { background: var(--bg); border-radius: 10px; border: 1px solid var(--border); padding: 16px; margin-top: 16px; white-space: pre-wrap; line-height: 1.8; font-size: 14px; max-height: 500px; overflow-y: auto; display: none; }
+.result-box.show { display: block; }
+.hot-list { list-style: none; }
+.hot-list li { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; border-radius: 8px; transition: background .2s; }
+.hot-list li:hover { background: #6366f122; }
+.hot-rank { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; margin-right: 12px; color: white; flex-shrink: 0; }
+.rank-1 { background: var(--red); } .rank-2 { background: #ff7a45; } .rank-3 { background: #f59e0b; }
+.rank-default { background: var(--border); color: var(--text2); }
+.hot-name { flex: 1; font-size: 14px; }
+.hot-heat { font-size: 12px; color: var(--text2); }
+.engine-select { display: flex; gap: 10px; margin-bottom: 14px; }
+.engine-btn { flex: 1; padding: 10px; border: 2px solid var(--border); border-radius: 10px; text-align: center; cursor: pointer; transition: all .2s; font-size: 13px; background: var(--surface); color: var(--text2); }
+.engine-btn.active { border-color: var(--accent); color: var(--accent); background: #6366f122; }
+.copy-btn { float: right; padding: 4px 12px; font-size: 12px; background: var(--accent); color: white; border: none; border-radius: 6px; cursor: pointer; }
+.loading-text { text-align: center; padding: 20px; color: var(--text2); display: none; }
+.loading-text.show { display: block; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">AI Workshop / 自媒体助手</div>
+  <div class="nav">
+    <a href="/">首页</a><a href="/stock">股票分析</a><a href="/media" class="active">自媒体助手</a><a href="/services">接单服务</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="card">
+    <div class="tabs">
+      <span class="tab active" onclick="switchTab('write')">内容生成</span>
+      <span class="tab" onclick="switchTab('imitate')">爆款模仿</span>
+      <span class="tab" onclick="switchTab('script')">视频脚本</span>
+      <span class="tab" onclick="switchTab('voice')">配音文案</span>
+      <span class="tab" onclick="switchTab('hot')">热门话题</span>
+    </div>
+
+    <div class="engine-select" id="tabWrite">
+      <div class="engine-btn" onclick="setEngine('deepseek', this)"><div class="name">DeepSeek</div><div style="font-size:11px;color:var(--text2)">中文优选</div></div>
+      <div class="engine-btn active" onclick="setEngine('claude', this)"><div class="name">Claude</div><div style="font-size:11px;color:var(--text2)">英文优选</div></div>
+    </div>
+
+    <div class="form-group">
+      <label>主题 / 关键词</label>
+      <input type="text" id="topicInput" placeholder="例如：AI 工具推荐、副业攻略、科技评测...">
+    </div>
+    <div class="form-group">
+      <label>风格 / 调性</label>
+      <select id="styleSelect">
+        <option value="professional">专业科普型</option>
+        <option value="casual" selected>轻松 conversational</option>
+        <option value="viral">爆款标题党</option>
+        <option value="tutorial">步骤教程型</option>
+        <option value="story">故事叙述型</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>补充要求</label>
+      <textarea id="reqInput" placeholder="字数要求、受众定位、特殊要求等..."></textarea>
+    </div>
+    <button class="btn" id="genBtn" onclick="generateContent()">生成内容</button>
+
+    <div class="loading-text" id="loading">正在生成...</div>
+    <div class="result-box" id="resultBox">
+      <button class="copy-btn" onclick="copyResult()">复制</button>
+      <div id="resultContent"></div>
+    </div>
+  </div>
+
+  <div class="card" id="imitateCard" style="display:none">
+    <h2>爆款风格模仿</h2>
+    <div class="form-group">
+      <label>粘贴爆款原文</label>
+      <textarea id="imitateInput" placeholder="粘贴一篇爆款文章或帖子..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>你的主题</label>
+      <input type="text" id="imitateTopic" placeholder="例如：程序员高效工作技巧">
+    </div>
+    <button class="btn" onclick="imitateStyle()">生成模仿文案</button>
+    <div class="result-box" id="imitateResult"><div id="imitateContent"></div></div>
+  </div>
+
+  <div class="card" id="scriptCard" style="display:none">
+    <h2>视频脚本生成</h2>
+    <div class="form-group">
+      <label>视频主题</label>
+      <input type="text" id="scriptTopic" placeholder="例如：如何用 ChatGPT 提升效率">
+    </div>
+    <div class="form-group">
+      <label>目标时长</label>
+      <select id="scriptDuration">
+        <option value="30s">30秒（短视频）</option>
+        <option value="60s" selected>60秒（中视频）</option>
+        <option value="90s">90秒（长视频）</option>
+        <option value="3min">3分钟（深度解析）</option>
+      </select>
+    </div>
+    <button class="btn" onclick="generateScript()">生成脚本</button>
+    <div class="result-box" id="scriptResult"><div id="scriptContent"></div></div>
+  </div>
+
+  <div class="card" id="voiceCard" style="display:none">
+    <h2>配音文案生成</h2>
+    <div class="form-group">
+      <label>视频场景描述</label>
+      <textarea id="voiceInput" placeholder="描述你的视频画面和内容..."></textarea>
+    </div>
+    <button class="btn" onclick="generateVoiceover()">生成配音文案</button>
+    <div class="result-box" id="voiceResult"><div id="voiceContent"></div></div>
+  </div>
+
+  <div class="card" id="hotCard">
+    <h2>实时热门话题</h2>
+    <ul class="hot-list" id="hotList"></ul>
+  </div>
+</div>
+
+<script>
+let currentTab = "write";
+let currentEngine = "claude";
+
+function switchTab(t) {
+  currentTab = t;
+  document.querySelectorAll(".tab").forEach(el => el.classList.remove("active"));
+  event.target.classList.add("active");
+  ["tabWrite","imitateCard","scriptCard","voiceCard","hotCard"].forEach(id => {
+    const el = document.getElementById(id);
+    if ((id === "tabWrite" && t === "write") || (id === t + "Card")) el.style.display = "block";
+    else if (id === "tabWrite") el.style.display = (t === "write") ? "block" : "none";
+    else if (id === "hotCard") el.style.display = (t === "hot") ? "block" : "none";
+    else el.style.display = (id === t + "Card") ? "block" : "none";
+  });
+}
+
+function setEngine(e, el) {
+  currentEngine = e;
+  document.querySelectorAll(".engine-btn").forEach(b => b.classList.remove("active"));
+  el.classList.add("active");
+}
+
+async function generateContent() {
+  const topic = document.getElementById("topicInput").value.trim();
+  const style = document.getElementById("styleSelect").value;
+  const req = document.getElementById("reqInput").value.trim();
+  if (!topic) { alert("请输入主题"); return; }
+
+  const styleMap = { professional: "专业科普风格，深入浅出", casual: "轻松 conversational 风格，像朋友聊天", viral: "爆款标题党风格，吸引点击", tutorial: "步骤教程风格，手把手教学", story: "故事叙述风格，引人入胜" };
+  const prompt = `请用${styleMap[style] || "专业"}写一篇关于「${topic}」的自媒体文章。${req ? "要求：" + req + "。" : ""}字数800字左右，标题吸引人，段落清晰，适合微信公众号/知乎/小红书发布。用中文输出。`;
+
+  showResult("resultBox", "resultContent", true);
+  try {
+    const resp = await fetch("/api/media/generate", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({prompt, engine: currentEngine}) });
+    const data = await resp.json();
+    showResult("resultBox", "resultContent", false, data.result || data.error);
+  } catch(e) { showResult("resultBox", "resultContent", false, "错误: " + e.message); }
+}
+
+async function imitateStyle() {
+  const orig = document.getElementById("imitateInput").value.trim();
+  const topic = document.getElementById("imitateTopic").value.trim();
+  if (!orig || !topic) { alert("请填写完整"); return; }
+
+  const prompt = `分析以下爆款内容的写作风格、语调、结构和钩子技巧：\n\n${orig}\n\n然后用完全相同的风格，写一篇关于「${topic}」的新文章。用中文输出。`;
+
+  showResult("imitateResult", "imitateContent", true);
+  try {
+    const resp = await fetch("/api/media/generate", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({prompt, engine: currentEngine}) });
+    const data = await resp.json();
+    showResult("imitateResult", "imitateContent", false, data.result || data.error);
+  } catch(e) { showResult("imitateResult", "imitateContent", false, "错误: " + e.message); }
+}
+
+async function generateScript() {
+  const topic = document.getElementById("scriptTopic").value.trim();
+  const dur = document.getElementById("scriptDuration").value;
+  if (!topic) { alert("请输入主题"); return; }
+
+  const prompt = `请为「${topic}」创建一个${dur}的视频脚本。包含：1) 黄金3秒开头钩子 2) 画面描述 3) 配音/旁白文案 4) 视觉建议 5) 行动号召。用中文输出，格式清晰，适合视频制作。`;
+
+  showResult("scriptResult", "scriptContent", true);
+  try {
+    const resp = await fetch("/api/media/generate", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({prompt, engine: currentEngine}) });
+    const data = await resp.json();
+    showResult("scriptResult", "scriptContent", false, data.result || data.error);
+  } catch(e) { showResult("scriptResult", "scriptContent", false, "错误: " + e.message); }
+}
+
+async function generateVoiceover() {
+  const desc = document.getElementById("voiceInput").value.trim();
+  if (!desc) { alert("请描述你的视频"); return; }
+
+  const prompt = `为以下视频内容创作配音文案：\n${desc}\n\n要求：自然、口语化中文配音文案，包含时间标记（如 [0:00-0:05]），简洁有力，吸引观众。用中文输出。`;
+
+  showResult("voiceResult", "voiceContent", true);
+  try {
+    const resp = await fetch("/api/media/generate", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({prompt, engine: currentEngine}) });
+    const data = await resp.json();
+    showResult("voiceResult", "voiceContent", false, data.result || data.error);
+  } catch(e) { showResult("voiceResult", "voiceContent", false, "错误: " + e.message); }
+}
+
+async function loadHotTopics() {
+  try {
+    const resp = await fetch("/api/media/hot-topics");
+    const data = await resp.json();
+    const list = document.getElementById("hotList");
+    list.innerHTML = "";
+    data.topics.forEach((t, i) => {
+      let rankClass = i < 3 ? `rank-${i+1}` : "rank-default";
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="hot-rank ${rankClass}">${i+1}</span><span class="hot-name">${t.tag}</span><span class="hot-heat">热度: ${t.hot}</span>`;
+      li.onclick = () => { document.getElementById("topicInput").value = t.tag; switchTab('write'); };
+      list.appendChild(li);
+    });
+  } catch(e) {}
+}
+
+function showResult(boxId, contentId, loading, text) {
+  const box = document.getElementById(boxId);
+  const content = document.getElementById(contentId);
+  if (loading === true) {
+    box.classList.add("show");
+    content.innerHTML = '<div style="color:var(--text2)">正在生成...</div>';
+  } else {
+    box.classList.add("show");
+    content.textContent = text || "";
+  }
+}
+
+function copyResult() {
+  const text = document.querySelector(".result-box.show > div:last-child").textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(".copy-btn");
+    btn.textContent = "已复制！";
+    setTimeout(() => btn.textContent = "复制", 1500);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => { switchTab("write"); loadHotTopics(); });
+</script>
+</body>
+</html>
