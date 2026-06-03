@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: stock-analysis-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 2 -t 120 backend:app
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: DEEPSEEK_API_KEY
+        sync: false
+    plan: free
