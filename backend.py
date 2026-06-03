@@ -626,8 +626,47 @@ def generate_report():
 
 
 # ==========================================================
-# MODULE 2: MEDIA ASSISTANT
-# ==========================================================
+
+# =========================================================
+# =========================================================
+# 大盘指数 API
+# =========================================================
+@app.route("/api/market/indices")
+def market_indices():
+    """获取主要大盘指数实时数据"""
+    # 指数代码：上证(sh000001)、深证成指(sz399001)、创业板(sz399006)
+    #           恒生(hk800000)、标普500(us.INX)、纳斯达克(us.IXIC)、道琼斯(us.DJI)
+    codes = "sh000001,sz399001,sz399006,hk800000,us.INX,us.IXIC,us.DJI"
+    url = f"https://qt.gtimg.cn/q={codes}"
+    try:
+        text = _fetch_tencent_raw(url)
+        if not text:
+            return jsonify({"indices": []})
+        results = []
+        for m in re.finditer(r'v_([^=]+)="([^"]*)"', text):
+            code = m.group(1)
+            fields = m.group(2).split("~")
+            if len(fields) < 35:
+                continue
+            try:
+                price      = float(fields[3]) if fields[3] else 0.0
+                prev_close = float(fields[4]) if fields[4] else price
+                change     = price - prev_close
+                change_pct = (change / prev_close * 100) if prev_close else 0.0
+                name = fields[1] if len(fields) > 1 and fields[1] else code
+                results.append({
+                    "code":       code,
+                    "name":       name,
+                    "price":      round(price, 2),
+                    "change":     round(change, 2),
+                    "change_pct": round(change_pct, 2),
+                })
+            except (ValueError, IndexError):
+                continue
+        return jsonify({"indices": results})
+    except Exception as e:
+        return jsonify({"error": str(e), "indices": []}), 500
+
 @app.route("/api/media/generate", methods=["POST"])
 def media_generate():
     data = request.json or {}

@@ -131,6 +131,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft
 .sidebar-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
 .sidebar-tabs button { flex: 1; padding: 6px 0; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; font-size: 12px; }
 .sidebar-tabs button.active { background: var(--accent); color: white; border-color: var(--accent); }
+/* === Market Overview === */
+.market-overview { display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
+.index-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; min-width: 155px; flex-shrink: 0; cursor: pointer; transition: border-color .2s; }
+.index-card:hover { border-color: var(--accent); }
+.index-name { font-size: 12px; color: var(--text2); margin-bottom: 6px; white-space: nowrap; }
+.index-price { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.index-change { font-size: 13px; font-weight: 600; }
+
+
+/* === Market Overview === */
+.market-overview { display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
+.index-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; min-width: 155px; flex-shrink: 0; cursor: pointer; transition: border-color .2s; }
+.index-card:hover { border-color: var(--accent); }
+.index-name { font-size: 12px; color: var(--text2); margin-bottom: 6px; white-space: nowrap; }
+.index-price { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.index-change { font-size: 13px; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -189,6 +205,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft
     <button id="searchBtn" onclick="searchStock()">搜索</button>
   </div>
   <div class="search-results" id="searchResults"></div>
+
+  <!-- Market Overview -->
+  <div class="market-overview" id="marketOverview">
+    <div class="loading" style="padding:16px">加载大盘数据中...</div>
+  </div>
+
+
 
   <div class="main-layout">
     <!-- Left: Main Content -->
@@ -268,7 +291,64 @@ body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+// =========================================================
+//  Market Indices
+// =========================================================
+const INDEX_LABELS = {
+  "sh000001": "上证指数", "sz399001": "深证成指",
+  "sz399006": "创业板指", "hk800000": "恒生指数",
+  "us.INX": "标普500", "us.IXIC": "纳斯达克",
+  "us.DJI": "道琼斯"
+};
+const INDEX_ORDER = ["sh000001","sz399001","sz399006","hk800000","us.INX","us.IXIC","us.DJI"];
+
+async function loadMarketIndices() {
+  try {
+    const r = await fetch("/api/market/indices");
+    const d = await r.json();
+    const container = document.getElementById("marketOverview");
+    if (!d.indices || !d.indices.length) {
+      container.innerHTML = '<div class="empty">大盘数据暂不可用</div>';
+      return;
+    }
+    let html = "";
+    d.indices.forEach(idx => {
+      const up = idx.change_pct >= 0;
+      const cls = up ? "up" : "down";
+      const sym = up ? "+" : "";
+      html += `
+        <div class="index-card" onclick="fillSearchFromIndex('${idx.code}')">
+          <div class="index-name">${INDEX_LABELS[idx.code] || idx.name}</div>
+          <div class="index-price ${cls}">${idx.price.toFixed(2)}</div>
+          <div class="index-change ${cls}">${sym}${idx.change_pct.toFixed(2)}%  ${sym}${idx.change.toFixed(2)}</div>
+        </div>`;
+    });
+    container.innerHTML = html;
+  } catch(e) {
+    console.error("Market indices error:", e);
+  }
+}
+
+function fillSearchFromIndex(code) {
+  // 根据代码自动填充搜索框并搜索
+  const marketMap = { sh:"cn", sz:"cn", hk:"hk", us:"us" };
+  let mkt = "cn";
+  for (const [prefix, val] of Object.entries(marketMap)) {
+    if (code.startsWith(prefix)) { mkt = val; break; }
+  }
+  document.getElementById("stockSearch").value = code;
+  document.getElementById("marketSelect").value = mkt;
+  searchStock();
+}
+
+// 页面加载时获取大盘数据，每30秒刷新
+document.addEventListener("DOMContentLoaded", () => {
+  loadMarketIndices();
+  setInterval(loadMarketIndices, 30000);
+});
+
+</script>
 <script>
 let currentStock = null;
 let currentAnalysis = "";
