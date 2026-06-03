@@ -111,8 +111,11 @@ def services_page():
 # MODULE 1: STOCK ANALYSIS
 # ==========================================================
 # A-share stock names loaded from stock_names.py (auto-generated, 5499 stocks)
-from stock_names import STOCK_NAMES as _TEMP
-STOCK_NAMES = _TEMP
+try:
+    from stock_names import STOCK_NAMES as _TEMP
+    STOCK_NAMES = _TEMP
+except ImportError:
+    STOCK_NAMES = {}
 
 # HK stock names loaded from hk_stock_names.py (top HK stocks)
 try:
