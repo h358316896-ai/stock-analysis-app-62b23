@@ -1,4 +1,4 @@
-﻿# AI Workshop - Unified Backend
+# AI Workshop - Unified Backend
 # 金融分析 + 自媒体助手 + 接单服务
 
 import os
