@@ -523,7 +523,7 @@ body {
 }
 .analysis-content.show { display: block; }
 .analysis-content h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--accent); }
-.analysis-content .text { font-size: 14px; line-height: 1.8; color: var(--text-secondary); white-space: pre-wrap; }
+.analysis-content .text { font-size: 14px; line-height: 1.8; color: var(--text-secondary); white-space: pre-wrap; max-height: 500px; overflow-y: auto; padding-right: 8px; }
 .analysis-actions { display: flex; gap: 8px; margin-top: 16px; }
 .btn-sm { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font); border: none; transition: var(--transition); }
 .btn-primary { background: var(--accent); color: white; }
@@ -1554,10 +1554,22 @@ async function runAnalysis(aspect) {
     state.analysis = d.analysis;
     const titles = { comprehensive: 'Comprehensive Analysis', technical: 'Technical Analysis', fundamental: 'Fundamental Analysis', news: 'News & Events', valuation: 'Valuation Analysis', sector: 'Sector Comparison', risk: 'Risk Assessment' };
     document.getElementById('analysisTitle').textContent = titles[aspect] || 'AI Analysis';
-    document.getElementById('analysisText').textContent = d.analysis;
+    // Render analysis as HTML with basic markdown formatting
+    var html = d.analysis
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')  // escape HTML
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')  // **bold**
+      .replace(/^### (.+)$/gm, '<h4 style="color:var(--accent);margin:16px 0 8px">$1</h4>')  // ### headings
+      .replace(/^## (.+)$/gm, '<h3 style="color:var(--text-primary);margin:18px 0 10px">$1</h3>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')  // list items
+      .replace(/(<li>.*<\/li>\n?)+/g, '<ul style="padding-left:20px;margin:8px 0">$&</ul>')  // wrap lists
+      .replace(/\n\n/g, '<br><br>')  // double newline = paragraph
+      .replace(/\n/g, '<br>');  // single newline = line break
+    document.getElementById('analysisText').innerHTML = html;
     document.getElementById('analysisBox').classList.add('show');
     document.getElementById('pdfBtn').style.display = 'inline-block';
     if (state.isLogin) document.getElementById('saveHistoryBtn').style.display = 'inline-block';
+    // Scroll analysis into view
+    document.getElementById('analysisBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch(e) { alert('Error: ' + e.message); }
   finally { toggleLoading(false); }
 }
