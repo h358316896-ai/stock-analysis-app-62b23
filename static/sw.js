@@ -1,63 +1,38 @@
-// Service Worker for StockAI PWA
-const CACHE_NAME = 'stockai-v2';
-const ASSETS = [
-  '/stock',
-  '/',
-  '/media',
-  '/services',
-  '/static/stock.html',
-  '/static/index.html',
-  '/static/media.html',
-  '/static/services.html',
-  '/static/manifest.json',
-  'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap',
-];
+// Service Worker for StockAI PWA — v3 (network-first, no aggressive HTML cache)
+const CACHE = 'stockai-v3';
 
-// Install - cache core assets
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS).catch(err => {
-        console.log('SW: Some assets failed to cache, continuing...');
-      });
-    })
-  );
   self.skipWaiting();
 });
 
-// Activate - clean old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
-    })
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
   );
   self.clients.claim();
 });
 
-// Fetch - network first, fallback to cache
 self.addEventListener('fetch', event => {
-  // Skip API calls and non-GET requests
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('/api/')) return;
 
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Cache successful responses
-        if (response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, clone);
-          });
-        }
-        return response;
+  // Only cache static assets (JS, CSS, images), never HTML pages
+  const url = event.request.url;
+  const isStatic = url.match(/\.(js|css|png|svg|ico|woff2?)$/i);
+
+  if (isStatic) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        const fetchPromise = fetch(event.request).then(response => {
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        });
+        return cached || fetchPromise;
       })
-      .catch(() => {
-        return caches.match(event.request);
-      })
-  );
+    );
+  }
+  // HTML pages: always go to network (no cache)
 });
