@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#060608">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/static/manifest.json">
 <title>Media AI Assistant — StockAI</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -133,14 +136,14 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 <div class="container">
   <div class="hero">
     <div class="tag">AI Content Studio</div>
-    <h1>Create viral content, <span>effortlessly</span></h1>
+    <h1>AI-powered content creation, <span>professionally</span></h1>
     <p>Generate, rewrite, and optimize content for every platform. Powered by DeepSeek & Claude.</p>
   </div>
 
   <!-- Tabs -->
   <div class="tabs" id="mainTabs">
     <button class="active" data-panel="write">✏️ Generate</button>
-    <button data-panel="imitate">🔥 Imitate Viral</button>
+    <button data-panel="imitate">🔥 Style Imitation</button>
     <button data-panel="script">🎬 Video Script</button>
     <button data-panel="voice">🎙️ Voice-Over</button>
     <button data-panel="hot">📊 Trends</button>
@@ -159,7 +162,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
       <label>Topic / Keywords</label>
       <input type="text" id="topicInput" placeholder="e.g. AI tools review, side hustle strategies, tech trends...">
       <div class="row">
-        <div><label>Style</label><select id="styleSelect"><option value="professional">Professional</option><option value="casual" selected>Conversational</option><option value="viral">Viral / Clickbait</option><option value="tutorial">Step-by-step Tutorial</option><option value="story">Storytelling</option></select></div>
+        <div><label>Style</label><select id="styleSelect"><option value="professional">Professional</option><option value="casual" selected>Conversational</option><option value="trending">Trending / Engaging</option><option value="tutorial">Step-by-step Tutorial</option><option value="story">Storytelling</option></select></div>
         <div><label>Platform</label><select id="platformSelect"><option value="general">General</option><option value="wechat">WeChat</option><option value="xiaohongshu">Xiaohongshu</option><option value="douyin">Douyin / TikTok</option><option value="twitter">Twitter / X</option><option value="linkedin">LinkedIn</option></select></div>
       </div>
       <label>Additional Requirements</label>
@@ -176,9 +179,9 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
   <!-- Panel: Imitate -->
   <div class="panel" id="panel-imitate">
     <div class="card">
-      <h3>Viral Content Imitation Engine</h3>
-      <label>Paste a viral post to imitate its style</label>
-      <textarea id="imitateSource" placeholder="Paste the original viral content here... The AI will analyze its structure, tone, and hooks, then create a new version on your topic."></textarea>
+      <h3>Style Imitation Engine</h3>
+      <label>Paste a reference post to analyze and imitate its style</label>
+      <textarea id="imitateSource" placeholder="Paste the reference content here... The AI will analyze its structure, tone, and hooks, then create a new version on your topic."></textarea>
       <label>Your Topic</label>
       <input type="text" id="imitateTopic" placeholder="e.g. 5 AI tools that save me 10 hours every week">
       <button class="btn btn-primary" onclick="imitateContent()">Generate Inspired Version →</button>
@@ -357,8 +360,8 @@ async function imitateContent() {
   const topic = document.getElementById('imitateTopic').value.trim();
   if (!source || !topic) { alert('Please provide both the source content and your topic'); return; }
   toggleLoading('loadingImitate', true);
-  const prompt = `Analyze the following viral content's style, structure, hook technique, and tone. Then create a NEW piece on this topic: "${topic}" using the SAME style and techniques.\n\nOriginal content:\n${source}\n\nNew content about "${topic}":`;
-  const result = await callAI('You excel at analyzing and replicating viral content styles.', prompt);
+  const prompt = `Analyze the following reference content's style, structure, hook technique, and tone. Then create a NEW piece on this topic: "${topic}" using the SAME style and techniques.\n\nReference content:\n${source}\n\nNew content about "${topic}":`;
+  const result = await callAI('You are a professional content strategist. Analyze and replicate successful content styles.', prompt);
   toggleLoading('loadingImitate', false);
   if (result) {
     document.getElementById('resultImitateContent').textContent = result;
@@ -425,7 +428,7 @@ function useTemplate(type) {
   const presets = {
     'tech-review': { topic: 'Review of [product name]: is it worth it?', style: 'professional', platform: 'general', reqs: 'Include: unboxing/first impressions, key features, pros & cons comparison table, who should buy, final verdict with rating' },
     'how-to': { topic: 'How to [achieve specific result] in [timeframe]', style: 'tutorial', platform: 'general', reqs: 'Step-by-step numbered format. Each step with a bold heading. Include: prerequisites, estimated time per step, common mistakes to avoid' },
-    'list': { topic: 'Top 10 [tools/tips/resources] for [audience]', style: 'viral', platform: 'xiaohongshu', reqs: 'Numbered list with emojis. Each item: name + one-line description + why it matters. Strong CTA at the end' },
+    'list': { topic: 'Top 10 [tools/tips/resources] for [audience]', style: 'trending', platform: 'xiaohongshu', reqs: 'Numbered list with emojis. Each item: name + one-line description + why it matters. Strong closing statement at the end' },
     'news': { topic: 'Breaking: [news event] — what it means for you', style: 'professional', platform: 'linkedin', reqs: 'Include: what happened, why it matters, expert perspective, actionable takeaways' },
     'story': { topic: 'I tried [something] for [time period] and here is what happened', style: 'story', platform: 'general', reqs: 'Personal narrative. Include: why I started, the struggle/journey, key turning point, results, lessons learned' },
     'comparison': { topic: '[Product A] vs [Product B]: which one wins?', style: 'professional', platform: 'general', reqs: 'Side-by-side comparison table. Categories: price, features, ease of use, performance, support. Clear winner for each use case' },
