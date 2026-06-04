@@ -1117,33 +1117,40 @@ async function loadCalendar() {
 // SEARCH
 // ============================================================
 async function autoSearch() {
-  const q = document.getElementById('stockSearch').value.trim();
+  const input = document.getElementById('stockSearch');
   const list = document.getElementById('searchResults');
-  if (q.length < 1) { list.classList.remove('show'); return; }
-  const mkt = document.getElementById('marketSelect').value;
+  if (!input || !list) return;
+  const q = input.value.trim();
+  if (q.length < 1) { list.classList.remove('show'); list.innerHTML = ''; return; }
+  const mkt = (document.getElementById('marketSelect') || {}).value || 'cn';
 
   list.innerHTML = '<div style="padding:12px;color:var(--text-tertiary);text-align:center">Searching...</div>';
   list.classList.add('show');
 
   try {
-    const r = await fetch(`/api/stock/search?q=${encodeURIComponent(q)}&market=${mkt}`);
+    const r = await fetch('/api/stock/search?q=' + encodeURIComponent(q) + '&market=' + mkt);
     const d = await r.json();
     list.innerHTML = '';
     if (d.results && d.results.length) {
-      d.results.forEach(s => {
-        const clr = MKT_CLR[s.market] || '#6366f1';
-        const badge = `<span style="font-size:10px;font-weight:600;color:white;background:${clr};padding:2px 7px;border-radius:3px">${MKT[s.market]}</span>`;
-        const div = document.createElement('div');
-        div.innerHTML = `${badge} <span style="font-weight:500">${s.name}</span> <span style="color:var(--text-tertiary);margin-left:auto">${s.code}</span>`;
-        div.style.cssText = 'display:flex;align-items:center;gap:10px';
-        div.onclick = () => { document.getElementById('stockSearch').value = s.code; document.getElementById('marketSelect').value = s.market; list.classList.remove('show'); searchStock(); };
+      d.results.forEach(function(s) {
+        var clr = (MKT_CLR && MKT_CLR[s.market]) || '#6366f1';
+        var mktLabel = (MKT && MKT[s.market]) || s.market;
+        var div = document.createElement('div');
+        div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04)';
+        div.innerHTML = '<span style="font-size:10px;font-weight:600;color:white;background:' + clr + ';padding:2px 7px;border-radius:3px">' + mktLabel + '</span> <span style="font-weight:500;flex:1">' + s.name + '</span> <span style="color:var(--text-tertiary)">' + s.code + '</span>';
+        div.onclick = function() {
+          document.getElementById('stockSearch').value = s.code;
+          document.getElementById('marketSelect').value = s.market;
+          list.classList.remove('show');
+          searchStock();
+        };
         list.appendChild(div);
       });
     } else {
-      list.innerHTML = '<div style="padding:12px;color:var(--text-tertiary);text-align:center">No results — try full code or name</div>';
+      list.innerHTML = '<div style="padding:12px;color:var(--text-tertiary);text-align:center">No results found</div>';
     }
   } catch(e) {
-    list.innerHTML = '<div style="padding:12px;color:var(--red);text-align:center">Search unavailable, try again</div>';
+    list.innerHTML = '<div style="padding:12px;color:#ef4444;text-align:center">Search error — try again</div>';
   }
 }
 }
