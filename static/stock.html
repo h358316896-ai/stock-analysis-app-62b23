@@ -513,6 +513,23 @@ body {
 #chartTooltip .tt-label { color: var(--text-tertiary); }
 #chartTooltip .tt-up { color: var(--green); }
 #chartTooltip .tt-down { color: var(--red); }
+#chartTooltip.pulse { animation: ttPulse 0.6s ease-in-out; }
+@keyframes ttPulse {
+  0%, 100% { box-shadow: var(--shadow-lg); }
+  50% { box-shadow: 0 0 20px rgba(59,130,246,0.5), 0 0 40px rgba(59,130,246,0.2); }
+}
+/* Pulse dot overlay on flow compare canvas */
+.flow-dot-indicator {
+  position: absolute; pointer-events: none; z-index: 10;
+  width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%);
+  animation: dotBlink 0.8s ease-in-out infinite;
+}
+.flow-dot-indicator.blue { background: #3b82f6; box-shadow: 0 0 12px #3b82f6; }
+.flow-dot-indicator.orange { background: #f97316; box-shadow: 0 0 12px #f97316; }
+@keyframes dotBlink {
+  0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.4; transform: translate(-50%, -50%) scale(1.6); }
+}
 .chart-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .chart-row-full { margin-bottom: 12px; }
 
@@ -868,8 +885,11 @@ body {
 
       <!-- Money Flow -->
       <div class="chart-panel" id="cp-moneyflow">
-        <div class="chart-row-full" style="margin-bottom:12px">
+        <div class="chart-row-full" style="margin-bottom:12px;position:relative">
           <canvas id="flowCompareCanvas" height="280"></canvas>
+          <div class="flow-dot-indicator blue" id="flowDotBlue" style="display:none"></div>
+          <div class="flow-dot-indicator orange" id="flowDotOrange" style="display:none"></div>
+          <div class="flow-dot-indicator" id="flowDotCross" style="display:none;width:2px;height:100%;top:0;border-radius:0;background:rgba(255,255,255,0.5);animation:dotBlink 0.6s ease-in-out infinite;box-shadow:0 0 6px rgba(255,255,255,0.3)"></div>
           <div style="display:flex;gap:16px;margin-top:4px;font-size:11px;color:var(--text-tertiary);justify-content:center">
             <span><span style="display:inline-block;width:10px;height:10px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Institutional (Main Force)</span>
             <span><span style="display:inline-block;width:10px;height:10px;background:#f97316;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Retail Investors</span>
@@ -1754,14 +1774,27 @@ function drawFlowCompare(flows, hoverIdx) {
 function initFlowCompareHover(flows) {
   var canvas = document.getElementById('flowCompareCanvas');
   if (!canvas) return;
+  var dotBlue = document.getElementById('flowDotBlue');
+  var dotOrange = document.getElementById('flowDotOrange');
+  var dotCross = document.getElementById('flowDotCross');
+
+  function hideDots() { if(dotBlue)dotBlue.style.display='none'; if(dotOrange)dotOrange.style.display='none'; if(dotCross)dotCross.style.display='none'; }
+
   canvas.onmousemove = function(ev) {
     var fd = canvas._flowData; if (!fd) return;
     var rect = canvas.getBoundingClientRect();
-    var mx2 = ev.clientX - rect.left;
-    if (fd.cw <= 0) { hideTooltip(); return; }
+    var mx2 = ev.clientX - rect.left, my = ev.clientY - rect.top;
+    if (fd.cw <= 0) { hideTooltip(); hideDots(); return; }
     var idx = Math.round((mx2 - fd.PAD.L) / fd.cw * (fd.n - 1));
     idx = Math.max(0, Math.min(fd.n - 1, idx));
     drawFlowCompare(fd.flows, idx);
+
+    // Update blinking dot positions
+    var mainY = fd.ys(fd.mainVals[idx]), retailY = fd.ys(fd.retailVals[idx]), crossX = fd.xs(idx);
+    if (dotBlue) { dotBlue.style.display='block'; dotBlue.style.left=crossX+'px'; dotBlue.style.top=mainY+'px'; }
+    if (dotOrange) { dotOrange.style.display='block'; dotOrange.style.left=crossX+'px'; dotOrange.style.top=retailY+'px'; }
+    if (dotCross) { dotCross.style.display='block'; dotCross.style.left=crossX+'px'; }
+
     var dt = fd.flows[idx].date || '';
     var mv = fd.mainVals[idx], rv = fd.retailVals[idx];
     var mUp = mv >= 0, rUp = rv >= 0;
@@ -1769,9 +1802,10 @@ function initFlowCompareHover(flows) {
     html += '<div class="tt-row"><span class="tt-label" style="color:#3b82f6">● Main Force</span><span class="'+(mUp?'tt-up':'tt-down')+'">'+(mUp?'+':'')+mv.toFixed(2)+'W</span></div>';
     html += '<div class="tt-row"><span class="tt-label" style="color:#f97316">● Retail</span><span class="'+(rUp?'tt-up':'tt-down')+'">'+(rUp?'+':'')+rv.toFixed(2)+'W</span></div>';
     html += '<div class="tt-row"><span class="tt-label">Net</span><span class="'+(mv+rv>=0?'tt-up':'tt-down')+'">'+(mv+rv>=0?'+':'')+(mv+rv).toFixed(2)+'W</span></div>';
+    var tt = getTooltipEl(); if (tt) tt.classList.add('pulse');
     showTooltip(ev, html);
   };
-  canvas.onmouseleave = function() { drawFlowCompare(flows, -1); hideTooltip(); };
+  canvas.onmouseleave = function() { drawFlowCompare(flows, -1); hideTooltip(); hideDots(); };
   canvas.addEventListener('touchmove', function(ev) {
     if (ev.touches.length === 1) {
       var fd = canvas._flowData; if (!fd) return;
@@ -1780,9 +1814,13 @@ function initFlowCompareHover(flows) {
       var idx2 = Math.round((mx3 - fd.PAD.L) / fd.cw * (fd.n - 1));
       idx2 = Math.max(0, Math.min(fd.n - 1, idx2));
       drawFlowCompare(fd.flows, idx2);
+      var cy = fd.xs(idx2), my2 = fd.ys(fd.mainVals[idx2]), ry2 = fd.ys(fd.retailVals[idx2]);
+      if (dotBlue) { dotBlue.style.display='block'; dotBlue.style.left=cy+'px'; dotBlue.style.top=my2+'px'; }
+      if (dotOrange) { dotOrange.style.display='block'; dotOrange.style.left=cy+'px'; dotOrange.style.top=ry2+'px'; }
+      if (dotCross) { dotCross.style.display='block'; dotCross.style.left=cy+'px'; }
     }
   }, {passive: true});
-  canvas.addEventListener('touchend', function() { drawFlowCompare(flows, -1); hideTooltip(); });
+  canvas.addEventListener('touchend', function() { drawFlowCompare(flows, -1); hideTooltip(); hideDots(); });
 }
 
 async function loadMoneyFlow() {
