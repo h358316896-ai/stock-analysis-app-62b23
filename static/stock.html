@@ -1292,7 +1292,8 @@ function quickSearch(code, mkt) {
 // CHARTS (Candlestick + MACD + RSI)
 // ============================================================
 function drawCandlestick(canvas, data) {
-  const ctx = canvas.getContext('2d'), W = canvas.width = canvas.offsetWidth, H = canvas.height = canvas.offsetHeight;
+  const ctx = canvas.getContext('2d'), W = canvas.width = (canvas.offsetWidth || 600), H = canvas.height = (canvas.offsetHeight || 360);
+  if (W < 10 || H < 10) return;
   const kl = data.klines, n = kl.length;
   if (n < 2) return;
   const PAD = { T: 30, R: 60, B: 30, L: 60 }, cw = W - PAD.L - PAD.R, ch = H - PAD.T - PAD.B;
@@ -1336,7 +1337,8 @@ function drawCandlestick(canvas, data) {
 }
 
 function drawMACD(canvas, data) {
-  const ctx = canvas.getContext('2d'), W = canvas.width = canvas.offsetWidth, H = canvas.height = canvas.offsetHeight;
+  const ctx = canvas.getContext('2d'), W = canvas.width = (canvas.offsetWidth || 600), H = canvas.height = (canvas.offsetHeight || 160);
+  if (W < 10 || H < 10) return;
   if (!data.macd?.dif) return;
   const PAD = { T: 8, R: 50, B: 18, L: 50 }, cw = W - PAD.L - PAD.R, ch = H - PAD.T - PAD.B, n = data.dates.length;
   const all = [...data.macd.dif.filter(v=>v!=null), ...data.macd.dea.filter(v=>v!=null), ...data.macd.histogram.filter(v=>v!=null)];
@@ -1353,7 +1355,8 @@ function drawMACD(canvas, data) {
 }
 
 function drawRSI(canvas, data) {
-  const ctx = canvas.getContext('2d'), W = canvas.width = canvas.offsetWidth, H = canvas.height = canvas.offsetHeight;
+  const ctx = canvas.getContext('2d'), W = canvas.width = (canvas.offsetWidth || 600), H = canvas.height = (canvas.offsetHeight || 160);
+  if (W < 10 || H < 10) return;
   if (!data.rsi) return;
   const PAD = { T: 8, R: 30, B: 18, L: 40 }, cw = W - PAD.L - PAD.R, ch = H - PAD.T - PAD.B, n = data.dates.length;
   const xs = v => PAD.L + (v/(n-1))*cw, ys = v => PAD.T + (1-v/100)*ch;
@@ -1394,10 +1397,15 @@ async function loadIntraday() {
   try {
     const r = await fetch(`/api/stock/intraday?code=${state.stock.code}&market=${state.stock.market}`);
     const d = await r.json();
-    if (!d.points?.length) return;
+    if (!d.points?.length) {
+      const canvas = document.getElementById('intradayCanvas');
+      if (canvas) { const ctx = canvas.getContext('2d'); canvas.width = canvas.offsetWidth || 600; canvas.height = canvas.offsetHeight || 380; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = '#585870'; ctx.font = '13px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('No intraday data available for this stock', canvas.width/2, canvas.height/2); }
+      return;
+    }
     const canvas = document.getElementById('intradayCanvas'), ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    canvas.width = canvas.offsetWidth || 600; canvas.height = canvas.offsetHeight || 380;
     const W = canvas.width, H = canvas.height, PAD = { T: 20, R: 60, B: 28, L: 60 }, cw = W-PAD.L-PAD.R, ch = H-PAD.T-PAD.B;
+    if (W < 10 || H < 10) return;
     const pr = d.points.map(p => p.price), n = pr.length;
     let mn = Math.min(...pr), mx = Math.max(...pr), pd = (mx-mn)*0.05 || 0.01;
     mn -= pd; mx += pd;
@@ -1422,11 +1430,13 @@ async function loadFinancials() {
     const r = await fetch(`/api/stock/financials?code=${state.stock.code}&market=${state.stock.market}`);
     const d = await r.json(); const f = d.financials || {};
     const items = [
-      ['P/E Ratio', f.pe?.toFixed(2) || '--'], ['P/B Ratio', f.pb?.toFixed(2) || '--'], ['ROE', f.roe ? (f.roe*100).toFixed(1)+'%' : '--'],
+      ['P/E Ratio', f.pe != null ? Number(f.pe).toFixed(2) : '--'], ['P/B Ratio', f.pb != null ? Number(f.pb).toFixed(2) : '--'],
+      ['ROE', f.roe != null ? (Number(f.roe)*100).toFixed(1)+'%' : '--'],
       ['Market Cap', fmt(f.total_mv)], ['Revenue', fmt(f.revenue)], ['Net Profit', fmt(f.net_profit)],
-      ['EPS', f.eps?.toFixed(2) || '--'], ['Book Value/Sh', f.bps?.toFixed(2) || '--'],
-      ['Debt Ratio', f.debt_ratio?.toFixed(1)+'%' || '--'], ['Gross Margin', f.gross_margin ? (f.gross_margin*100).toFixed(1)+'%' : '--'],
-      ['Net Margin', f.net_margin ? (f.net_margin*100).toFixed(1)+'%' : '--']
+      ['EPS', f.eps != null ? Number(f.eps).toFixed(2) : '--'], ['Book Value/Sh', f.bps != null ? Number(f.bps).toFixed(2) : '--'],
+      ['Debt Ratio', f.debt_ratio != null ? Number(f.debt_ratio).toFixed(1)+'%' : '--'],
+      ['Gross Margin', f.gross_margin != null ? (Number(f.gross_margin)*100).toFixed(1)+'%' : '--'],
+      ['Net Margin', f.net_margin != null ? (Number(f.net_margin)*100).toFixed(1)+'%' : '--']
     ];
     document.getElementById('financialGrid').innerHTML = items.map(([l, v]) => '<div class="fin-card"><div class="fc-label">'+l+'</div><div class="fc-value">'+v+'</div></div>').join('');
   } catch(e) {}
@@ -1440,21 +1450,26 @@ async function loadMoneyFlow() {
   try {
     const r = await fetch('/api/stock/money-flow?code=' + state.stock.code + '&market=' + state.stock.market);
     const d = await r.json();
-    if (!d.flows || d.flows.length < 3) return;
+    if (!d.flows || d.flows.length < 1) {
+      document.getElementById('flowSummary').innerHTML = '<p style="color:var(--text-tertiary);padding:20px;text-align:center">No money flow data available</p>';
+      return;
+    }
 
     function drawFlowBar(canvasId, key, color, label) {
       var canvas = document.getElementById(canvasId);
       if (!canvas) return;
       var ctx = canvas.getContext('2d');
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      canvas.width = canvas.offsetWidth || 600;
+      canvas.height = canvas.offsetHeight || 200;
       var W = canvas.width, H = canvas.height;
+      if (W < 10 || H < 10) return;
       var PAD = {T:20,R:50,B:30,L:55}, cw=W-PAD.L-PAD.R, ch=H-PAD.T-PAD.B;
       var vals = d.flows.map(function(f){return f[key];});
       var mx = Math.max.apply(null, vals.map(Math.abs));
       if (mx === 0) mx = 1;
       mx *= 1.2;
-      var xs = function(i){return PAD.L+(i/(vals.length-1))*cw;};
+      var nvals = vals.length;
+      var xs = function(i){return PAD.L+((nvals>1?i/(nvals-1):0.5))*cw;};
       var ys = function(v){return PAD.T+(1-(v+mx)/(2*mx))*ch;};
       var zeroY = ys(0);
 
