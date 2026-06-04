@@ -369,44 +369,55 @@ def stock_search():
 
     results = []
 
-    # ---- A-shares: Eastmoney autocomplete (best for partial matching) ----
-    if market in ("cn", "all"):
-        try:
-            em_url = f"https://searchapi.eastmoney.com/api/suggest/get?input={keyword}&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count=20"
-            em_resp = requests.get(em_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=8)
-            em_data = em_resp.json()
-            if em_data.get("QuotationCodeTable") and em_data["QuotationCodeTable"].get("Data"):
-                for item in em_data["QuotationCodeTable"]["Data"]:
-                    code = item.get("Code", "")
-                    name = item.get("Name", "")
-                    mkt_str = item.get("MarketId", "")
-                    # MarketId: "1"=Shanghai, "0"=Shenzhen, "116"=ChiNext, etc.
-                    if code and name:
-                        results.append({"code": code, "name": name, "market": "cn"})
-        except Exception:
-            pass
+    # ---- A-shares: LOCAL database (instant, no network) ----
+    if market in ("cn", "all") and STOCK_NAMES:
+        kw = keyword.lower()
+        for code, name in STOCK_NAMES.items():
+            if kw in code.lower() or kw in name.lower():
+                results.append({"code": code, "name": name, "market": "cn"})
+            if len(results) >= 30:
+                break
 
-        # Fallback: Tencent smartbox
-        if len(results) == 0:
-            results.extend(_search_online_tencent(keyword, "gp"))
+    # ---- HK stocks: LOCAL database ----
+    if market in ("hk", "all") and HK_STOCK_NAMES:
+        kw = keyword.lower()
+        hk_cnt = 0
+        for code, name in HK_STOCK_NAMES.items():
+            if kw in code.lower() or kw in name.lower():
+                results.append({"code": code, "name": name, "market": "hk"})
+                hk_cnt += 1
+            if hk_cnt >= 15:
+                break
 
-    # ---- HK stocks: Tencent smartbox ----
-    if market in ("hk", "all"):
-        try:
-            hk_results = _search_online_tencent(keyword, "hk")
-            for r in hk_results:
-                r["market"] = "hk"
-            results.extend(hk_results)
-        except Exception:
-            pass
-
-    # ---- US stocks: Tencent smartbox ----
+    # ---- US stocks: online API ----
     if market in ("us", "all"):
         try:
             us_results = _search_us_stocks(keyword)
-            results.extend(us_results)
+            results.extend(us_results[:20])
         except Exception:
             pass
+
+    # ---- Online fallback if local found < 3 results ----
+    if len(results) < 3:
+        if market in ("cn", "all"):
+            try:
+                online = _search_online_tencent(keyword, "gp")
+                existing = {r["code"] for r in results if r["market"] == "cn"}
+                for r in online:
+                    if r["code"] not in existing:
+                        results.append(r)
+            except Exception:
+                pass
+        if market in ("hk", "all"):
+            try:
+                online = _search_online_tencent(keyword, "hk")
+                existing = {r["code"] for r in results if r["market"] == "hk"}
+                for r in online:
+                    r["market"] = "hk"
+                    if r["code"] not in existing:
+                        results.append(r)
+            except Exception:
+                pass
 
     # Deduplicate
     seen = set()
@@ -421,7 +432,7 @@ def stock_search():
         if key not in seen:
             seen.add(key)
             deduped.append(r)
-            if len(deduped) >= 30:
+            if len(deduped) >= 40:
                 break
 
     return jsonify({"results": deduped})
