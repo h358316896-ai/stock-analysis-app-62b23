@@ -868,6 +868,13 @@ body {
 
       <!-- Money Flow -->
       <div class="chart-panel" id="cp-moneyflow">
+        <div class="chart-row-full" style="margin-bottom:12px">
+          <canvas id="flowCompareCanvas" height="280"></canvas>
+          <div style="display:flex;gap:16px;margin-top:4px;font-size:11px;color:var(--text-tertiary);justify-content:center">
+            <span><span style="display:inline-block;width:10px;height:10px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Institutional (Main Force)</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:#f97316;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Retail Investors</span>
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div><canvas id="flowMainCanvas" height="200"></canvas></div>
           <div><canvas id="flowRetailCanvas" height="200"></canvas></div>
@@ -1638,6 +1645,116 @@ async function loadFinancials() {
 // ============================================================
 // Money Flow Chart (Institutional vs Retail)
 // ============================================================
+function drawFlowCompare(flows) {
+  var canvas = document.getElementById('flowCompareCanvas');
+  if (!canvas || !flows || flows.length < 1) return;
+  var ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 700;
+  canvas.height = canvas.offsetHeight || 280;
+  var W = canvas.width, H = canvas.height;
+  if (W < 10 || H < 10) return;
+  var PAD = {T: 20, R: 60, B: 30, L: 55}, cw = W - PAD.L - PAD.R, ch = H - PAD.T - PAD.B;
+  var n = flows.length;
+
+  var mainVals = flows.map(function(f){return f.main || 0;});
+  var retailVals = flows.map(function(f){return f.retail || 0;});
+  var allVals = mainVals.concat(retailVals);
+  var mx = Math.max.apply(null, allVals.map(Math.abs));
+  if (mx === 0) mx = 1; mx *= 1.2;
+  var zeroY = PAD.T + ch / 2;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#111118'; ctx.fillRect(PAD.L, PAD.T, cw, ch);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 0.5;
+  for (var g = 0; g <= 4; g++) {
+    var gy = PAD.T + (g/4) * ch;
+    ctx.beginPath(); ctx.moveTo(PAD.L, gy); ctx.lineTo(W - PAD.R, gy); ctx.stroke();
+  }
+  // Zero line
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD.L, zeroY); ctx.lineTo(W - PAD.R, zeroY); ctx.stroke();
+
+  var xs = function(i){return PAD.L + ((n>1 ? i/(n-1) : 0.5)) * cw;};
+  var ys = function(v){return zeroY - (v / mx) * (ch/2);};
+  var bw = Math.max(2, Math.min(20, cw / n * 0.6));
+
+  // Draw bars for each day
+  for (var i = 0; i < n; i++) {
+    var x = xs(i);
+    // Main force bar
+    var mainH = Math.abs(ys(mainVals[i]) - zeroY);
+    if (mainH < 0.5) mainH = 0.5;
+    ctx.fillStyle = mainVals[i] >= 0 ? '#3b82f6' : 'rgba(59,130,246,0.45)';
+    ctx.fillRect(x - bw, mainVals[i] >= 0 ? ys(mainVals[i]) : zeroY, bw, mainH);
+    // Retail bar
+    var retailH = Math.abs(ys(retailVals[i]) - zeroY);
+    if (retailH < 0.5) retailH = 0.5;
+    ctx.fillStyle = retailVals[i] >= 0 ? '#f97316' : 'rgba(249,115,22,0.45)';
+    ctx.fillRect(x, retailVals[i] >= 0 ? ys(retailVals[i]) : zeroY, bw, retailH);
+  }
+
+  // Connect lines for main force
+  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.beginPath();
+  for (var i2 = 0; i2 < n; i2++) { var x2 = xs(i2); var y2 = ys(mainVals[i2]); i2 === 0 ? ctx.moveTo(x2, y2) : ctx.lineTo(x2, y2); }
+  ctx.stroke();
+  // Connect lines for retail
+  ctx.strokeStyle = '#f97316'; ctx.lineWidth = 2; ctx.beginPath();
+  for (var i3 = 0; i3 < n; i3++) { var x3 = xs(i3); var y3 = ys(retailVals[i3]); i3 === 0 ? ctx.moveTo(x3, y3) : ctx.lineTo(x3, y3); }
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#585870'; ctx.font = '10px Inter, sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText('+'+mx.toFixed(0)+'W', PAD.L - 4, PAD.T + 12);
+  ctx.fillText('0', PAD.L - 4, zeroY + 4);
+  ctx.fillText('-'+mx.toFixed(0)+'W', PAD.L - 4, H - PAD.B + 2);
+  // Date labels
+  ctx.textAlign = 'center';
+  for (var i4 = 0; i4 < n; i4 += Math.max(1, Math.floor(n/6))) {
+    ctx.fillText((flows[i4].date || '').slice(5), xs(i4), H - 8);
+    // X-axis tick
+    ctx.beginPath(); ctx.moveTo(xs(i4), PAD.T); ctx.lineTo(xs(i4), H - PAD.B); ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+
+  // Hover events
+  canvas.onmousemove = function(ev) {
+    var rect = canvas.getBoundingClientRect();
+    var mx2 = ev.clientX - rect.left;
+    if (cw <= 0) { hideTooltip(); return; }
+    var idx = Math.round((mx2 - PAD.L) / cw * (n - 1));
+    idx = Math.max(0, Math.min(n - 1, idx));
+    drawFlowCompare(flows);
+    var cx = xs(idx);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(cx, PAD.T); ctx.lineTo(cx, H - PAD.B); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+    var dt = flows[idx].date || '';
+    var html = '<div class="tt-date">'+dt+'</div>';
+    html += '<div class="tt-row"><span class="tt-label">Main Force</span><span style="color:#3b82f6">'+(mainVals[idx]>=0?'+':'')+mainVals[idx].toFixed(2)+'W</span></div>';
+    html += '<div class="tt-row"><span class="tt-label">Retail</span><span style="color:#f97316">'+(retailVals[idx]>=0?'+':'')+retailVals[idx].toFixed(2)+'W</span></div>';
+    showTooltip(ev, html);
+  };
+  canvas.onmouseleave = function() { drawFlowCompare(flows); hideTooltip(); };
+  canvas.addEventListener('touchmove', function(ev) {
+    if (ev.touches.length === 1) {
+      var rect = canvas.getBoundingClientRect();
+      var mx3 = ev.touches[0].clientX - rect.left;
+      var idx2 = Math.round((mx3 - PAD.L) / cw * (n - 1));
+      idx2 = Math.max(0, Math.min(n - 1, idx2));
+      drawFlowCompare(flows);
+      var cx2 = xs(idx2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(cx2, PAD.T); ctx.lineTo(cx2, H - PAD.B); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }, {passive: true});
+  canvas.addEventListener('touchend', function() { drawFlowCompare(flows); hideTooltip(); });
+}
+
 async function loadMoneyFlow() {
   if (!state.stock) return;
   try {
@@ -1693,6 +1810,9 @@ async function loadMoneyFlow() {
         ctx.fillText((d.flows[i].date||'').slice(5), xs(i), H-8);
       }
     }
+
+    // Comparison chart: main force vs retail on same canvas
+    drawFlowCompare(d.flows);
 
     drawFlowBar('flowMainCanvas', 'main', '#3b82f6', 'Institutional (Main Force)');
     drawFlowBar('flowRetailCanvas', 'retail', '#f97316', 'Retail Investors');
