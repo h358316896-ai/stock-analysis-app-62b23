@@ -1525,6 +1525,78 @@ def economic_calendar():
     return jsonify({"calendar": events, "note": "Sample calendar. Live data requires premium API key."})
 
 
+# ==========================================================
+# 主力/散户资金流向 (Institutional vs Retail Money Flow)
+# ==========================================================
+@app.route("/api/stock/money-flow")
+def stock_money_flow():
+    """获取个股资金流向 — 主力/超大单/大单/中单/小单/散户"""
+    code = request.args.get("code", "").strip()
+    market = request.args.get("market", "cn").strip()
+    if not code:
+        return jsonify({"error": "no code"}), 400
+
+    result = {"flows": [], "summary": {}}
+
+    try:
+        if market == "cn":
+            # Eastmoney fund flow API
+            prefix = "1" if code.startswith("6") else "0"
+            secid = f"{prefix}.{code}"
+            url = (
+                f"https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get"
+                f"?secid={secid}&fields1=f1,f2,f3,f7"
+                f"&fields2=f51,f52,f53,f54,f55,f56&lmt=60"
+            )
+            resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+            data = resp.json()
+            if data.get("data") and data["data"].get("klines"):
+                for line in data["data"]["klines"]:
+                    parts = line.split(",")
+                    if len(parts) >= 6:
+                        result["flows"].append({
+                            "date": parts[0],
+                            "main": round(float(parts[1]) / 1e4, 2),     # 主力净流入(万)
+                            "retail": round(float(parts[2]) / 1e4, 2),   # 小单净流入(万)
+                            "mid": round(float(parts[3]) / 1e4, 2),      # 中单净流入(万)
+                            "large": round(float(parts[4]) / 1e4, 2),    # 大单净流入(万)
+                            "xl": round(float(parts[5]) / 1e4, 2),       # 超大单净流入(万)
+                        })
+
+        # Summary stats (last 5 days)
+        if result["flows"]:
+            recent = result["flows"][-5:]
+            main_sum = sum(f["main"] for f in recent)
+            retail_sum = sum(f["retail"] for f in recent)
+            result["summary"] = {
+                "main_5d": round(main_sum, 2),
+                "retail_5d": round(retail_sum, 2),
+                "main_vs_retail": "主力流入" if main_sum > 0 else "主力流出",
+                "strength": "偏强" if main_sum > retail_sum else "偏弱",
+                "period": f"{recent[0]['date']} ~ {recent[-1]['date']}",
+            }
+    except Exception as e:
+        # Fallback: try Tencent fund flow
+        try:
+            prefix = "sh" if code.startswith(("6", "5", "1")) else "sz"
+            ff_url = f"https://qt.gtimg.cn/q=ff_{prefix}{code}"
+            text = _fetch_tencent_raw(ff_url)
+            if text:
+                match = re.search(r'="([^"]+)"', text)
+                if match:
+                    fields = match.group(1).split("~")
+                    if len(fields) >= 10:
+                        result["summary"] = {
+                            "main_net": fields[1] if len(fields) > 1 else "0",
+                            "retail_net": fields[3] if len(fields) > 3 else "0",
+                            "source": "tencent",
+                        }
+        except Exception:
+            pass
+
+    return jsonify(result)
+
+
 @app.route("/api/media/generate", methods=["POST"])
 def media_generate():
     data = request.json or {}
