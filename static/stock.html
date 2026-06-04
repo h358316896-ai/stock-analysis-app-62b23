@@ -1118,24 +1118,34 @@ async function loadCalendar() {
 // ============================================================
 async function autoSearch() {
   const q = document.getElementById('stockSearch').value.trim();
-  if (q.length < 2) { document.getElementById('searchResults').classList.remove('show'); return; }
+  const list = document.getElementById('searchResults');
+  if (q.length < 1) { list.classList.remove('show'); return; }
   const mkt = document.getElementById('marketSelect').value;
+
+  list.innerHTML = '<div style="padding:12px;color:var(--text-tertiary);text-align:center">Searching...</div>';
+  list.classList.add('show');
+
   try {
     const r = await fetch(`/api/stock/search?q=${encodeURIComponent(q)}&market=${mkt}`);
     const d = await r.json();
-    const list = document.getElementById('searchResults');
     list.innerHTML = '';
     if (d.results && d.results.length) {
       d.results.forEach(s => {
-        const badge = `<span class="badge badge-${s.market}">${MKT[s.market]}</span>`;
+        const clr = MKT_CLR[s.market] || '#6366f1';
+        const badge = `<span style="font-size:10px;font-weight:600;color:white;background:${clr};padding:2px 7px;border-radius:3px">${MKT[s.market]}</span>`;
         const div = document.createElement('div');
-        div.innerHTML = `${badge} <span style="font-weight:500">${s.name}</span> <span style="color:var(--text-tertiary)">${s.code}</span>`;
+        div.innerHTML = `${badge} <span style="font-weight:500">${s.name}</span> <span style="color:var(--text-tertiary);margin-left:auto">${s.code}</span>`;
+        div.style.cssText = 'display:flex;align-items:center;gap:10px';
         div.onclick = () => { document.getElementById('stockSearch').value = s.code; document.getElementById('marketSelect').value = s.market; list.classList.remove('show'); searchStock(); };
         list.appendChild(div);
       });
-      list.classList.add('show');
+    } else {
+      list.innerHTML = '<div style="padding:12px;color:var(--text-tertiary);text-align:center">No results — try full code or name</div>';
     }
-  } catch(e) {}
+  } catch(e) {
+    list.innerHTML = '<div style="padding:12px;color:var(--red);text-align:center">Search unavailable, try again</div>';
+  }
+}
 }
 
 function showToast(msg, type='info') {
