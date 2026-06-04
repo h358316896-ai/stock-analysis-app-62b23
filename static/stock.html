@@ -486,9 +486,33 @@ body {
 
 .chart-panel { display: none; margin-bottom: 20px; }
 .chart-panel.active { display: block; }
-.chart-panel canvas { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); width: 100%; }
+.chart-panel canvas { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); width: 100%; cursor: crosshair; }
+.chart-panel canvas:hover { border-color: var(--border-strong); }
 
 .chart-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Chart crosshair tooltip */
+#chartTooltip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 12px;
+  font-family: var(--font);
+  color: var(--text-primary);
+  z-index: 9999;
+  display: none;
+  min-width: 140px;
+  box-shadow: var(--shadow-lg);
+  line-height: 1.7;
+}
+#chartTooltip .tt-date { color: var(--accent); font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+#chartTooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; }
+#chartTooltip .tt-label { color: var(--text-tertiary); }
+#chartTooltip .tt-up { color: var(--green); }
+#chartTooltip .tt-down { color: var(--red); }
 .chart-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .chart-row-full { margin-bottom: 12px; }
 
@@ -906,6 +930,7 @@ body {
   </div>
 </div>
 
+<div id="chartTooltip"></div>
 <script>
 // ============================================================
 // APP STATE
@@ -1291,7 +1316,91 @@ function quickSearch(code, mkt) {
 // ============================================================
 // CHARTS (Candlestick + MACD + RSI)
 // ============================================================
-function drawCandlestick(canvas, data) {
+// Crosshair state
+window._chartHoverX = -1;
+window._chartData = null;
+window._chartDataN = 0;
+var tooltipEl = null;
+
+function getTooltipEl() {
+  if (!tooltipEl) tooltipEl = document.getElementById('chartTooltip');
+  return tooltipEl;
+}
+
+function hideTooltip() { var tt = getTooltipEl(); if (tt) tt.style.display = 'none'; }
+
+function showTooltip(ev, html) {
+  var tt = getTooltipEl(); if (!tt) return;
+  tt.innerHTML = html; tt.style.display = 'block';
+  var x = ev.clientX + 16, y = ev.clientY - 10;
+  if (x + 160 > window.innerWidth) x = ev.clientX - 170;
+  if (y + 200 > window.innerHeight) y = window.innerHeight - 210;
+  tt.style.left = x + 'px'; tt.style.top = y + 'px';
+}
+
+// Shared crosshair drawing
+function drawCrosshairLine(ctx, x, H, PAD) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(x, PAD.T); ctx.lineTo(x, H - PAD.B); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function redrawAllCharts(hoverIdx) {
+  window._chartHoverX = hoverIdx;
+  var d = window._chartData;
+  if (!d) return;
+  if (document.getElementById('cp-kline').classList.contains('active')) {
+    drawCandlestick(document.getElementById('klineCanvas'), d, hoverIdx);
+    drawMACD(document.getElementById('macdCanvas'), d, hoverIdx);
+    drawRSI(document.getElementById('rsiCanvas'), d, hoverIdx);
+  }
+}
+
+function initChartHover(canvas, data, getTooltipHTMLFn) {
+  var n = data.dates ? data.dates.length : (data.klines ? data.klines.length : 0);
+  window._chartDataN = n;
+  canvas.onmousemove = function(ev) {
+    var rect = canvas.getBoundingClientRect();
+    var mx = ev.clientX - rect.left;
+    var PAD_L = 60, PAD_R = 60;
+    var cw = rect.width - PAD_L - PAD_R;
+    if (cw <= 0) { hideTooltip(); return; }
+    var idx = Math.round((mx - PAD_L) / cw * (n - 1));
+    idx = Math.max(0, Math.min(n - 1, idx));
+    redrawAllCharts(idx);
+    if (getTooltipHTMLFn) {
+      var html = getTooltipHTMLFn(idx);
+      if (html) showTooltip(ev, html);
+    }
+  };
+  canvas.onmouseleave = function() {
+    redrawAllCharts(-1);
+    hideTooltip();
+  };
+  // Touch support
+  canvas.addEventListener('touchmove', function(ev) {
+    if (ev.touches.length === 1) {
+      var rect = canvas.getBoundingClientRect();
+      var mx = ev.touches[0].clientX - rect.left;
+      var PAD_L = 60, PAD_R = 60;
+      var cw = rect.width - PAD_L - PAD_R;
+      if (cw <= 0) return;
+      var idx = Math.round((mx - PAD_L) / cw * (n - 1));
+      idx = Math.max(0, Math.min(n - 1, idx));
+      redrawAllCharts(idx);
+    }
+  }, {passive: true});
+  canvas.addEventListener('touchend', function() {
+    redrawAllCharts(-1);
+    hideTooltip();
+  });
+}
+
+function drawCandlestick(canvas, data, hoverIdx) {
+  if (hoverIdx === undefined) hoverIdx = -1;
   const ctx = canvas.getContext('2d'), W = canvas.width = (canvas.offsetWidth || 600), H = canvas.height = (canvas.offsetHeight || 360);
   if (W < 10 || H < 10) return;
   const kl = data.klines, n = kl.length;
@@ -1334,9 +1443,22 @@ function drawCandlestick(canvas, data) {
   // Date labels
   ctx.textAlign = 'center';
   for (let i = 0; i < n; i += Math.max(1, Math.floor(n/8))) { ctx.fillText(data.dates[i]?.slice(5) || '', xs(i), H-8); }
+  // Crosshair
+  if (hoverIdx >= 0 && hoverIdx < n) {
+    var cx = xs(hoverIdx);
+    drawCrosshairLine(ctx, cx, H, PAD);
+    // Highlight candle
+    var k = kl[hoverIdx];
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(cx - barW*1.5, PAD.T, barW*3, ch);
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 10px Inter'; ctx.textAlign = 'center';
+    var up2 = k.close >= k.open;
+    ctx.fillStyle = up2 ? '#22c55e' : '#ef4444';
+    ctx.fillText((up2?'+':'')+((k.close-k.open)/(k.open||1)*100).toFixed(2)+'%', cx, PAD.T+12);
+  }
 }
 
-function drawMACD(canvas, data) {
+function drawMACD(canvas, data, hoverIdx) {
+  if (hoverIdx === undefined) hoverIdx = -1;
   const ctx = canvas.getContext('2d'), W = canvas.width = (canvas.offsetWidth || 600), H = canvas.height = (canvas.offsetHeight || 160);
   if (W < 10 || H < 10) return;
   if (!data.macd?.dif) return;
@@ -1352,9 +1474,20 @@ function drawMACD(canvas, data) {
   data.macd.histogram.forEach((v, i) => { if (v==null) return; const x = xs(i); ctx.fillStyle = v>=0 ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'; ctx.fillRect(x-(cw/n*0.25), Math.min(zy, ys(v)), cw/n*0.5, Math.abs(zy-ys(v))); });
   [{ k:'dif', c:'#eab308' }, { k:'dea', c:'#3b82f6' }].forEach(l => { ctx.strokeStyle = l.c; ctx.lineWidth = 1.2; ctx.beginPath(); let st=false; data.macd[l.k].forEach((v,i)=>{if(v==null){st=false;return}const x=xs(i),y=ys(v);st?ctx.lineTo(x,y):(ctx.moveTo(x,y),st=true)}); ctx.stroke(); });
   ctx.fillStyle = '#585870'; ctx.font = '9px Inter'; ctx.fillText('MACD', PAD.L, 12);
+  // Crosshair
+  if (hoverIdx >= 0 && hoverIdx < n) {
+    var cx2 = xs(hoverIdx);
+    drawCrosshairLine(ctx, cx2, H, PAD);
+    var difVal = data.macd.dif[hoverIdx], deaVal = data.macd.dea[hoverIdx], histVal = data.macd.histogram[hoverIdx];
+    if (difVal != null) {
+      ctx.fillStyle = '#eab308'; ctx.font = 'bold 9px Inter'; ctx.textAlign = 'left';
+      ctx.fillText('DIF:'+difVal.toFixed(3), cx2+4, 12);
+    }
+  }
 }
 
-function drawRSI(canvas, data) {
+function drawRSI(canvas, data, hoverIdx) {
+  if (hoverIdx === undefined) hoverIdx = -1;
   const ctx = canvas.getContext('2d'), W = canvas.width = (canvas.offsetWidth || 600), H = canvas.height = (canvas.offsetHeight || 160);
   if (W < 10 || H < 10) return;
   if (!data.rsi) return;
@@ -1367,6 +1500,16 @@ function drawRSI(canvas, data) {
   data.rsi.forEach((v, i) => { if (v==null) { st=false; return; } const x = xs(i), y = ys(v); st ? ctx.lineTo(x, y) : (ctx.moveTo(x, y), st = true); });
   ctx.stroke();
   ctx.fillStyle = '#585870'; ctx.font = '9px Inter'; ctx.fillText('RSI(14)', PAD.L, 12);
+  // Crosshair
+  if (hoverIdx >= 0 && hoverIdx < n) {
+    var cx3 = xs(hoverIdx);
+    drawCrosshairLine(ctx, cx3, H, PAD);
+    var rsiVal = data.rsi[hoverIdx];
+    if (rsiVal != null) {
+      ctx.fillStyle = '#a855f7'; ctx.font = 'bold 9px Inter'; ctx.textAlign = 'left';
+      ctx.fillText('RSI:'+rsiVal.toFixed(1), cx3+4, 12);
+    }
+  }
 }
 
 async function loadIndicatorsChart(code, mkt) {
@@ -1374,18 +1517,34 @@ async function loadIndicatorsChart(code, mkt) {
     const r = await fetch(`/api/stock/indicators?code=${code}&market=${mkt}&limit=120`);
     const data = await r.json();
     if (data.error) return;
-    drawCandlestick(document.getElementById('klineCanvas'), data);
+    window._chartData = data;
+    var kCanvas = document.getElementById('klineCanvas');
+    drawCandlestick(kCanvas, data);
     drawMACD(document.getElementById('macdCanvas'), data);
     drawRSI(document.getElementById('rsiCanvas'), data);
-    window._chartData = data;
+    // Crosshair + tooltip
+    initChartHover(kCanvas, data, function(idx) {
+      var d = window._chartData; if (!d || idx < 0) return '';
+      var dt = (d.dates[idx]||''), o = d.klines[idx].open, h = d.klines[idx].high, l = d.klines[idx].low, c = d.klines[idx].close, v = d.klines[idx].volume;
+      var up = c >= o, clr = up ? 'tt-up' : 'tt-down';
+      var html = '<div class="tt-date">'+dt+'</div>';
+      html += '<div class="tt-row"><span class="tt-label">Open</span><span>'+o.toFixed(2)+'</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">High</span><span class="tt-up">'+h.toFixed(2)+'</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">Low</span><span class="tt-down">'+l.toFixed(2)+'</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">Close</span><span class="'+clr+'">'+c.toFixed(2)+'</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">Vol</span><span>'+fmt(v)+'</span></div>';
+      var chg = ((c-o)/(o||1)*100).toFixed(2);
+      html += '<div class="tt-row"><span class="tt-label">Chg</span><span class="'+clr+'">'+(up?'+':'')+chg+'%</span></div>';
+      return html;
+    });
   } catch(e) {}
 }
 
-window.addEventListener('resize', () => {
+window.addEventListener('resize', function() {
   if (document.getElementById('cp-kline').classList.contains('active') && window._chartData) {
-    drawCandlestick(document.getElementById('klineCanvas'), window._chartData);
-    drawMACD(document.getElementById('macdCanvas'), window._chartData);
-    drawRSI(document.getElementById('rsiCanvas'), window._chartData);
+    drawCandlestick(document.getElementById('klineCanvas'), window._chartData, window._chartHoverX);
+    drawMACD(document.getElementById('macdCanvas'), window._chartData, window._chartHoverX);
+    drawRSI(document.getElementById('rsiCanvas'), window._chartData, window._chartHoverX);
   }
 });
 
@@ -1411,16 +1570,50 @@ async function loadIntraday() {
     mn -= pd; mx += pd;
     const xs = v => PAD.L + (v/(n-1))*cw, ys = v => PAD.T + (1-(v-mn)/(mx-mn))*ch;
 
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#111118'; ctx.fillRect(PAD.L, PAD.T, cw, ch);
+    function drawIntradayChart(hoverIdx) {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#111118'; ctx.fillRect(PAD.L, PAD.T, cw, ch);
 
-    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.beginPath();
-    for (let i = 0; i < n; i++) { const x = xs(i), y = ys(pr[i]); i===0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-    ctx.stroke();
-    ctx.lineTo(xs(n-1), ys(mn)); ctx.lineTo(xs(0), ys(mn)); ctx.closePath();
-    ctx.fillStyle = 'rgba(59,130,246,0.08)'; ctx.fill();
-    ctx.fillStyle = '#585870'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
-    for (let i = 0; i < n; i += Math.max(1, Math.floor(n/6))) { ctx.fillText(d.points[i].time, xs(i), H-8); }
+      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.beginPath();
+      for (let i2 = 0; i2 < n; i2++) { const x2 = xs(i2), y2 = ys(pr[i2]); i2===0 ? ctx.moveTo(x2, y2) : ctx.lineTo(x2, y2); }
+      ctx.stroke();
+      ctx.lineTo(xs(n-1), ys(mn)); ctx.lineTo(xs(0), ys(mn)); ctx.closePath();
+      ctx.fillStyle = 'rgba(59,130,246,0.08)'; ctx.fill();
+      ctx.fillStyle = '#585870'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
+      for (let i3 = 0; i3 < n; i3 += Math.max(1, Math.floor(n/6))) { ctx.fillText(d.points[i3].time, xs(i3), H-8); }
+      // Crosshair
+      if (hoverIdx >= 0 && hoverIdx < n) {
+        var hx = xs(hoverIdx); drawCrosshairLine(ctx, hx, H, PAD);
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(hx, ys(pr[hoverIdx]), 4, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    drawIntradayChart(-1);
+
+    // Hover events
+    canvas.onmousemove = function(ev) {
+      var rect = canvas.getBoundingClientRect();
+      var mx2 = ev.clientX - rect.left;
+      if (cw <= 0) { hideTooltip(); return; }
+      var idx = Math.round((mx2 - PAD.L) / cw * (n - 1));
+      idx = Math.max(0, Math.min(n - 1, idx));
+      drawIntradayChart(idx);
+      var pt = d.points[idx];
+      var html = '<div class="tt-date">'+pt.time+'</div>';
+      html += '<div class="tt-row"><span class="tt-label">Price</span><span>'+pt.price.toFixed(2)+'</span></div>';
+      if (pt.volume) html += '<div class="tt-row"><span class="tt-label">Vol</span><span>'+fmt(pt.volume)+'</span></div>';
+      showTooltip(ev, html);
+    };
+    canvas.onmouseleave = function() { drawIntradayChart(-1); hideTooltip(); };
+    canvas.addEventListener('touchmove', function(ev) {
+      if (ev.touches.length === 1) {
+        var rect = canvas.getBoundingClientRect();
+        var mx3 = ev.touches[0].clientX - rect.left;
+        var idx2 = Math.round((mx3 - PAD.L) / cw * (n - 1));
+        idx2 = Math.max(0, Math.min(n - 1, idx2));
+        drawIntradayChart(idx2);
+      }
+    }, {passive: true});
+    canvas.addEventListener('touchend', function() { drawIntradayChart(-1); hideTooltip(); });
   } catch(e) {}
 }
 
