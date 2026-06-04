@@ -921,23 +921,33 @@ def stock_intraday():
             if not text:
                 return jsonify({"points": [], "error": "fetch failed"})
 
-            # Parse minute data
-            match = re.search(r'min_data="([^"]*)"', text)
-            if not match:
-                return jsonify({"points": []})
+            # Parse minute data - format: min_data={...json...}
+            # Remove the "min_data=" prefix, parse as JSON
+            idx = text.find("{")
+            if idx < 0:
+                return jsonify({"points": [], "error": "no JSON found"})
+            try:
+                data = json.loads(text[idx:])
+                stock_key = f"{prefix}{code}"
+                minute_list = data.get("data", {}).get(stock_key, {}).get("data", {}).get("data", [])
+            except (json.JSONDecodeError, KeyError):
+                return jsonify({"points": [], "error": "JSON parse failed"})
 
-            raw = match.group(1)
-            lines = raw.strip().split("\\n")
             points = []
-            prev_close = None
-            for line in lines:
-                parts = line.strip().split()
+            prev_price = None
+            for item in minute_list:
+                parts = str(item).split()
                 if len(parts) >= 2:
                     try:
                         t = parts[0]
                         price = float(parts[1])
                         vol = float(parts[3]) if len(parts) > 3 else 0
-                        points.append({"time": t, "price": price, "volume": vol})
+                        if prev_price is not None:
+                            change = round(price - prev_price, 2)
+                        else:
+                            change = 0
+                        prev_price = price
+                        points.append({"time": t, "price": price, "volume": vol, "change": change})
                     except (ValueError, IndexError):
                         continue
             return jsonify({"points": points})
