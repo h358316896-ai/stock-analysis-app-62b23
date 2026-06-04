@@ -583,10 +583,16 @@ def stock_ai_analysis():
         if ctx:
             user_msg += f"\n\nCurrent market data:\n" + "\n".join(ctx)
 
-        analysis = deepseek_chat([
+        analysis_result = deepseek_chat([
             {"role": "system", "content": system_msg},
             {"role": "user", "content": user_msg}
         ], max_tokens=2000)
+
+        # Handle API error response
+        if isinstance(analysis_result, dict) and "error" in analysis_result:
+            return jsonify({"error": analysis_result["error"], "code": code}), 503
+
+        analysis = analysis_result
 
         # 保存分析历史（如果已登录）
         uid = current_user_id()
