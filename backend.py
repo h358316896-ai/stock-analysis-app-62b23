@@ -669,88 +669,86 @@ def market_indices():
 
 
 # ==========================================================
+# PWA Icon Generator
+# ==========================================================
+@app.route("/static/icon-<int:size>.png")
+def pwa_icon(size):
+    """Dynamic PWA icon generation"""
+    buf = BytesIO()
+    try:
+        from PIL import Image, ImageDraw
+        img = Image.new("RGBA", (size, size), (6, 6, 8, 255))
+        draw = ImageDraw.Draw(img)
+        m = size // 8
+        draw.rounded_rectangle([m, m, size-m, size-m], radius=size//6, fill=(59, 130, 246, 255))
+        # Simple "S" shape
+        bw, bh = size//5, size//4
+        cx, cy = size//2, size//2
+        draw.rectangle([cx-bw, cy-bh, cx+bw, cy+bh], fill=(255, 255, 255, 255))
+        draw.rectangle([cx-bw+size//20, cy-bh+size//20, cx+bw-size//20, cy+bh-size//20], fill=(59, 130, 246, 255))
+        img.save(buf, "PNG")
+    except ImportError:
+        # Minimal PNG without PIL
+        import struct, zlib
+        def chunk(t, d):
+            c = t + d
+            return struct.pack('>I', len(d)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+        raw = b'\x00' + bytes([59, 130, 246, 255] * size) * size
+        buf.write(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', size, size, 8, 6, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b''))
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
+
+
+# ==========================================================
 # 全球指数扩展 API (新增亚太/欧洲/商品/加密货币)
 # ==========================================================
 @app.route("/api/market/global-indices")
 def global_indices():
-    """获取扩展的全球大盘指数，含商品和加密货币"""
-    results = {"asia": [], "europe": [], "commodities": [], "crypto": [], "us": []}
+    """获取扩展的全球大盘指数 — 覆盖亚太/欧洲/美洲/商品/加密货币/其他"""
 
-    # --- 亚太指数 ---
-    asia_codes = "hkHIS,sh000688,jpN225,krKOSPI,inNIFTY"
-    # 港股恒生、上证科创板50、日经225、韩国KOSPI、印度NIFTY
-    url_asia = f"https://qt.gtimg.cn/q={asia_codes}"
-    from urllib.parse import quote
-    try:
-        text = _fetch_tencent_raw(url_asia)
-        if text:
-            for m in re.finditer(r'v_([^=]+)="([^"]*)"', text):
-                fields = m.group(2).split("~")
-                if len(fields) < 35:
-                    continue
-                try:
-                    price = float(fields[3]) if fields[3] else 0.0
-                    prev_close = float(fields[4]) if fields[4] else price
-                    change = price - prev_close
-                    change_pct = (change / prev_close * 100) if prev_close else 0.0
-                    name = fields[1] if fields[1] else m.group(1)
-                    code = m.group(1)
-                    # Map names
-                    name_map = {
-                        "hkHIS": "恒生指数", "sh000688": "科创50",
-                        "jpN225": "日经225", "krKOSPI": "韩国KOSPI", "inNIFTY": "印度NIFTY 50"
-                    }
-                    results["asia"].append({
-                        "code": code, "name": name_map.get(code, name),
-                        "price": round(price, 2), "change": round(change, 2),
-                        "change_pct": round(change_pct, 2),
-                    })
-                except (ValueError, IndexError):
-                    continue
-    except Exception:
-        pass
+    def _parse_tencent_indices(codes_str, name_map):
+        """通用腾讯指数解析器"""
+        items = []
+        url = f"https://qt.gtimg.cn/q={codes_str}"
+        try:
+            text = _fetch_tencent_raw(url)
+            if text:
+                for m in re.finditer(r'v_([^=]+)="([^"]*)"', text):
+                    fields = m.group(2).split("~")
+                    if len(fields) < 35:
+                        continue
+                    try:
+                        price = float(fields[3]) if fields[3] else 0.0
+                        prev_close = float(fields[4]) if fields[4] else price
+                        change = price - prev_close
+                        change_pct = (change / prev_close * 100) if prev_close else 0.0
+                        code = m.group(1)
+                        name = name_map.get(code, fields[1] if fields[1] else code)
+                        items.append({
+                            "code": code, "name": name,
+                            "price": round(price, 2), "change": round(change, 2),
+                            "change_pct": round(change_pct, 2),
+                        })
+                    except (ValueError, IndexError):
+                        continue
+        except Exception:
+            pass
+        return items
 
-    # --- 欧洲指数 (via yfinance or fallback) ---
-    # FTSE100, DAX, CAC40 from Tencent
-    eu_codes = "ukFTSE,deDAX,frCAC"
-    try:
-        text = _fetch_tencent_raw(f"https://qt.gtimg.cn/q={eu_codes}")
-        if text:
-            eu_names = {"ukFTSE": "英国富时100", "deDAX": "德国DAX", "frCAC": "法国CAC40"}
-            for m in re.finditer(r'v_([^=]+)="([^"]*)"', text):
-                fields = m.group(2).split("~")
-                if len(fields) < 35:
-                    continue
-                try:
-                    price = float(fields[3]) if fields[3] else 0.0
-                    prev_close = float(fields[4]) if fields[4] else price
-                    change = price - prev_close
-                    change_pct = (change / prev_close * 100) if prev_close else 0.0
-                    code = m.group(1)
-                    results["europe"].append({
-                        "code": code, "name": eu_names.get(code, fields[1]),
-                        "price": round(price, 2), "change": round(change, 2),
-                        "change_pct": round(change_pct, 2),
-                    })
-                except (ValueError, IndexError):
-                    continue
-    except Exception:
-        pass
-
-    # --- 商品 (黄金/原油/白银) ---
-    # Using Tencent futures API or yfinance
-    try:
+    def _fetch_yf_indices(symbols):
+        """通过 yfinance 获取指数"""
+        items = []
         try:
             import yfinance as yf
-            for sym, name in [("GC=F", "黄金期货"), ("CL=F", "WTI原油"), ("SI=F", "白银期货")]:
+            for sym, name in symbols:
                 try:
                     t = yf.Ticker(sym)
                     info = t.info
-                    price = info.get("regularMarketPrice") or info.get("previousClose") or 0
-                    prev = info.get("previousClose") or price
+                    price = info.get("regularMarketPrice") or info.get("currentPrice") or info.get("previousClose") or 0
+                    prev = info.get("previousClose") or info.get("regularMarketPreviousClose") or price
                     if price > 0:
                         chg_pct = ((price - prev) / prev * 100) if prev else 0
-                        results["commodities"].append({
+                        items.append({
                             "code": sym, "name": name,
                             "price": round(price, 2), "change": round(price - prev, 2),
                             "change_pct": round(chg_pct, 2),
@@ -759,29 +757,95 @@ def global_indices():
                     pass
         except ImportError:
             pass
-    except Exception:
-        pass
+        return items
 
-    # --- 加密货币 (BTC/ETH) ---
-    try:
-        for sym, name in [("BTC-USD", "比特币"), ("ETH-USD", "以太坊")]:
-            try:
-                t = yf.Ticker(sym) if "yf" in dir() else None
-                if t:
-                    info = t.info
-                    price = info.get("regularMarketPrice") or 0
-                    prev = info.get("previousClose") or price
-                    if price > 0:
-                        chg_pct = ((price - prev) / prev * 100) if prev else 0
-                        results["crypto"].append({
-                            "code": sym, "name": name,
-                            "price": round(price, 2), "change": round(price - prev, 2),
-                            "change_pct": round(chg_pct, 2),
-                        })
-            except Exception:
-                pass
-    except Exception:
-        pass
+    results = {
+        "asia": [], "europe": [], "americas": [],
+        "commodities": [], "crypto": [], "others": []
+    }
+
+    # ====== 亚太 (Tencent API) ======
+    asia_map = {
+        "hkHIS": "Hang Seng Index",
+        "sh000688": "STAR 50",
+        "sz399001": "SZSE Component",
+        "sz399006": "ChiNext",
+        "jpN225": "Nikkei 225",
+        "krKOSPI": "KOSPI",
+        "inNIFTY": "NIFTY 50",
+        "twII": "Taiwan Weighted",
+        "sgSTI": "STI Index",
+        "auAS51": "ASX 200",
+    }
+    results["asia"] = _parse_tencent_indices(
+        "hkHIS,sh000688,sz399001,sz399006,jpN225,krKOSPI,inNIFTY,twII,sgSTI,auAS51",
+        asia_map
+    )
+
+    # ====== 欧洲 (Tencent + yfinance 补充) ======
+    eu_map = {
+        "ukFTSE": "FTSE 100",
+        "deDAX": "DAX 40",
+        "frCAC": "CAC 40",
+        "euSTOXX": "Euro Stoxx 50",
+    }
+    results["europe"] = _parse_tencent_indices("ukFTSE,deDAX,frCAC,euSTOXX", eu_map)
+    # 补充：瑞士 SMI, 荷兰 AEX, 意大利 MIB
+    results["europe"].extend(_fetch_yf_indices([
+        ("^SSMI", "Swiss SMI"),
+        ("^AEX", "AEX Index"),
+    ]))
+
+    # ====== 美洲 (Tencent US + yfinance 补充) ======
+    americas_map = {
+        "us.INX": "S&P 500",
+        "us.IXIC": "NASDAQ Composite",
+        "us.DJI": "Dow Jones",
+    }
+    results["americas"] = _parse_tencent_indices("us.INX,us.IXIC,us.DJI", americas_map)
+    results["americas"].extend(_fetch_yf_indices([
+        ("^BVSP", "Bovespa"),
+        ("^GSPTSE", "S&P/TSX"),
+        ("^MXX", "IPC Mexico"),
+    ]))
+
+    # ====== 商品 ======
+    results["commodities"] = _fetch_yf_indices([
+        ("GC=F", "Gold Futures"),
+        ("SI=F", "Silver Futures"),
+        ("CL=F", "WTI Crude Oil"),
+        ("BZ=F", "Brent Crude Oil"),
+        ("HG=F", "Copper Futures"),
+        ("NG=F", "Natural Gas"),
+        ("ZC=F", "Corn Futures"),
+        ("ZS=F", "Soybean Futures"),
+    ])
+
+    # ====== 加密货币 ======
+    results["crypto"] = _fetch_yf_indices([
+        ("BTC-USD", "Bitcoin"),
+        ("ETH-USD", "Ethereum"),
+        ("SOL-USD", "Solana"),
+        ("BNB-USD", "BNB"),
+        ("XRP-USD", "XRP"),
+    ])
+
+    # ====== 其他 (VIX, DXY, 美债) ======
+    results["others"] = _fetch_yf_indices([
+        ("^VIX", "VIX Volatility"),
+        ("DX-Y.NYB", "US Dollar Index"),
+        ("^TNX", "US 10Y Treasury Yield"),
+        ("^TYX", "US 30Y Treasury Yield"),
+    ])
+
+    # 腾讯API也支持VIX和DXY
+    others_tencent = _parse_tencent_indices("us.VIX,us.DXY", {
+        "us.VIX": "VIX Volatility",
+        "us.DXY": "US Dollar Index",
+    })
+    for item in others_tencent:
+        if not any(o["code"] == item["code"] for o in results["others"]):
+            results["others"].append(item)
 
     return jsonify(results)
 
