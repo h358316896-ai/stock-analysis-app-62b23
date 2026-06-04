@@ -667,6 +667,663 @@ def market_indices():
     except Exception as e:
         return jsonify({"error": str(e), "indices": []}), 500
 
+
+# ==========================================================
+# 全球指数扩展 API (新增亚太/欧洲/商品/加密货币)
+# ==========================================================
+@app.route("/api/market/global-indices")
+def global_indices():
+    """获取扩展的全球大盘指数，含商品和加密货币"""
+    results = {"asia": [], "europe": [], "commodities": [], "crypto": [], "us": []}
+
+    # --- 亚太指数 ---
+    asia_codes = "hkHIS,sh000688,jpN225,krKOSPI,inNIFTY"
+    # 港股恒生、上证科创板50、日经225、韩国KOSPI、印度NIFTY
+    url_asia = f"https://qt.gtimg.cn/q={asia_codes}"
+    from urllib.parse import quote
+    try:
+        text = _fetch_tencent_raw(url_asia)
+        if text:
+            for m in re.finditer(r'v_([^=]+)="([^"]*)"', text):
+                fields = m.group(2).split("~")
+                if len(fields) < 35:
+                    continue
+                try:
+                    price = float(fields[3]) if fields[3] else 0.0
+                    prev_close = float(fields[4]) if fields[4] else price
+                    change = price - prev_close
+                    change_pct = (change / prev_close * 100) if prev_close else 0.0
+                    name = fields[1] if fields[1] else m.group(1)
+                    code = m.group(1)
+                    # Map names
+                    name_map = {
+                        "hkHIS": "恒生指数", "sh000688": "科创50",
+                        "jpN225": "日经225", "krKOSPI": "韩国KOSPI", "inNIFTY": "印度NIFTY 50"
+                    }
+                    results["asia"].append({
+                        "code": code, "name": name_map.get(code, name),
+                        "price": round(price, 2), "change": round(change, 2),
+                        "change_pct": round(change_pct, 2),
+                    })
+                except (ValueError, IndexError):
+                    continue
+    except Exception:
+        pass
+
+    # --- 欧洲指数 (via yfinance or fallback) ---
+    # FTSE100, DAX, CAC40 from Tencent
+    eu_codes = "ukFTSE,deDAX,frCAC"
+    try:
+        text = _fetch_tencent_raw(f"https://qt.gtimg.cn/q={eu_codes}")
+        if text:
+            eu_names = {"ukFTSE": "英国富时100", "deDAX": "德国DAX", "frCAC": "法国CAC40"}
+            for m in re.finditer(r'v_([^=]+)="([^"]*)"', text):
+                fields = m.group(2).split("~")
+                if len(fields) < 35:
+                    continue
+                try:
+                    price = float(fields[3]) if fields[3] else 0.0
+                    prev_close = float(fields[4]) if fields[4] else price
+                    change = price - prev_close
+                    change_pct = (change / prev_close * 100) if prev_close else 0.0
+                    code = m.group(1)
+                    results["europe"].append({
+                        "code": code, "name": eu_names.get(code, fields[1]),
+                        "price": round(price, 2), "change": round(change, 2),
+                        "change_pct": round(change_pct, 2),
+                    })
+                except (ValueError, IndexError):
+                    continue
+    except Exception:
+        pass
+
+    # --- 商品 (黄金/原油/白银) ---
+    # Using Tencent futures API or yfinance
+    try:
+        try:
+            import yfinance as yf
+            for sym, name in [("GC=F", "黄金期货"), ("CL=F", "WTI原油"), ("SI=F", "白银期货")]:
+                try:
+                    t = yf.Ticker(sym)
+                    info = t.info
+                    price = info.get("regularMarketPrice") or info.get("previousClose") or 0
+                    prev = info.get("previousClose") or price
+                    if price > 0:
+                        chg_pct = ((price - prev) / prev * 100) if prev else 0
+                        results["commodities"].append({
+                            "code": sym, "name": name,
+                            "price": round(price, 2), "change": round(price - prev, 2),
+                            "change_pct": round(chg_pct, 2),
+                        })
+                except Exception:
+                    pass
+        except ImportError:
+            pass
+    except Exception:
+        pass
+
+    # --- 加密货币 (BTC/ETH) ---
+    try:
+        for sym, name in [("BTC-USD", "比特币"), ("ETH-USD", "以太坊")]:
+            try:
+                t = yf.Ticker(sym) if "yf" in dir() else None
+                if t:
+                    info = t.info
+                    price = info.get("regularMarketPrice") or 0
+                    prev = info.get("previousClose") or price
+                    if price > 0:
+                        chg_pct = ((price - prev) / prev * 100) if prev else 0
+                        results["crypto"].append({
+                            "code": sym, "name": name,
+                            "price": round(price, 2), "change": round(price - prev, 2),
+                            "change_pct": round(chg_pct, 2),
+                        })
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return jsonify(results)
+
+
+# ==========================================================
+# 分时图数据 (Intraday)
+# ==========================================================
+@app.route("/api/stock/intraday")
+def stock_intraday():
+    """获取分时图数据"""
+    code = request.args.get("code", "").strip()
+    market = request.args.get("market", "cn").strip()
+    if not code:
+        return jsonify({"error": "no code"}), 400
+
+    try:
+        if market == "cn":
+            prefix = "sh" if code.startswith(("6", "5", "1")) else "sz"
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/minute/query?_var=min_data&code={prefix}{code}"
+            text = _fetch_tencent_raw(url)
+            if not text:
+                return jsonify({"points": [], "error": "fetch failed"})
+
+            # Parse minute data
+            match = re.search(r'min_data="([^"]*)"', text)
+            if not match:
+                return jsonify({"points": []})
+
+            raw = match.group(1)
+            lines = raw.strip().split("\\n")
+            points = []
+            prev_close = None
+            for line in lines:
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    try:
+                        t = parts[0]
+                        price = float(parts[1])
+                        vol = float(parts[3]) if len(parts) > 3 else 0
+                        points.append({"time": t, "price": price, "volume": vol})
+                    except (ValueError, IndexError):
+                        continue
+            return jsonify({"points": points})
+        elif market == "hk":
+            code_fill = code.zfill(5)
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/minute/query?_var=min_data&code=hk{code_fill}"
+            text = _fetch_tencent_raw(url)
+            if not text:
+                return jsonify({"points": [], "error": "fetch failed"})
+            match = re.search(r'min_data="([^"]*)"', text)
+            if not match:
+                return jsonify({"points": []})
+            raw = match.group(1)
+            lines = raw.strip().split("\\n")
+            points = []
+            for line in lines:
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    try:
+                        points.append({"time": parts[0], "price": float(parts[1])})
+                    except (ValueError, IndexError):
+                        continue
+            return jsonify({"points": points})
+        else:
+            return jsonify({"points": [], "error": "US intraday not supported yet"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ==========================================================
+# 技术指标计算
+# ==========================================================
+def calc_ema(data, period):
+    """计算指数移动平均"""
+    if len(data) < period:
+        return [None] * len(data)
+    k = 2 / (period + 1)
+    ema = [sum(data[:period]) / period] * (period - 1)
+    ema.append(sum(data[:period]) / period)
+    for i in range(period, len(data)):
+        ema.append(data[i] * k + ema[-1] * (1 - k))
+    return [None] * (period - 1) + ema[period - 1:]
+
+
+def calc_macd(closes):
+    """计算 MACD (12, 26, 9)"""
+    ema12 = calc_ema(closes, 12)
+    ema26 = calc_ema(closes, 26)
+    dif = [a - b if a is not None and b is not None else None for a, b in zip(ema12, ema26)]
+    # DEA = 9-day EMA of DIF
+    valid_dif = [x for x in dif if x is not None]
+    if len(valid_dif) < 9:
+        return {"dif": dif, "dea": [None] * len(closes), "histogram": [None] * len(closes)}
+    dea_vals = calc_ema(valid_dif, 9)
+    dea = [None] * (len(dif) - len(dea_vals)) + dea_vals
+    histogram = [(d - e) * 2 if d is not None and e is not None else None for d, e in zip(dif, dea)]
+    return {"dif": dif, "dea": dea, "histogram": histogram}
+
+
+def calc_rsi(closes, period=14):
+    """计算 RSI"""
+    if len(closes) < period + 1:
+        return [None] * len(closes)
+    gains, losses = [], []
+    for i in range(1, len(closes)):
+        chg = closes[i] - closes[i - 1]
+        gains.append(chg if chg > 0 else 0)
+        losses.append(-chg if chg < 0 else 0)
+
+    rsi = [None] * (period + 1)
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    rs = avg_gain / avg_loss if avg_loss > 0 else float("inf")
+    rsi.append(100 - 100 / (1 + rs) if avg_loss > 0 else 100)
+
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        rs = avg_gain / avg_loss if avg_loss > 0 else float("inf")
+        rsi.append(100 - 100 / (1 + rs) if avg_loss > 0 else 100 if avg_gain > 0 else 50)
+    return rsi
+
+
+def calc_bollinger(closes, period=20, std_dev=2):
+    """计算布林带"""
+    if len(closes) < period:
+        return {"upper": [None] * len(closes), "middle": [None] * len(closes), "lower": [None] * len(closes)}
+    import statistics
+    upper, middle, lower = [], [], []
+    for i in range(len(closes)):
+        if i < period - 1:
+            upper.append(None)
+            middle.append(None)
+            lower.append(None)
+        else:
+            window = closes[i - period + 1 : i + 1]
+            ma = sum(window) / period
+            std = statistics.stdev(window) if len(window) > 1 else 0
+            middle.append(ma)
+            upper.append(ma + std_dev * std)
+            lower.append(ma - std_dev * std)
+    return {"upper": upper, "middle": middle, "lower": lower}
+
+
+def calc_kdj(highs, lows, closes, period=9):
+    """计算 KDJ"""
+    n = len(closes)
+    if n < period:
+        return {"k": [None] * n, "d": [None] * n, "j": [None] * n}
+    k_vals, d_vals, j_vals = [50] * (period - 1), [50] * (period - 1), [50] * (period - 1)
+    prev_k, prev_d = 50, 50
+    for i in range(period - 1, n):
+        high_max = max(highs[i - period + 1 : i + 1])
+        low_min = min(lows[i - period + 1 : i + 1])
+        rsv = (closes[i] - low_min) / (high_max - low_min) * 100 if high_max != low_min else 50
+        k = 2 / 3 * prev_k + 1 / 3 * rsv
+        d = 2 / 3 * prev_d + 1 / 3 * k
+        j = 3 * k - 2 * d
+        k_vals.append(round(k, 2))
+        d_vals.append(round(d, 2))
+        j_vals.append(round(j, 2))
+        prev_k, prev_d = k, d
+    return {"k": k_vals, "d": d_vals, "j": j_vals}
+
+
+@app.route("/api/stock/indicators")
+def stock_indicators():
+    """获取技术指标数据"""
+    code = request.args.get("code", "").strip()
+    market = request.args.get("market", "cn").strip()
+    limit = int(request.args.get("limit", 120))
+
+    if not code:
+        return jsonify({"error": "no code"}), 400
+
+    # Fetch kline data (reuse existing logic)
+    klines = []
+    try:
+        if market in ("cn", "hk"):
+            prefix_map = {"cn": ("sh" if code.startswith(("6", "5", "1")) else "sz", code),
+                          "hk": ("hk", code.zfill(5))}
+            prefix, c = prefix_map.get(market, ("sh", code))
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={prefix}{c},day,,,{limit},qfq"
+            data = fetch_json(url, 15)
+            if not isinstance(data, dict) or "error" not in data:
+                klines_raw = data.get("data", {}).get(f"{prefix}{c}", {}).get("qfqday", [])
+                for k in klines_raw:
+                    if len(k) >= 6:
+                        klines.append({
+                            "date": k[0], "open": float(k[1]), "close": float(k[2]),
+                            "high": float(k[3]), "low": float(k[4]), "volume": int(float(k[5])) * 100
+                        })
+        else:
+            try:
+                import yfinance as yf
+                df = yf.Ticker(code).history(period=f"{limit}d")
+                for idx, r in df.iterrows():
+                    klines.append({
+                        "date": str(idx)[:10], "open": float(r["Open"]), "close": float(r["Close"]),
+                        "high": float(r["High"]), "low": float(r["Low"]), "volume": int(r["Volume"])
+                    })
+            except Exception:
+                pass
+    except Exception:
+        return jsonify({"error": "failed to fetch kline data"}), 500
+
+    if not klines or len(klines) < 20:
+        return jsonify({"error": "insufficient data", "indicators": {}})
+
+    closes = [k["close"] for k in klines]
+    highs = [k["high"] for k in klines]
+    lows = [k["low"] for k in klines]
+    dates = [k["date"] for k in klines]
+    volumes = [k["volume"] for k in klines]
+
+    # Calculate all indicators
+    ma5 = calc_ema(closes, 5)
+    ma10 = calc_ema(closes, 10)
+    ma20 = calc_ema(closes, 20)
+    ma60 = calc_ema(closes, 60)
+    macd_data = calc_macd(closes)
+    rsi = calc_rsi(closes, 14)
+    boll = calc_bollinger(closes, 20, 2)
+    kdj = calc_kdj(highs, lows, closes, 9)
+
+    return jsonify({
+        "dates": dates,
+        "klines": klines,
+        "volumes": volumes,
+        "ma5": ma5, "ma10": ma10, "ma20": ma20, "ma60": ma60,
+        "macd": macd_data,
+        "rsi": rsi,
+        "bollinger": boll,
+        "kdj": kdj,
+    })
+
+
+# ==========================================================
+# 北向资金流向 (North-bound Capital Flow)
+# ==========================================================
+@app.route("/api/market/north-bound")
+def north_bound_flow():
+    """获取沪深港通北向资金流向"""
+    try:
+        # Eastmoney API for north-bound capital flow
+        url = "https://push2.eastmoney.com/api/qt/kamt.kline/get?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54&klt=101&lmt=30"
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        data = resp.json()
+        flows = []
+        if data.get("data") and data["data"].get("klines"):
+            for line in data["data"]["klines"]:
+                parts = line.split(",")
+                if len(parts) >= 4:
+                    flows.append({
+                        "date": parts[0],
+                        "net_flow": float(parts[1]) if parts[1] != "-" else 0,
+                    })
+        return jsonify({"flows": flows, "updated": datetime.now().strftime("%H:%M:%S")})
+    except Exception as e:
+        return jsonify({"error": str(e), "flows": []})
+
+
+# ==========================================================
+# 板块热力图 (Sector Heatmap)
+# ==========================================================
+@app.route("/api/market/sectors")
+def sector_heatmap():
+    """获取行业板块涨跌数据"""
+    try:
+        # Eastmoney sector API
+        url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2&fields=f2,f3,f4,f12,f14"
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        data = resp.json()
+        sectors = []
+        if data.get("data") and data["data"].get("diff"):
+            for item in data["data"]["diff"]:
+                sectors.append({
+                    "code": item.get("f12", ""),
+                    "name": item.get("f14", ""),
+                    "price": item.get("f2", 0),
+                    "change_pct": item.get("f3", 0),
+                    "change": item.get("f4", 0),
+                })
+        return jsonify({"sectors": sectors})
+    except Exception as e:
+        return jsonify({"error": str(e), "sectors": []})
+
+
+@app.route("/api/market/concepts")
+def concept_heatmap():
+    """获取概念板块涨跌数据"""
+    try:
+        url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:3&fields=f2,f3,f4,f12,f14"
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        data = resp.json()
+        sectors = []
+        if data.get("data") and data["data"].get("diff"):
+            for item in data["data"]["diff"]:
+                sectors.append({
+                    "code": item.get("f12", ""),
+                    "name": item.get("f14", ""),
+                    "change_pct": item.get("f3", 0),
+                })
+        return jsonify({"sectors": sectors})
+    except Exception as e:
+        return jsonify({"error": str(e), "sectors": []})
+
+
+# ==========================================================
+# 龙虎榜 (Dragon-Tiger Board)
+# ==========================================================
+@app.route("/api/market/dragon-tiger")
+def dragon_tiger():
+    """获取每日龙虎榜数据"""
+    try:
+        today = datetime.now().strftime("%Y%m%d")
+        url = f"https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:4&fields=f2,f3,f4,f12,f14,f62,f184,f66,f72,f75,f78,f81,f84,f87,f204,f205,f206"
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        data = resp.json()
+        stocks = []
+        if data.get("data") and data["data"].get("diff"):
+            for item in data["data"]["diff"]:
+                stocks.append({
+                    "code": item.get("f12", ""),
+                    "name": item.get("f14", ""),
+                    "change_pct": item.get("f3", 0),
+                    "price": item.get("f2", 0),
+                    "net_buy": item.get("f62", 0),  # 龙虎榜净买额
+                })
+        return jsonify({"stocks": stocks, "date": datetime.now().strftime("%Y-%m-%d")})
+    except Exception as e:
+        return jsonify({"error": str(e), "stocks": []})
+
+
+# ==========================================================
+# 个股财务数据 (Financial Data)
+# ==========================================================
+@app.route("/api/stock/financials")
+def stock_financials():
+    """获取个股财务数据"""
+    code = request.args.get("code", "").strip()
+    market = request.args.get("market", "cn").strip()
+    if not code:
+        return jsonify({"error": "no code"}), 400
+
+    result = {"pe": None, "pb": None, "roe": None, "revenue": None, "net_profit": None,
+              "total_mv": None, "eps": None, "bps": None, "debt_ratio": None}
+
+    try:
+        if market == "cn":
+            # Eastmoney financial data
+            prefix = "1" if code.startswith("6") else "0"
+            secid = f"{prefix}.{code}"
+            url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f9,f20,f23,f37,f38,f39,f40,f41,f43,f44,f45,f46,f55,f57,f58,f115,f162,f167,f170,f173"
+            resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+            data = resp.json()
+            if data.get("data"):
+                d = data["data"]
+                result = {
+                    "pe": d.get("f9"),           # 市盈率(动态)
+                    "pb": d.get("f23"),          # 市净率
+                    "roe": d.get("f173"),        # ROE
+                    "revenue": d.get("f44"),     # 营业总收入
+                    "net_profit": d.get("f46"),  # 净利润
+                    "total_mv": d.get("f20"),    # 总市值
+                    "eps": d.get("f43"),         # 每股收益
+                    "bps": d.get("f41"),         # 每股净资产
+                    "debt_ratio": d.get("f55"),  # 资产负债率
+                    "gross_margin": d.get("f38"), # 毛利率
+                    "net_margin": d.get("f39"),  # 净利率
+                }
+        elif market == "us":
+            try:
+                import yfinance as yf
+                t = yf.Ticker(code)
+                info = t.info
+                result = {
+                    "pe": info.get("trailingPE"),
+                    "pb": info.get("priceToBook"),
+                    "roe": info.get("returnOnEquity"),
+                    "revenue": info.get("totalRevenue"),
+                    "net_profit": info.get("netIncomeToCommon"),
+                    "total_mv": info.get("marketCap"),
+                    "eps": info.get("trailingEps"),
+                    "bps": info.get("bookValue"),
+                    "debt_ratio": info.get("debtToEquity"),
+                    "gross_margin": info.get("grossMargins"),
+                    "net_margin": info.get("profitMargins"),
+                }
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return jsonify({"financials": result})
+
+
+# ==========================================================
+# 个股对比 (Stock Comparison)
+# ==========================================================
+@app.route("/api/stock/compare", methods=["POST"])
+def stock_compare():
+    """对比多只股票"""
+    data = request.json or {}
+    stocks = data.get("stocks", [])  # [{"code": "600519", "market": "cn"}, ...]
+    if not stocks or len(stocks) < 2:
+        return jsonify({"error": "至少需要2只股票进行对比"}), 400
+    if len(stocks) > 5:
+        return jsonify({"error": "最多对比5只股票"}), 400
+
+    results = []
+    for s in stocks:
+        code = s.get("code", "")
+        market = s.get("market", "cn")
+        try:
+            if market == "cn":
+                q = fetch_cn_quote(code)
+            elif market == "hk":
+                q = fetch_hk_quote(code)
+            elif market == "us":
+                q = fetch_us_quote(code)
+            else:
+                continue
+            if q and "error" not in q:
+                results.append({
+                    "code": code, "name": q.get("name", code), "market": market,
+                    "price": q.get("price", 0), "change_pct": q.get("change_pct", 0),
+                    "pe": q.get("pe"), "market_cap": q.get("market_cap"),
+                    "volume": q.get("volume", 0),
+                })
+        except Exception:
+            continue
+
+    return jsonify({"comparison": results})
+
+
+# ==========================================================
+# 智能选股 (Stock Screener)
+# ==========================================================
+@app.route("/api/stock/screener", methods=["POST"])
+def stock_screener():
+    """多条件选股"""
+    data = request.json or {}
+    # 筛选条件: pe_max, pe_min, market_cap_min, change_pct_min, change_pct_max
+    filters = {
+        "pe_max": data.get("pe_max"),
+        "pe_min": data.get("pe_min"),
+        "market_cap_min": data.get("market_cap_min"),
+        "change_pct_min": data.get("change_pct_min"),
+        "change_pct_max": data.get("change_pct_max"),
+        "roe_min": data.get("roe_min"),
+    }
+
+    try:
+        # Eastmoney stock list with filters
+        # 沪深A股, filtered by PE, market cap
+        url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid=f3"
+               "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
+               "&fields=f2,f3,f4,f9,f12,f14,f15,f16,f17,f18,f20,f21,f23,f173")
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        result = resp.json()
+        stocks = []
+        if result.get("data") and result["data"].get("diff"):
+            for item in result["data"]["diff"]:
+                pe = item.get("f9")
+                price = item.get("f2", 0)
+                change_pct = item.get("f3", 0)
+                market_cap = item.get("f20", 0)
+
+                # Apply filters
+                if filters["pe_max"] and (pe is None or pe > filters["pe_max"]):
+                    continue
+                if filters["pe_min"] and (pe is None or pe < filters["pe_min"]):
+                    continue
+                if filters["market_cap_min"] and market_cap < filters["market_cap_min"] * 1e8:
+                    continue
+                if filters["change_pct_min"] is not None and change_pct < filters["change_pct_min"]:
+                    continue
+                if filters["change_pct_max"] is not None and change_pct > filters["change_pct_max"]:
+                    continue
+
+                stocks.append({
+                    "code": item.get("f12", ""),
+                    "name": item.get("f14", ""),
+                    "price": price,
+                    "change_pct": change_pct,
+                    "pe": pe,
+                    "market_cap": market_cap,
+                })
+        return jsonify({"stocks": stocks, "total": len(stocks)})
+    except Exception as e:
+        return jsonify({"error": str(e), "stocks": []})
+
+
+# ==========================================================
+# K线数据增强 (含成交量、完整OHLCV)
+# ==========================================================
+@app.route("/api/stock/kline-full")
+def stock_kline_full():
+    """获取完整K线数据 (OHLCV + 分时图点)"""
+    code = request.args.get("code", "").strip()
+    market = request.args.get("market", "cn")
+    limit = int(request.args.get("limit", 120))
+
+    if not code:
+        return jsonify({"error": "no code"}), 400
+
+    try:
+        if market in ("cn", "hk"):
+            prefix_map = {"cn": ("sh" if code.startswith(("6", "5", "1")) else "sz", code),
+                          "hk": ("hk", code.zfill(5))}
+            prefix, c = prefix_map.get(market, ("sh", code))
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={prefix}{c},day,,,{limit},qfq"
+            data = fetch_json(url, 15)
+            if isinstance(data, dict) and "error" in data:
+                return jsonify({"klines": []})
+            klines_raw = data.get("data", {}).get(f"{prefix}{c}", {}).get("qfqday", [])
+            klines = []
+            for k in klines_raw:
+                if len(k) >= 6:
+                    klines.append({
+                        "date": k[0], "open": float(k[1]), "close": float(k[2]),
+                        "high": float(k[3]), "low": float(k[4]), "volume": int(float(k[5])) * 100
+                    })
+            return jsonify({"klines": klines})
+        else:
+            try:
+                import yfinance as yf
+                df = yf.Ticker(code).history(period=f"{limit}d")
+                klines = []
+                for idx, r in df.iterrows():
+                    klines.append({
+                        "date": str(idx)[:10], "open": float(r["Open"]), "close": float(r["Close"]),
+                        "high": float(r["High"]), "low": float(r["Low"]), "volume": int(r["Volume"])
+                    })
+                return jsonify({"klines": klines})
+            except ImportError:
+                return jsonify({"klines": [], "error": "yfinance not available"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/media/generate", methods=["POST"])
 def media_generate():
     data = request.json or {}
