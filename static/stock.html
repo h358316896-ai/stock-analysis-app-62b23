@@ -1748,7 +1748,9 @@ async function runAnalysis(aspect) {
     const titles = { comprehensive: 'Comprehensive Analysis', technical: 'Technical Analysis', fundamental: 'Fundamental Analysis', news: 'News & Events', valuation: 'Valuation Analysis', sector: 'Sector Comparison', risk: 'Risk Assessment' };
     document.getElementById('analysisTitle').textContent = titles[aspect] || 'AI Analysis';
     // Render analysis as HTML with basic markdown formatting
-    var html = d.analysis
+    var raw = d.analysis || '';
+    if (typeof raw !== 'string') raw = String(raw);
+    var html = raw
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')  // escape HTML
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')  // **bold**
       .replace(/^### (.+)$/gm, '<h4 style="color:var(--accent);margin:16px 0 8px">$1</h4>')  // ### headings
@@ -1757,6 +1759,7 @@ async function runAnalysis(aspect) {
       .replace(/(<li>.*<\/li>\n?)+/g, '<ul style="padding-left:20px;margin:8px 0">$&</ul>')  // wrap lists
       .replace(/\n\n/g, '<br><br>')  // double newline = paragraph
       .replace(/\n/g, '<br>');  // single newline = line break
+    if (!raw) html = '<p style="color:var(--text-tertiary);text-align:center;padding:40px">AI analysis unavailable. The analysis service may be offline or the API key is not configured.</p>';
     document.getElementById('analysisText').innerHTML = html;
     document.getElementById('analysisBox').classList.add('show');
     document.getElementById('pdfBtn').style.display = 'inline-block';
@@ -1839,7 +1842,7 @@ async function loadHistory() {
   try { const r = await fetch('/api/analysis/history?limit=20'); const d = await r.json(); const list = document.getElementById('historyList');
     if (!d.items?.length) { list.innerHTML = '<div class="empty">No history yet</div>'; return; }
     const lbs = { comprehensive: 'Comprehensive', technical: 'Technical', fundamental: 'Fundamental', news: 'News', valuation: 'Valuation', sector: 'Sector', risk: 'Risk' };
-    list.innerHTML = d.items.map(i => `<div class="wl-item" onclick="document.getElementById('analysisText').textContent=\`${i.analysis.replace(/`/g,'\\`')}\`;document.getElementById('analysisBox').classList.add('show')"><div class="wl-name">${i.name} · ${lbs[i.aspect]||i.aspect}</div><div class="wl-meta">${i.code} · ${i.created_at}</div></div>`).join('');
+    list.innerHTML = d.items.map(i => { var a = (i.analysis || ''); if (typeof a !== 'string') a = String(a); var escaped = a.replace(/`/g, '\\`').replace(/\\/g, '\\\\').replace(/</g, '&lt;'); return `<div class="wl-item" onclick="document.getElementById('analysisText').innerHTML=\`${escaped}\`;document.getElementById('analysisBox').classList.add('show')"><div class="wl-name">${i.name} · ${lbs[i.aspect]||i.aspect}</div><div class="wl-meta">${i.code} · ${i.created_at}</div></div>`; }).join('');
   } catch(e) {}
 }
 
