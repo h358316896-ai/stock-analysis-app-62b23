@@ -363,58 +363,65 @@ def _search_us_stocks(keyword):
 @app.route("/api/stock/search")
 def stock_search():
     keyword = request.args.get("q", "").strip()
-    market = request.args.get("market", "all").strip()  # cn, hk, us, all
+    market = request.args.get("market", "cn").strip()
     if not keyword:
         return jsonify({"error": "no query"}), 400
 
     results = []
 
-    # ---- A-shares search (market=cn or all) ----
+    # ---- A-shares: Eastmoney autocomplete (best for partial matching) ----
     if market in ("cn", "all"):
-        for c, n in STOCK_NAMES.items():
-            if keyword in c or keyword in n:
-                results.append({"code": c, "name": n, "market": "cn"})
-            if len(results) >= 20:
-                break
-        # If local A-share search found nothing, try online
-        cn_count = len(results)
-        if cn_count == 0:
+        try:
+            em_url = f"https://searchapi.eastmoney.com/api/suggest/get?input={keyword}&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count=20"
+            em_resp = requests.get(em_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=8)
+            em_data = em_resp.json()
+            if em_data.get("QuotationCodeTable") and em_data["QuotationCodeTable"].get("Data"):
+                for item in em_data["QuotationCodeTable"]["Data"]:
+                    code = item.get("Code", "")
+                    name = item.get("Name", "")
+                    mkt_str = item.get("MarketId", "")
+                    # MarketId: "1"=Shanghai, "0"=Shenzhen, "116"=ChiNext, etc.
+                    if code and name:
+                        results.append({"code": code, "name": name, "market": "cn"})
+        except Exception:
+            pass
+
+        # Fallback: Tencent smartbox
+        if len(results) == 0:
             results.extend(_search_online_tencent(keyword, "gp"))
 
-    # ---- HK stocks search (market=hk or all) ----
+    # ---- HK stocks: Tencent smartbox ----
     if market in ("hk", "all"):
-        for c, n in HK_STOCK_NAMES.items():
-            if keyword in c or keyword in n:
-                results.append({"code": c, "name": n, "market": "hk"})
-            if len(results) >= 50:
-                break
-        # Try online HK search (Tencent might support t=hk)
-        if len([r for r in results if r["market"] == "hk"]) < 5:
+        try:
             hk_results = _search_online_tencent(keyword, "hk")
             for r in hk_results:
                 r["market"] = "hk"
             results.extend(hk_results)
+        except Exception:
+            pass
 
-    # ---- US stocks search (market=us or all) ----
+    # ---- US stocks: Tencent smartbox ----
     if market in ("us", "all"):
-        us_results = _search_us_stocks(keyword)
-        results.extend(us_results)
+        try:
+            us_results = _search_us_stocks(keyword)
+            results.extend(us_results)
+        except Exception:
+            pass
 
-    # Deduplicate by code+market (normalize US codes)
+    # Deduplicate
     seen = set()
     deduped = []
     for r in results:
         code = r.get("code", "")
-        market = r.get("market", "")
-        # Normalize US codes: strip .O/.N/.OQ/.NQ suffixes, uppercase
-        if market == "us":
+        mkt = r.get("market", "")
+        if mkt == "us":
             code = code.split(".")[0].upper()
             r["code"] = code
-        key = (code, market)
+        key = (code, mkt)
         if key not in seen:
             seen.add(key)
             deduped.append(r)
-            if len(deduped) >= 40:
+            if len(deduped) >= 30:
                 break
 
     return jsonify({"results": deduped})
