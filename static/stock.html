@@ -13,8 +13,6 @@
 /* ============================================================
    DESiGN SYSTEM — Western Premium Finance Terminal
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
 :root {
   --bg-primary: #060608;
   --bg-secondary: #0c0c14;
@@ -1140,37 +1138,96 @@ async function autoSearch() {
   } catch(e) {}
 }
 
+function showToast(msg, type='info') {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;transition:all .3s;opacity:0;pointer-events:none;font-family:var(--font);max-width:90vw;text-align:center';
+    document.body.appendChild(toast);
+  }
+  const colors = { info: 'var(--bg-elevated)', error: 'rgba(239,68,68,0.95)', success: 'rgba(34,197,94,0.95)' };
+  const textColors = { info: 'var(--text-primary)', error: 'white', success: 'white' };
+  toast.style.background = colors[type] || colors.info;
+  toast.style.color = textColors[type] || textColors.info;
+  toast.style.border = type === 'info' ? '1px solid var(--border-strong)' : 'none';
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(-50%) translateY(10px)'; }, 3000);
+}
+
 async function searchStock() {
   let code = document.getElementById('stockSearch').value.trim();
   let mkt = document.getElementById('marketSelect').value;
-  if (!code) return;
+  const searchBtn = document.getElementById('searchBtn');
+  const searchInput = document.getElementById('stockSearch');
+
+  if (!code) {
+    showToast('Please enter a stock code or name', 'error');
+    searchInput.style.borderColor = 'var(--red)';
+    setTimeout(() => searchInput.style.borderColor = '', 1500);
+    return;
+  }
+  searchInput.style.borderColor = '';
+
   document.getElementById('searchResults').classList.remove('show');
+  searchBtn.disabled = true;
+  searchBtn.textContent = 'Searching...';
   toggleLoading(true);
 
+  // Name search fallback
   if (/[一-鿿]/.test(code)) {
     try {
       const r = await fetch(`/api/stock/search?q=${encodeURIComponent(code)}&market=${mkt}`);
       const d = await r.json();
-      if (d.results && d.results.length > 0) { code = d.results[0].code; mkt = d.results[0].market || mkt; document.getElementById('stockSearch').value = code; document.getElementById('marketSelect').value = mkt; }
-      else { alert('Stock not found'); toggleLoading(false); return; }
-    } catch(e) { alert('Search failed'); toggleLoading(false); return; }
+      if (d.results && d.results.length > 0) {
+        code = d.results[0].code; mkt = d.results[0].market || mkt;
+        searchInput.value = code;
+        document.getElementById('marketSelect').value = mkt;
+      } else {
+        showToast('Stock not found. Try the ticker code instead.', 'error');
+        searchInput.style.borderColor = 'var(--red)';
+        setTimeout(() => searchInput.style.borderColor = '', 1500);
+        toggleLoading(false); searchBtn.disabled = false; searchBtn.textContent = 'Search';
+        return;
+      }
+    } catch(e) {
+      showToast('Network error. Please check your connection.', 'error');
+      toggleLoading(false); searchBtn.disabled = false; searchBtn.textContent = 'Search';
+      return;
+    }
   }
 
   try {
     const r = await fetch(`/api/stock/quote?code=${encodeURIComponent(code)}&market=${mkt}`);
-    if (!r.ok) { alert('Stock not found'); toggleLoading(false); return; }
+    if (!r.ok) {
+      showToast(`Stock "${code}" not found in ${MKT[mkt] || mkt} market`, 'error');
+      searchInput.style.borderColor = 'var(--red)';
+      setTimeout(() => searchInput.style.borderColor = '', 1500);
+      toggleLoading(false); searchBtn.disabled = false; searchBtn.textContent = 'Search';
+      return;
+    }
     const q = await r.json();
-    if (q.error) { alert(q.error); toggleLoading(false); return; }
+    if (q.error) {
+      showToast(q.error, 'error');
+      toggleLoading(false); searchBtn.disabled = false; searchBtn.textContent = 'Search';
+      return;
+    }
     state.stock = { code: q.code, name: q.name, market: mkt, price: q.price };
 
-    // Quote panel
+    // Quote panel with animation
     document.getElementById('quoteName').textContent = q.name;
     document.getElementById('quoteMeta').textContent = `${q.code} · ${q.currency || 'CNY'} · ${MKT[mkt]}`;
     document.getElementById('quotePrice').textContent = q.price.toFixed(2);
     const chgEl = document.getElementById('quoteChange');
     chgEl.textContent = `${q.change_pct >= 0 ? '+' : ''}${q.change_pct.toFixed(2)}%  ${q.change >= 0 ? '+' : ''}${q.change.toFixed(2)}`;
     chgEl.className = 'quote-change-lg ' + (q.change_pct >= 0 ? 'text-green' : 'text-red');
-    document.getElementById('quotePanel').classList.add('show');
+    const panel = document.getElementById('quotePanel');
+    panel.classList.add('show');
+    panel.style.opacity = '0'; panel.style.transform = 'translateY(10px)';
+    requestAnimationFrame(() => { panel.style.transition = 'all .3s ease-out'; panel.style.opacity = '1'; panel.style.transform = ''; });
 
     const items = [['Open', q.open?.toFixed(2)], ['High', q.high?.toFixed(2)], ['Low', q.low?.toFixed(2)], ['Volume', fmt(q.volume)], ['Turnover', fmt(q.amount)], ['Market Cap', fmt(q.market_cap)], ['P/E Ratio', q.pe || 'N/A']];
     document.getElementById('quoteGrid').innerHTML = items.map(([l, v]) => `<div class="quote-item"><div class="ql">${l}</div><div class="qv">${v}</div></div>`).join('');
@@ -1184,8 +1241,15 @@ async function searchStock() {
       document.getElementById('watchlistBtn').style.display = 'inline-block';
       checkWatchlistStatus(code, mkt);
     }
-  } catch(e) { alert('Error: ' + e.message); }
-  finally { toggleLoading(false); }
+
+    showToast(`Loaded: ${q.name} (${q.code})`, 'success');
+  } catch(e) {
+    showToast('Connection error. Please try again.', 'error');
+  } finally {
+    toggleLoading(false);
+    searchBtn.disabled = false;
+    searchBtn.textContent = 'Search';
+  }
 }
 
 function fmt(n) { if (!n || n === 0) return '--'; if (n >= 1e8) return (n/1e8).toFixed(2) + 'B'; if (n >= 1e4) return (n/1e4).toFixed(2) + 'M'; return n.toLocaleString(); }
