@@ -9,6 +9,7 @@ import base64
 import requests
 from io import BytesIO
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 # Try loading .env, fallback to env vars
 try:
@@ -133,6 +134,11 @@ def _fetch_tencent_raw(url):
         return resp.text
     except Exception as e:
         return None
+
+
+# Simple in-memory cache with TTL for global-indices
+_global_indices_cache = {"data": None, "ts": 0}
+_GLOBAL_INDICES_CACHE_TTL = 60  # seconds
 
 
 def fetch_cn_quote(code):
@@ -723,6 +729,12 @@ def pwa_icon(size):
 @app.route("/api/market/global-indices")
 def global_indices():
     """获取扩展的全球大盘指数 — 覆盖亚太/欧洲/美洲/商品/加密货币/其他"""
+    global _global_indices_cache
+
+    # Return cached result if fresh
+    now = time.time()
+    if _global_indices_cache["data"] is not None and (now - _global_indices_cache["ts"]) < _GLOBAL_INDICES_CACHE_TTL:
+        return jsonify(_global_indices_cache["data"])
 
     def _parse_tencent_indices(codes_str, name_map):
         """通用腾讯指数解析器"""
@@ -753,27 +765,40 @@ def global_indices():
             pass
         return items
 
-    def _fetch_yf_indices(symbols):
-        """通过 yfinance 获取指数"""
-        items = []
+    def _fetch_single_yf(sym_name):
+        """Fetch a single yfinance symbol with timeout"""
+        sym, name = sym_name
         try:
             import yfinance as yf
-            for sym, name in symbols:
-                try:
-                    t = yf.Ticker(sym)
-                    info = t.info
-                    price = info.get("regularMarketPrice") or info.get("currentPrice") or info.get("previousClose") or 0
-                    prev = info.get("previousClose") or info.get("regularMarketPreviousClose") or price
-                    if price > 0:
-                        chg_pct = ((price - prev) / prev * 100) if prev else 0
-                        items.append({
-                            "code": sym, "name": name,
-                            "price": round(price, 2), "change": round(price - prev, 2),
-                            "change_pct": round(chg_pct, 2),
-                        })
-                except Exception:
-                    pass
-        except ImportError:
+            t = yf.Ticker(sym)
+            info = t.info
+            price = info.get("regularMarketPrice") or info.get("currentPrice") or info.get("previousClose") or 0
+            prev = info.get("previousClose") or info.get("regularMarketPreviousClose") or price
+            if price > 0:
+                chg_pct = ((price - prev) / prev * 100) if prev else 0
+                return {
+                    "code": sym, "name": name,
+                    "price": round(price, 2), "change": round(price - prev, 2),
+                    "change_pct": round(chg_pct, 2),
+                }
+        except Exception:
+            pass
+        return None
+
+    def _fetch_yf_indices_parallel(symbols):
+        """通过 yfinance 并行获取多个指数"""
+        items = []
+        try:
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                futures = {executor.submit(_fetch_single_yf, s): s for s in symbols}
+                for f in as_completed(futures, timeout=12):
+                    try:
+                        result = f.result(timeout=10)
+                        if result:
+                            items.append(result)
+                    except (FuturesTimeoutError, Exception):
+                        pass
+        except (ImportError, Exception):
             pass
         return items
 
@@ -800,7 +825,7 @@ def global_indices():
         asia_map
     )
 
-    # ====== 欧洲 (Tencent + yfinance 补充) ======
+    # ====== 欧洲 (Tencent + yfinance 并行补充) ======
     eu_map = {
         "ukFTSE": "FTSE 100",
         "deDAX": "DAX 40",
@@ -808,27 +833,26 @@ def global_indices():
         "euSTOXX": "Euro Stoxx 50",
     }
     results["europe"] = _parse_tencent_indices("ukFTSE,deDAX,frCAC,euSTOXX", eu_map)
-    # 补充：瑞士 SMI, 荷兰 AEX, 意大利 MIB
-    results["europe"].extend(_fetch_yf_indices([
+    results["europe"].extend(_fetch_yf_indices_parallel([
         ("^SSMI", "Swiss SMI"),
         ("^AEX", "AEX Index"),
     ]))
 
-    # ====== 美洲 (Tencent US + yfinance 补充) ======
+    # ====== 美洲 (Tencent US + yfinance 并行补充) ======
     americas_map = {
         "us.INX": "S&P 500",
         "us.IXIC": "NASDAQ Composite",
         "us.DJI": "Dow Jones",
     }
     results["americas"] = _parse_tencent_indices("us.INX,us.IXIC,us.DJI", americas_map)
-    results["americas"].extend(_fetch_yf_indices([
+    results["americas"].extend(_fetch_yf_indices_parallel([
         ("^BVSP", "Bovespa"),
         ("^GSPTSE", "S&P/TSX"),
         ("^MXX", "IPC Mexico"),
     ]))
 
-    # ====== 商品 ======
-    results["commodities"] = _fetch_yf_indices([
+    # ====== 商品 (yfinance 并行) ======
+    results["commodities"] = _fetch_yf_indices_parallel([
         ("GC=F", "Gold Futures"),
         ("SI=F", "Silver Futures"),
         ("CL=F", "WTI Crude Oil"),
@@ -839,8 +863,8 @@ def global_indices():
         ("ZS=F", "Soybean Futures"),
     ])
 
-    # ====== 加密货币 ======
-    results["crypto"] = _fetch_yf_indices([
+    # ====== 加密货币 (yfinance 并行) ======
+    results["crypto"] = _fetch_yf_indices_parallel([
         ("BTC-USD", "Bitcoin"),
         ("ETH-USD", "Ethereum"),
         ("SOL-USD", "Solana"),
@@ -849,7 +873,7 @@ def global_indices():
     ])
 
     # ====== 其他 (VIX, DXY, 美债) ======
-    results["others"] = _fetch_yf_indices([
+    results["others"] = _fetch_yf_indices_parallel([
         ("^VIX", "VIX Volatility"),
         ("DX-Y.NYB", "US Dollar Index"),
         ("^TNX", "US 10Y Treasury Yield"),
@@ -864,6 +888,10 @@ def global_indices():
     for item in others_tencent:
         if not any(o["code"] == item["code"] for o in results["others"]):
             results["others"].append(item)
+
+    # Update cache
+    _global_indices_cache["data"] = results
+    _global_indices_cache["ts"] = time.time()
 
     return jsonify(results)
 
