@@ -700,7 +700,8 @@ body {
   <!-- Search -->
   <div class="search-section">
     <div class="search-box">
-      <input type="text" id="stockSearch" placeholder="Search stocks by ticker or name... (e.g. AAPL, 600519, 00700)" autocomplete="off">
+      <input type="text" id="stockSearch" placeholder="Search by code or name — e.g. 600519, AAPL, 00700" autocomplete="off" list="stockDatalist">
+      <datalist id="stockDatalist"></datalist>
       <select id="marketSelect">
         <option value="cn">🇨🇳 A-Share</option>
         <option value="hk">🇭🇰 HK</option>
@@ -823,6 +824,7 @@ body {
       <div class="chart-tabs">
         <button class="active" data-chart="kline">Candlestick</button>
         <button data-chart="intraday">Intraday</button>
+        <button data-chart="moneyflow">Capital Flow</button>
         <button data-chart="financials">Financials</button>
       </div>
 
@@ -838,6 +840,15 @@ body {
       <!-- Intraday -->
       <div class="chart-panel" id="cp-intraday">
         <canvas id="intradayCanvas" height="380"></canvas>
+      </div>
+
+      <!-- Money Flow -->
+      <div class="chart-panel" id="cp-moneyflow">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><canvas id="flowMainCanvas" height="200"></canvas></div>
+          <div><canvas id="flowRetailCanvas" height="200"></canvas></div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:12px;font-size:13px" id="flowSummary"></div>
       </div>
 
       <!-- Financials -->
@@ -941,6 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.chart-panel').forEach(p => p.classList.remove('active'));
       document.getElementById('cp-' + b.dataset.chart).classList.add('active');
       if (b.dataset.chart === 'intraday' && state.stock) loadIntraday();
+      if (b.dataset.chart === 'moneyflow' && state.stock) loadMoneyFlow();
       if (b.dataset.chart === 'financials' && state.stock) loadFinancials();
     });
   });
@@ -1418,9 +1430,94 @@ async function loadFinancials() {
       ['Debt Ratio', f.debt_ratio?.toFixed(1)+'%' || '--'], ['Gross Margin', f.gross_margin ? (f.gross_margin*100).toFixed(1)+'%' : '--'],
       ['Net Margin', f.net_margin ? (f.net_margin*100).toFixed(1)+'%' : '--']
     ];
-    document.getElementById('financialGrid').innerHTML = items.map(([l, v]) => `<div class="fin-card"><div class="fc-label">${l}</div><div class="fc-value">${v}</div></div>`).join('');
+    document.getElementById('financialGrid').innerHTML = items.map(([l, v]) => '<div class="fin-card"><div class="fc-label">'+l+'</div><div class="fc-value">'+v+'</div></div>').join('');
   } catch(e) {}
 }
+
+// ============================================================
+// Money Flow Chart (Institutional vs Retail)
+// ============================================================
+async function loadMoneyFlow() {
+  if (!state.stock) return;
+  try {
+    const r = await fetch('/api/stock/money-flow?code=' + state.stock.code + '&market=' + state.stock.market);
+    const d = await r.json();
+    if (!d.flows || d.flows.length < 3) return;
+
+    function drawFlowBar(canvasId, key, color, label) {
+      var canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      var W = canvas.width, H = canvas.height;
+      var PAD = {T:20,R:50,B:30,L:55}, cw=W-PAD.L-PAD.R, ch=H-PAD.T-PAD.B;
+      var vals = d.flows.map(function(f){return f[key];});
+      var mx = Math.max.apply(null, vals.map(Math.abs));
+      if (mx === 0) mx = 1;
+      mx *= 1.2;
+      var xs = function(i){return PAD.L+(i/(vals.length-1))*cw;};
+      var ys = function(v){return PAD.T+(1-(v+mx)/(2*mx))*ch;};
+      var zeroY = ys(0);
+
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle = '#111118'; ctx.fillRect(PAD.L,PAD.T,cw,ch);
+
+      // Grid and zero line
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.moveTo(PAD.L,zeroY); ctx.lineTo(W-PAD.R,zeroY); ctx.stroke();
+
+      // Bars
+      var bw = Math.max(2, cw/vals.length*0.65);
+      vals.forEach(function(v,i){
+        var x = xs(i), h = Math.abs(ys(v)-zeroY);
+        ctx.fillStyle = v >= 0 ? color : 'rgba(239,68,68,0.7)';
+        ctx.fillRect(x-bw/2, v>=0 ? ys(v) : zeroY, bw, Math.max(1,h));
+      });
+
+      // Labels
+      ctx.fillStyle = '#585870'; ctx.font = '10px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('+'+mx.toFixed(0)+'W', PAD.L, PAD.T+10);
+      ctx.fillText('-'+mx.toFixed(0)+'W', PAD.L, H-PAD.B+2);
+      ctx.fillText(label, PAD.L, PAD.T+10);
+      // Date labels
+      ctx.textAlign = 'center';
+      for (var i=0; i<vals.length; i+=Math.max(1,Math.floor(vals.length/6))) {
+        ctx.fillText((d.flows[i].date||'').slice(5), xs(i), H-8);
+      }
+    }
+
+    drawFlowBar('flowMainCanvas', 'main', '#3b82f6', 'Institutional (Main Force)');
+    drawFlowBar('flowRetailCanvas', 'retail', '#f97316', 'Retail Investors');
+
+    // Summary
+    var s = d.summary || {};
+    document.getElementById('flowSummary').innerHTML =
+      '<div><span style="color:var(--text-tertiary)">Main Force 5D:</span> <b style="color:'+(s.main_5d>=0?'#22c55e':'#ef4444')+'">'+(s.main_5d||0)+'W</b></div>'+
+      '<div><span style="color:var(--text-tertiary)">Retail 5D:</span> <b style="color:'+(s.retail_5d>=0?'#22c55e':'#ef4444')+'">'+(s.retail_5d||0)+'W</b></div>'+
+      '<div><span style="color:var(--text-tertiary)">Signal:</span> <b>'+(s.main_vs_retail||'')+' · '+(s.strength||'')+'</b></div>';
+  } catch(e) { console.error(e); }
+}
+
+// ============================================================
+// Datalist Population (native browser autocomplete as fallback)
+// ============================================================
+async function populateDatalist() {
+  try {
+    var r = await fetch('/api/market/indices');
+    var d = await r.json();
+    if (!d.indices) return;
+    var dl = document.getElementById('stockDatalist');
+    if (!dl) return;
+    var labels = {'sh000001':'SSE 000001','sz399001':'SZSE 399001','sz399006':'ChiNext 399006','hk800000':'HSI','us.INX':'S&P 500','us.IXIC':'NASDAQ','us.DJI':'DJIA'};
+    dl.innerHTML = d.indices.map(function(i){
+      return '<option value="'+i.code+'">'+(labels[i.code]||i.name)+'</option>';
+    }).join('');
+  } catch(e) {}
+}
+// Call on load
+document.addEventListener('DOMContentLoaded', function() { populateDatalist(); });
 
 // ============================================================
 // AI ANALYSIS
@@ -1560,11 +1657,9 @@ function toggleLoading(v) { document.getElementById('loading').classList.toggle(
 document.getElementById('authModal').addEventListener('click', e => { if (e.target === document.getElementById('authModal')) closeAuthModal(); });
 </script>
 <script>
-// PWA Service Worker Registration
+// SW self-destruct (registered previously, will unregister on next visit)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/static/sw.js').then(reg => {
-    console.log('SW registered:', reg.scope);
-  }).catch(err => console.log('SW registration skipped:', err));
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
 </script>
 </body>
