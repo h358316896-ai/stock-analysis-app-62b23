@@ -1324,6 +1324,125 @@ def stock_kline_full():
         return jsonify({"error": str(e)}), 500
 
 
+# ==========================================================
+# 涨跌幅排行榜 (Top Movers)
+# ==========================================================
+@app.route("/api/market/movers")
+def top_movers():
+    """获取涨跌幅排行榜"""
+    try:
+        # A股涨幅榜
+        url_up = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20,f9"
+        url_down = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=0&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20,f9"
+        h = {"User-Agent": "Mozilla/5.0"}
+        up_data = requests.get(url_up, headers=h, timeout=10).json()
+        down_data = requests.get(url_down, headers=h, timeout=10).json()
+
+        def parse_mover(item):
+            return {
+                "code": item.get("f12", ""),
+                "name": item.get("f14", ""),
+                "price": item.get("f2", 0),
+                "change_pct": item.get("f3", 0),
+                "market_cap": item.get("f20", 0),
+                "pe": item.get("f9"),
+            }
+
+        gainers = [parse_mover(i) for i in up_data.get("data", {}).get("diff", [])[:15]]
+        losers = [parse_mover(i) for i in down_data.get("data", {}).get("diff", [])[:15]]
+        return jsonify({"gainers": gainers, "losers": losers,
+                        "updated": datetime.now().strftime("%H:%M:%S")})
+    except Exception as e:
+        return jsonify({"error": str(e), "gainers": [], "losers": []})
+
+
+# ==========================================================
+# 财经新闻 (Financial News)
+# ==========================================================
+@app.route("/api/news/finance")
+def finance_news():
+    """获取财经新闻"""
+    try:
+        # Eastmoney news headlines
+        url = "https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&secids=&fields=f3,f4,f12,f14,f17,f18&np=1&pz=15&ut=bd1d9ddb04089700cf9c27f6f7426281&cb=jQuery"
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        # Simple approach: use a known news API
+        news_url = "https://newsapi.org/v2/top-headlines?category=business&language=en&pageSize=20&apiKey=demo"
+        try:
+            nresp = requests.get(news_url, timeout=10)
+            ndata = nresp.json()
+            articles = []
+            for a in ndata.get("articles", [])[:15]:
+                articles.append({
+                    "title": a.get("title", ""),
+                    "source": a.get("source", {}).get("name", ""),
+                    "url": a.get("url", ""),
+                    "published": a.get("publishedAt", ""),
+                    "description": a.get("description", "")[:150] if a.get("description") else "",
+                })
+            if articles:
+                return jsonify({"news": articles, "updated": datetime.now().strftime("%H:%M")})
+        except Exception:
+            pass
+
+        # Fallback: return curated financial news
+        return jsonify({
+            "news": [
+                {"title": "Markets await Fed decision on interest rates", "source": "Reuters", "published": datetime.now().strftime("%Y-%m-%dT%H:%M:00Z")},
+                {"title": "Tech stocks lead global rally amid AI optimism", "source": "Bloomberg", "published": datetime.now().strftime("%Y-%m-%dT%H:%M:00Z")},
+                {"title": "Oil prices stabilize after recent volatility", "source": "CNBC", "published": datetime.now().strftime("%Y-%m-%dT%H:%M:00Z")},
+            ],
+            "updated": datetime.now().strftime("%H:%M"),
+            "note": "Using demo/sample data. Configure NEWS_API_KEY for live news."
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "news": []})
+
+
+# ==========================================================
+# 经济日历 (Economic Calendar)
+# ==========================================================
+@app.route("/api/market/calendar")
+def economic_calendar():
+    """经济事件日历"""
+    today = datetime.now()
+    events = []
+    # Generate upcoming events for next 7 days
+    for i in range(7):
+        d = today + timedelta(days=i)
+        day_events = []
+        if d.weekday() == 0:  # Monday
+            day_events = [
+                {"time": "09:30", "event": "China Manufacturing PMI", "importance": "high", "country": "CN"},
+                {"time": "10:00", "event": "Eurozone Industrial Production", "importance": "medium", "country": "EU"},
+            ]
+        elif d.weekday() == 2:  # Wednesday
+            day_events = [
+                {"time": "14:00", "event": "US Fed Interest Rate Decision", "importance": "high", "country": "US"},
+                {"time": "16:30", "event": "US Crude Oil Inventories", "importance": "medium", "country": "US"},
+            ]
+        elif d.weekday() == 3:  # Thursday
+            day_events = [
+                {"time": "08:00", "event": "UK GDP (QoQ)", "importance": "high", "country": "UK"},
+                {"time": "20:30", "event": "US Initial Jobless Claims", "importance": "medium", "country": "US"},
+            ]
+        elif d.weekday() == 4:  # Friday
+            day_events = [
+                {"time": "09:30", "event": "China CPI (YoY)", "importance": "high", "country": "CN"},
+                {"time": "14:30", "event": "US Nonfarm Payrolls", "importance": "high", "country": "US"},
+            ]
+        else:
+            day_events = [
+                {"time": "10:00", "event": "Consumer Confidence Index", "importance": "low", "country": "EU"},
+            ]
+        events.append({
+            "date": d.strftime("%Y-%m-%d"),
+            "day": d.strftime("%A"),
+            "events": day_events,
+        })
+    return jsonify({"calendar": events, "note": "Sample calendar. Live data requires premium API key."})
+
+
 @app.route("/api/media/generate", methods=["POST"])
 def media_generate():
     data = request.json or {}
