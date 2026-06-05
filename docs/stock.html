@@ -693,6 +693,28 @@ body {
 .badge-cn { background: var(--red-bg); color: var(--red); }
 .badge-hk { background: var(--green-bg); color: var(--green); }
 .badge-us { background: rgba(59,130,246,0.15); color: var(--accent); }
+
+/* Anomaly Alert Flash */
+@keyframes alertFlash {
+  0%,100% { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.15); }
+  50% { background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.6); box-shadow: 0 0 16px rgba(239,68,68,0.3); }
+}
+@keyframes alertFlashGreen {
+  0%,100% { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.15); }
+  50% { background: rgba(34,197,94,0.25); border-color: rgba(34,197,94,0.6); box-shadow: 0 0 16px rgba(34,197,94,0.3); }
+}
+@keyframes pulseDot {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.8); }
+}
+.alert-flash-up { animation: alertFlashGreen 1.2s ease-in-out infinite; border-radius:8px; padding:8px 10px; border:1px solid transparent; cursor:pointer; }
+.alert-flash-down { animation: alertFlash 1.2s ease-in-out infinite; border-radius:8px; padding:8px 10px; border:1px solid transparent; cursor:pointer; }
+.alert-pulse-dot { display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;animation:pulseDot 1s ease-in-out infinite; }
+
+/* Smart Screener Tags */
+.strategy-tag { display:inline-block;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);transition:all .2s;margin:3px; }
+.strategy-tag:hover { border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,0.08); }
+.strategy-tag.active { background:var(--accent);color:white;border-color:var(--accent); }
 </style>
 </head>
 <body>
@@ -816,6 +838,15 @@ body {
   <!-- Panel: Screener -->
   <div class="panel" id="panel-screener">
     <div class="glass" style="padding:16px">
+      <div style="margin-bottom:12px">
+        <span style="font-size:11px;color:var(--text-tertiary);margin-right:8px">🎯 智能策略:</span>
+        <span class="strategy-tag active" data-strategy="custom" onclick="applyStrategy('custom')">自定义</span>
+        <span class="strategy-tag" data-strategy="breakout" onclick="applyStrategy('breakout')">📈 放量突破</span>
+        <span class="strategy-tag" data-strategy="oversold" onclick="applyStrategy('oversold')">📉 超跌反弹</span>
+        <span class="strategy-tag" data-strategy="strong" onclick="applyStrategy('strong')">💪 强势股</span>
+        <span class="strategy-tag" data-strategy="value" onclick="applyStrategy('value')">💎 低估值</span>
+        <span class="strategy-tag" data-strategy="inflow" onclick="applyStrategy('inflow')">💰 资金流入</span>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px">
         <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">Max P/E</label><input type="number" id="scrPE" placeholder="e.g. 30" style="width:100%;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
         <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">Min P/E</label><input type="number" id="scrPEMin" placeholder="e.g. 0" style="width:100%;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
@@ -845,6 +876,11 @@ body {
   <!-- Panel: Big Data -->
   <div class="panel" id="panel-bigdata">
     <div class="glass" style="padding:14px;margin-bottom:12px">
+      <!-- 异动预警条 -->
+      <div id="anomalyBar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;min-height:32px;align-items:center">
+        <span style="font-size:11px;font-weight:700;color:var(--orange);white-space:nowrap">⚡ 异动预警</span>
+        <span id="anomalyContent" style="font-size:11px;color:var(--text-tertiary)">监控中...</span>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
         <!-- 北向资金 -->
         <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
@@ -1253,6 +1289,7 @@ async function loadCalendar() {
 // BIG DATA PANEL
 // ============================================================
 async function loadBigData() {
+  loadAnomalies();
   loadNorthBound();
   loadMarginTrading();
   loadLimitUpDown();
@@ -1353,6 +1390,53 @@ async function loadInstitutionalResearch() {
       return '<div style="padding:2px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02)"><b style="color:var(--accent);cursor:pointer" onclick="quickSearch(\''+rec.code+'\',\'cn\')">'+rec.name+'</b> '+rec.date+'<br><span style="color:var(--text-tertiary)">'+rec.org_count+'家机构 '+(rec.biz||'')+'</span></div>';
     }).join('');
   } catch(e) {}
+}
+
+// ============================================================
+// ANOMALY ALERTS
+// ============================================================
+async function loadAnomalies() {
+  try {
+    var alerts = [];
+    // Check movers for big changes (>7%)
+    var mr = await fetch('/api/market/movers'); var md = await mr.json();
+    (md.gainers||[]).forEach(function(s){
+      if (s.change_pct > 7) alerts.push({code:s.code,name:s.name,msg:'暴涨 +'+s.change_pct.toFixed(1)+'%',cls:'up',price:s.price});
+    });
+    (md.losers||[]).forEach(function(s){
+      if (s.change_pct < -7) alerts.push({code:s.code,name:s.name,msg:'暴跌 '+s.change_pct.toFixed(1)+'%',cls:'down',price:s.price});
+    });
+    var el = document.getElementById('anomalyContent');
+    if (!alerts.length) { el.innerHTML = '<span style="color:var(--text-tertiary)">暂无显著异动</span>'; return; }
+    el.innerHTML = alerts.slice(0,8).map(function(a){
+      var cls = a.cls==='up'?'alert-flash-up':'alert-flash-down';
+      return '<span class="'+cls+'" onclick="quickSearch(\''+a.code+'\',\'cn\')" title="'+a.price.toFixed(2)+'"><span class="alert-pulse-dot" style="background:'+(a.cls==='up'?'#22c55e':'#ef4444')+'"></span>'+a.name+' '+a.msg+'</span>';
+    }).join('');
+  } catch(e) {}
+}
+
+// ============================================================
+// SMART SCREENER STRATEGIES
+// ============================================================
+function applyStrategy(name) {
+  document.querySelectorAll('.strategy-tag').forEach(function(t){t.classList.toggle('active',t.dataset.strategy===name);});
+  var pe=document.getElementById('scrPE'), peMin=document.getElementById('scrPEMin'), mkt=document.getElementById('scrMktCap'), chg=document.getElementById('scrChgMin');
+  // Reset
+  pe.value='';peMin.value='';mkt.value=''; chg.value='';
+  var strategies = {
+    custom: {},
+    breakout: {peMax:'50',mktCapMin:'10',chgMin:'3'},
+    oversold: {peMax:'40',mktCapMin:'5',chgMin:'-10'},
+    strong: {peMax:'60',mktCapMin:'50',chgMin:'2'},
+    value: {peMax:'15',peMin:'0',mktCapMin:'100'},
+    inflow: {peMax:'40',mktCapMin:'20',chgMin:'0'},
+  };
+  var s = strategies[name]||{};
+  if (s.peMax) pe.value=s.peMax;
+  if (s.peMin) peMin.value=s.peMin;
+  if (s.mktCapMin) mkt.value=s.mktCapMin;
+  if (s.chgMin) chg.value=s.chgMin;
+  if (name!=='custom') runScreener();
 }
 
 // ============================================================
