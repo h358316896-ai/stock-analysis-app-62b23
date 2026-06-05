@@ -100,6 +100,21 @@ def fetch_json(url, timeout=10):
         print(f"[fetch_json] Error for {url[:80]}: {e}")
         return {"error": str(e)}
 
+EM_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://data.eastmoney.com/",
+}
+
+def fetch_eastmoney(url, timeout=10):
+    """Fetch JSON from Eastmoney API with SSL fallback. Returns parsed JSON or None."""
+    for verify in (True, False):
+        try:
+            resp = requests.get(url, headers=EM_HEADERS, timeout=timeout, verify=verify)
+            return resp.json()
+        except Exception:
+            continue
+    return None
+
 
 def fetch_text_gbk(url, timeout=10):
     """Fetch raw text as GBK from URL"""
@@ -225,7 +240,7 @@ def refresh_hk_stocks():
 def _fetch_tencent_raw(url):
     """Fetch raw GBK text from Tencent Finance API using Python requests (no curl dependency)"""
     try:
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
         resp.encoding = "gb18030"
         return resp.text
     except Exception as e:
@@ -1280,7 +1295,7 @@ def north_bound_flow():
     try:
         # Eastmoney API for north-bound capital flow
         url = "https://push2.eastmoney.com/api/qt/kamt.kline/get?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54&klt=101&lmt=30"
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
         data = resp.json()
         flows = []
         if data.get("data") and data["data"].get("klines"):
@@ -1302,44 +1317,32 @@ def north_bound_flow():
 @app.route("/api/market/sectors")
 def sector_heatmap():
     """获取行业板块涨跌数据"""
-    try:
-        # Eastmoney sector API
-        url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2&fields=f2,f3,f4,f12,f14"
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        data = resp.json()
-        sectors = []
-        if data.get("data") and data["data"].get("diff"):
-            for item in data["data"]["diff"]:
-                sectors.append({
-                    "code": item.get("f12", ""),
-                    "name": item.get("f14", ""),
-                    "price": item.get("f2", 0),
-                    "change_pct": item.get("f3", 0),
-                    "change": item.get("f4", 0),
-                })
-        return jsonify({"sectors": sectors})
-    except Exception as e:
-        return jsonify({"error": str(e), "sectors": []})
+    url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2&fields=f2,f3,f4,f12,f14"
+    data = fetch_eastmoney(url)
+    sectors = []
+    if data and data.get("data") and data["data"].get("diff"):
+        for item in data["data"]["diff"]:
+            sectors.append({
+                "code": item.get("f12", ""), "name": item.get("f14", ""),
+                "price": item.get("f2", 0), "change_pct": item.get("f3", 0),
+                "change": item.get("f4", 0),
+            })
+    return jsonify({"sectors": sectors})
 
 
 @app.route("/api/market/concepts")
 def concept_heatmap():
     """获取概念板块涨跌数据"""
-    try:
-        url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:3&fields=f2,f3,f4,f12,f14"
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        data = resp.json()
-        sectors = []
-        if data.get("data") and data["data"].get("diff"):
-            for item in data["data"]["diff"]:
-                sectors.append({
-                    "code": item.get("f12", ""),
-                    "name": item.get("f14", ""),
-                    "change_pct": item.get("f3", 0),
-                })
-        return jsonify({"sectors": sectors})
-    except Exception as e:
-        return jsonify({"error": str(e), "sectors": []})
+    url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:3&fields=f2,f3,f4,f12,f14"
+    data = fetch_eastmoney(url)
+    sectors = []
+    if data and data.get("data") and data["data"].get("diff"):
+        for item in data["data"]["diff"]:
+            sectors.append({
+                "code": item.get("f12", ""), "name": item.get("f14", ""),
+                "change_pct": item.get("f3", 0),
+            })
+    return jsonify({"sectors": sectors})
 
 
 # ==========================================================
@@ -1351,7 +1354,7 @@ def dragon_tiger():
     try:
         today = datetime.now().strftime("%Y%m%d")
         url = f"https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:4&fields=f2,f3,f4,f12,f14,f62,f184,f66,f72,f75,f78,f81,f84,f87,f204,f205,f206"
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
         data = resp.json()
         stocks = []
         if data.get("data") and data["data"].get("diff"):
@@ -1388,7 +1391,7 @@ def stock_financials():
             prefix = "1" if code.startswith("6") else "0"
             secid = f"{prefix}.{code}"
             url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f9,f20,f23,f37,f38,f39,f40,f41,f43,f44,f45,f46,f55,f57,f58,f115,f162,f167,f170,f173"
-            resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+            resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
             data = resp.json()
             if data.get("data"):
                 d = data["data"]
@@ -1493,7 +1496,7 @@ def stock_screener():
         url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid=f3"
                "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
                "&fields=f2,f3,f4,f9,f12,f14,f15,f16,f17,f18,f20,f21,f23,f173")
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
         result = resp.json()
         stocks = []
         if result.get("data") and result["data"].get("diff"):
@@ -1617,7 +1620,7 @@ def finance_news():
     try:
         # Eastmoney news headlines
         url = "https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&secids=&fields=f3,f4,f12,f14,f17,f18&np=1&pz=15&ut=bd1d9ddb04089700cf9c27f6f7426281&cb=jQuery"
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
         # Simple approach: use a known news API
         news_url = "https://newsapi.org/v2/top-headlines?category=business&language=en&pageSize=20&apiKey=demo"
         try:
@@ -1722,13 +1725,6 @@ def stock_money_flow():
         prefix = "1" if code.startswith("6") else "0"
         secid = f"{prefix}.{code}"
 
-        # Headers that mimic browser request (Eastmoney blocks requests without Referer)
-        em_headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Referer": "https://data.eastmoney.com/",
-            "Accept": "application/json, text/plain, */*",
-        }
-
         # Try multiple Eastmoney API URLs (different subdomains / parameter orders)
         em_urls = [
             # push2his — more reliable for historical kline data
@@ -1739,14 +1735,7 @@ def stock_money_flow():
 
         data = None
         for url in em_urls:
-            for ssl_verify in (True, False):
-                try:
-                    resp = requests.get(url, headers=em_headers, timeout=15, verify=ssl_verify)
-                    data = resp.json()
-                    if data.get("data") and data["data"].get("klines"):
-                        break
-                except Exception:
-                    continue
+            data = fetch_eastmoney(url, timeout=15)
             if data and data.get("data") and data["data"].get("klines"):
                 break
 
