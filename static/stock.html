@@ -887,7 +887,7 @@ body {
       <!-- Money Flow -->
       <div class="chart-panel" id="cp-moneyflow">
         <div class="chart-row-full" style="margin-bottom:12px;position:relative">
-          <canvas id="flowCompareCanvas" height="280"></canvas>
+          <canvas id="flowCompareCanvas" width="700" height="280" style="width:100%;max-width:100%;height:auto;min-height:220px"></canvas>
           <div class="flow-dot-indicator blue" id="flowDotBlue" style="display:none"></div>
           <div class="flow-dot-indicator orange" id="flowDotOrange" style="display:none"></div>
           <div class="flow-dot-indicator" id="flowDotCross" style="display:none;width:2px;height:100%;top:0;border-radius:0;background:rgba(255,255,255,0.5);animation:dotBlink 0.6s ease-in-out infinite;box-shadow:0 0 6px rgba(255,255,255,0.3)"></div>
@@ -1670,11 +1670,17 @@ function drawFlowCompare(flows, hoverIdx) {
   if (hoverIdx === undefined) hoverIdx = -1;
   var canvas = document.getElementById('flowCompareCanvas');
   if (!canvas || !flows || flows.length < 1) return;
+  // Use getBoundingClientRect for better cross-browser support (WeChat etc)
+  var rect = canvas.getBoundingClientRect();
   var ctx = canvas.getContext('2d');
-  canvas.width = canvas.offsetWidth || 700;
-  canvas.height = canvas.offsetHeight || 280;
-  var W = canvas.width, H = canvas.height;
-  if (W < 10 || H < 10) return;
+  var dpr = window.devicePixelRatio || 1;
+  var W = rect.width || 700, H = rect.height || 280;
+  if (W < 10 || H < 10) { W = 700; H = 280; }
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
   var PAD = {T: 22, R: 70, B: 32, L: 60}, cw = W - PAD.L - PAD.R, ch = H - PAD.T - PAD.B;
   var n = flows.length;
 
@@ -1838,10 +1844,13 @@ async function loadMoneyFlow() {
       var canvas = document.getElementById(canvasId);
       if (!canvas) return;
       var ctx = canvas.getContext('2d');
-      canvas.width = canvas.offsetWidth || 600;
-      canvas.height = canvas.offsetHeight || 200;
-      var W = canvas.width, H = canvas.height;
-      if (W < 10 || H < 10) return;
+      var rect = canvas.getBoundingClientRect();
+      var dpr = window.devicePixelRatio || 1;
+      var W = rect.width || 600, H = rect.height || 200;
+      if (W < 10 || H < 10) { W = 600; H = 200; }
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+      ctx.scale(dpr, dpr);
       var PAD = {T:20,R:50,B:30,L:55}, cw=W-PAD.L-PAD.R, ch=H-PAD.T-PAD.B;
       var vals = d.flows.map(function(f){return f[key];});
       var mx = Math.max.apply(null, vals.map(Math.abs));
