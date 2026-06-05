@@ -1865,6 +1865,15 @@ def stock_money_flow():
     except Exception:
         pass
 
+    # Load from file cache if live APIs returned nothing
+    if not result["flows"] and cache_key in _file_cache:
+        for date_str, cached in sorted(_file_cache[cache_key].items()):
+            result["flows"].append({
+                "date": date_str,
+                "main": cached["main"], "retail": cached["retail"],
+                "mid": cached.get("mid", 0), "large": cached.get("large", 0), "xl": cached.get("xl", 0),
+            })
+
     # Merge today's live data into file cache
     if result["flows"]:
         today = datetime.now().strftime("%Y-%m-%d")
