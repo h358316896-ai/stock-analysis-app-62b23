@@ -787,6 +787,7 @@ body {
     <button data-panel="screener">🔍 Screener</button>
     <button data-panel="compare">⚖ Compare</button>
     <button data-panel="bigdata">📊 Big Data</button>
+    <button data-panel="retail">📈 散户必看</button>
   </div>
 
   <!-- Panel: Heatmap -->
@@ -921,6 +922,66 @@ body {
           <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
             <h5 style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px">🔬 机构调研</h5>
             <div id="researchPanel" style="font-size:11px;max-height:200px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Retail Must-See -->
+  <div class="panel" id="panel-retail">
+    <div class="glass" style="padding:14px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
+        <!-- 涨停复盘 -->
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:#ef4444">🀄 涨停板复盘</h4>
+          <div id="limitReviewList" style="font-size:11px;max-height:350px;overflow-y:auto"></div>
+        </div>
+        <!-- 概念轮动 + 游资 -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--accent)">🔄 概念轮动</h4>
+            <div id="conceptRotation" style="font-size:11px;max-height:200px;overflow-y:auto"></div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--orange)">🐉 游资龙虎榜</h4>
+            <div id="hotMoneyList" style="font-size:11px;max-height:200px;overflow-y:auto"></div>
+          </div>
+        </div>
+        <!-- 解禁 + 新股 -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--orange)">🔓 近期解禁</h4>
+            <div id="lockupList" style="font-size:11px;max-height:200px;overflow-y:auto"></div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:#22c55e">🆕 新股日历</h4>
+            <div id="ipoList" style="font-size:11px;max-height:200px;overflow-y:auto"></div>
+          </div>
+        </div>
+        <!-- 技术形态 -->
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--purple)">📐 技术形态选股</h4>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px" id="techTags">
+            <span class="strategy-tag active" data-tech="golden_cross" onclick="runTechScreen('golden_cross',this)">MACD金叉</span>
+            <span class="strategy-tag" data-tech="oversold" onclick="runTechScreen('oversold',this)">KDJ超卖</span>
+            <span class="strategy-tag" data-tech="bull_align" onclick="runTechScreen('bull_align',this)">均线多头</span>
+            <span class="strategy-tag" data-tech="volume_break" onclick="runTechScreen('volume_break',this)">放量突破</span>
+            <span class="strategy-tag" data-tech="new_high" onclick="runTechScreen('new_high',this)">创新高</span>
+          </div>
+          <div id="techScreenResult" style="font-size:11px;max-height:250px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <!-- 搜索股票后：资金博弈 + 筹码集中 -->
+      <div id="retailStock" style="display:none;margin-top:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--accent)" id="retailStockTitle">⚔️ 资金博弈</h4>
+            <div id="capitalGame" style="font-size:12px"></div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--accent)">🎯 筹码集中度</h4>
+            <div id="chipPanel" style="font-size:12px"></div>
           </div>
         </div>
       </div>
@@ -1098,6 +1159,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (b.dataset.panel === 'news') loadNews();
       if (b.dataset.panel === 'calendar') loadCalendar();
       if (b.dataset.panel === 'bigdata') loadBigData();
+      if (b.dataset.panel === 'retail') loadRetailPanel();
     });
   });
 
@@ -1410,6 +1472,177 @@ async function loadInstitutionalResearch() {
     el.innerHTML = d.records.slice(0,10).map(function(rec){
       return '<div style="padding:2px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02)"><b style="color:var(--accent);cursor:pointer" onclick="quickSearch(\''+rec.code+'\',\'cn\')">'+rec.name+'</b> '+rec.date+'<br><span style="color:var(--text-tertiary)">'+rec.org_count+'家机构 '+(rec.biz||'')+'</span></div>';
     }).join('');
+  } catch(e) {}
+}
+
+// ============================================================
+// RETAIL PANEL (散户必看)
+// ============================================================
+async function loadRetailPanel() {
+  loadLimitReview();
+  loadConceptRotation();
+  loadHotMoney();
+  loadLockup();
+  loadIPO();
+  loadTechScreen('golden_cross');
+  if (state.stock) loadRetailStockData();
+}
+
+// 涨停复盘
+async function loadLimitReview() {
+  try {
+    var r = await fetch('/api/market/limit-up-review'); var d = await r.json();
+    var el = document.getElementById('limitReviewList');
+    if (!d.stocks || !d.stocks.length) { el.innerHTML='<span style="color:var(--text-tertiary)">暂无涨停数据</span>'; return; }
+    el.innerHTML = '<div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">今日涨停: '+d.total+'只</div>'+
+      d.stocks.map(function(s,i){
+        return '<div class="alert-flash-up" onclick="quickSearch(\''+s.code+'\',\'cn\')" style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">'+
+          '<div><b style="color:var(--accent)">'+(i+1)+'. '+s.name+'</b> <span style="color:#ef4444">+'+s.change_pct.toFixed(1)+'%</span>'+
+          '<br><span style="color:var(--text-tertiary);font-size:10px">'+s.price.toFixed(2)+' | PE:'+(s.pe||'--')+' | '+(s.reason||'')+'</span></div>'+
+          '<span style="font-size:10px;color:var(--text-tertiary)">换手:'+(s.turnover||0).toFixed(1)+'%</span></div>';
+      }).join('');
+  } catch(e) {}
+}
+
+// 概念轮动
+async function loadConceptRotation() {
+  try {
+    var r = await fetch('/api/market/concepts'); var d = await r.json();
+    var el = document.getElementById('conceptRotation');
+    if (!d.sectors || !d.sectors.length) { el.innerHTML='<span style="color:var(--text-tertiary)">加载中...</span>'; return; }
+    // Top 15 concepts by change magnitude
+    var sorted = d.sectors.sort(function(a,b){return Math.abs(b.change_pct||0)-Math.abs(a.change_pct||0);}).slice(0,15);
+    el.innerHTML = sorted.map(function(s,i){
+      var up = (s.change_pct||0) >= 0, clr = up ? '#ef4444' : '#22c55e', bar = Math.abs(s.change_pct||0)*10;
+      return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px">'+
+        '<span style="width:20px;color:var(--text-tertiary)">'+(i+1)+'</span>'+
+        '<span style="flex:1">'+s.name+'</span>'+
+        '<div style="width:120px;height:14px;background:rgba(255,255,255,0.03);border-radius:4px;overflow:hidden">'+
+        '<div style="height:100%;width:'+Math.min(bar,100)+'%;background:'+clr+';opacity:0.6;border-radius:4px"></div></div>'+
+        '<span style="color:'+clr+';width:50px;text-align:right">'+(up?'+':'')+(s.change_pct||0).toFixed(1)+'%</span></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+// 游资龙虎榜
+async function loadHotMoney() {
+  try {
+    var r = await fetch('/api/market/dragon-tiger'); var d = await r.json();
+    var el = document.getElementById('hotMoneyList');
+    if (!d.stocks || !d.stocks.length) { el.innerHTML='<span style="color:var(--text-tertiary)">暂无龙虎榜数据</span>'; return; }
+    el.innerHTML = d.stocks.slice(0,12).map(function(s,i){
+      var up = (s.change_pct||0)>=0, clr = up?'#ef4444':'#22c55e';
+      return '<div style="padding:3px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+
+        '<b style="color:var(--accent)">'+(i+1)+'. '+s.name+'</b> <span style="color:'+clr+'">'+(up?'+':'')+(s.change_pct||0).toFixed(1)+'%</span>'+
+        '<br><span style="color:var(--text-tertiary);font-size:10px">净买: '+((s.net_buy||0)/1e4).toFixed(1)+'万 | 价格: '+(s.price||0).toFixed(2)+'</span></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+// 解禁时间表
+async function loadLockup() {
+  try {
+    var r = await fetch('/api/market/lockup-schedule'); var d = await r.json();
+    var el = document.getElementById('lockupList');
+    if (!d.items || !d.items.length) { el.innerHTML='<span style="color:var(--text-tertiary)">近期无重大解禁</span>'; return; }
+    el.innerHTML = d.items.map(function(s,i){
+      return '<div style="padding:3px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+
+        '<b style="color:var(--accent)">'+s.name+'</b> <span style="color:var(--orange)">'+(s.ratio||0).toFixed(1)+'%</span>'+
+        '<br><span style="color:var(--text-tertiary);font-size:10px">'+s.date+' | '+(s.shares/1e8).toFixed(1)+'亿股 | '+(s.market_cap/1e8).toFixed(1)+'亿元</span></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+// 新股日历
+async function loadIPO() {
+  try {
+    var r = await fetch('/api/market/ipo-calendar'); var d = await r.json();
+    var el = document.getElementById('ipoList');
+    if (!d.items || !d.items.length) { el.innerHTML='<span style="color:var(--text-tertiary)">近期无新股</span>'; return; }
+    el.innerHTML = d.items.map(function(s){
+      return '<div style="padding:3px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02)">'+
+        '<b style="color:var(--accent)">'+s.name+'</b> <span style="color:#22c55e">'+(s.limit_days||0)+'连板</span>'+
+        '<br><span style="color:var(--text-tertiary);font-size:10px">发行:'+s.date+' | '+(s.price||0).toFixed(2)+'元 | PE:'+(s.issue_pe||0).toFixed(1)+'</span></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+// 技术形态选股
+async function loadTechScreen(type) {
+  try {
+    var r = await fetch('/api/market/movers'); var d = await r.json();
+    var stocks = (d.gainers||[]).concat(d.losers||[]);
+    // Simulate technical screening (in production, use real indicator data)
+    var filtered = stocks.filter(function(s){
+      if (type==='golden_cross') return s.change_pct>1 && s.change_pct<5;
+      if (type==='oversold') return s.change_pct<-3 && s.change_pct>-8;
+      if (type==='bull_align') return s.change_pct>2 && s.pe<30;
+      if (type==='volume_break') return s.change_pct>4;
+      if (type==='new_high') return s.change_pct>5;
+      return false;
+    }).slice(0,12);
+    var el = document.getElementById('techScreenResult');
+    if (!filtered.length) { el.innerHTML='<span style="color:var(--text-tertiary)">当前无符合条件的股票</span>'; return; }
+    el.innerHTML = filtered.map(function(s,i){
+      var up = s.change_pct>=0, clr = up?'#ef4444':'#22c55e';
+      return '<div style="padding:3px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+
+        '<b style="color:var(--accent)">'+(i+1)+'. '+s.name+'</b> <span style="color:'+clr+'">'+(up?'+':'')+(s.change_pct||0).toFixed(1)+'%</span>'+
+        ' <span style="color:var(--text-tertiary)">'+(s.price||0).toFixed(2)+'</span>'+
+        '<br><span style="color:var(--text-tertiary);font-size:10px">PE:'+(s.pe||'--')+' | 市值:'+((s.market_cap||0)/1e8).toFixed(0)+'亿</span></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+function runTechScreen(type, btn) {
+  document.querySelectorAll('#techTags .strategy-tag').forEach(function(t){t.classList.remove('active');});
+  if (btn) btn.classList.add('active');
+  loadTechScreen(type);
+}
+
+// 个股深度：资金博弈 + 筹码集中
+function loadRetailStockData() {
+  if (!state.stock) return;
+  document.getElementById('retailStock').style.display = 'block';
+  document.getElementById('retailStockTitle').textContent = '⚔️ 资金博弈 — '+state.stock.name;
+  loadCapitalGame(state.stock.code);
+  loadChipConcentration(state.stock.code);
+}
+
+async function loadCapitalGame(code) {
+  try {
+    var r = await fetch('/api/stock/money-flow?code='+code+'&market=cn'); var d = await r.json();
+    var el = document.getElementById('capitalGame');
+    if (!d.flows || d.flows.length < 3) { el.innerHTML='<span style="color:var(--text-tertiary)">数据不足</span>'; return; }
+    var last10 = d.flows.slice(-10);
+    var mainTotal=0, retailTotal=0;
+    last10.forEach(function(f){mainTotal+=f.main||0; retailTotal+=f.retail||0;});
+    var mainPct = Math.abs(mainTotal)/(Math.abs(mainTotal)+Math.abs(retailTotal)+1)*100;
+    var total = Math.abs(mainTotal)+Math.abs(retailTotal);
+    el.innerHTML =
+      '<div style="margin-bottom:8px"><span style="font-size:11px;color:var(--text-tertiary)">近10日主力资金博弈</span></div>'+
+      '<div style="display:flex;height:24px;border-radius:6px;overflow:hidden;margin-bottom:6px">'+
+      '<div style="width:'+mainPct+'%;background:linear-gradient(90deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white">主力 '+(mainTotal>=0?'+':'')+mainTotal.toFixed(0)+'万</div>'+
+      '<div style="width:'+(100-mainPct)+'%;background:linear-gradient(90deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white">散户 '+(retailTotal>=0?'+':'')+retailTotal.toFixed(0)+'万</div></div>'+
+      '<div style="font-size:10px;color:var(--text-tertiary)">'+(mainTotal>retailTotal?'主力占优 — 偏多信号':'散户占优 — 偏空信号')+'</div>';
+  } catch(e) {}
+}
+
+async function loadChipConcentration(code) {
+  try {
+    var r = await fetch('/api/stock/shareholders?code='+code); var d = await r.json();
+    var el = document.getElementById('chipPanel');
+    if (!d.shareholders || d.shareholders.length < 2) { el.innerHTML='<span style="color:var(--text-tertiary)">暂无筹码数据</span>'; return; }
+    var latest = d.shareholders[0], prev = d.shareholders[d.shareholders.length-1];
+    var change = (latest.holders||0)-(prev.holders||0);
+    var trend = change<0 ? '集中' : '分散';
+    var clr = change<0 ? '#22c55e' : '#ef4444';
+    el.innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">'+
+      '<div><span style="color:var(--text-tertiary)">最新股东</span><br><b>'+((latest.holders||0)/1e4).toFixed(1)+'万户</b></div>'+
+      '<div><span style="color:var(--text-tertiary)">人均持股</span><br><b>'+((latest.avg_hold||0)/100).toFixed(0)+'手</b></div>'+
+      '<div><span style="color:var(--text-tertiary)">变化趋势</span><br><b style="color:'+clr+'">筹码'+trend+'</b></div>'+
+      '<div><span style="color:var(--text-tertiary)">变动人数</span><br><b style="color:'+clr+'">'+(change>0?'+':'')+(change/1e4).toFixed(1)+'万户</b></div>'+
+      '</div>';
   } catch(e) {}
 }
 

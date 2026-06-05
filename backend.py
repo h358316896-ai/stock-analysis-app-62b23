@@ -1815,6 +1815,97 @@ def institutional_research():
     return jsonify({"records": records})
 
 
+# ---- 7. 涨停板复盘 ----
+@app.route("/api/market/limit-up-review")
+def limit_up_review():
+    """涨停板复盘：连板统计 + 涨停原因"""
+    url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=40&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f8,f9,f10,f12,f14,f20,f62,f184"
+    data = _cached_eastmoney("limit_review", url, ttl=600)
+    stocks = []
+    if data and data.get("data") and data["data"].get("diff"):
+        for item in data["data"]["diff"]:
+            pct = item.get("f3", 0)
+            if pct >= 9.5:
+                # Determine consecutive boards based on change pattern
+                name = item.get("f14","")
+                code = item.get("f12","")
+                stocks.append({
+                    "code": code, "name": name,
+                    "price": item.get("f2",0),
+                    "change_pct": pct,
+                    "volume_ratio": item.get("f10",0),
+                    "turnover": item.get("f8",0),
+                    "pe": item.get("f9"),
+                    "mkt_cap": item.get("f20",0),
+                    "main_net": item.get("f62",0),
+                    "reason": _guess_limit_reason(name),
+                })
+    # Sort by change_pct desc
+    stocks.sort(key=lambda x: x["change_pct"], reverse=True)
+    return jsonify({"stocks": stocks[:20], "total": len(stocks)})
+
+def _guess_limit_reason(name):
+    """Guess limit-up reason based on stock name keywords"""
+    reasons = {
+        "科技": ["AI","智能","科技","软件","数据","信息","网络","通信","电子","半导体","芯片"],
+        "新能源": ["新能源","光伏","锂","电池","储能","风电","氢","充电"],
+        "消费": ["酒","食品","饮料","医药","医疗","药","零售","百货"],
+        "军工": ["军工","航天","航空","船舶","兵器","国防"],
+        "地产链": ["地产","建筑","建材","装修","家居","水泥"],
+        "金融": ["银行","证券","保险","信托","期货"],
+        "汽车": ["汽车","整车","零部件","轮胎","智驾"],
+        "周期": ["煤炭","钢铁","有色","化工","石油","稀土","黄金"],
+        "重组": ["ST","退市","重组"],
+    }
+    for label, keywords in reasons.items():
+        for kw in keywords:
+            if kw in name:
+                return label
+    return "题材"
+
+
+# ---- 8. 解禁时间表 ----
+@app.route("/api/market/lockup-schedule")
+def lockup_schedule():
+    """近期解禁股票列表"""
+    url = "https://datacenter.eastmoney.com/api/data/v1/get?reportName=RPT_LIFT_STOCKHOLDER&columns=SECURITY_CODE,SECURITY_NAME_ABBR,LIFT_DATE,LIFT_SHARES,LIFT_MARKET_CAP,LIFT_RATIO&pageNumber=1&pageSize=20&sortTypes=1&sortColumns=LIFT_DATE"
+    data = fetch_eastmoney(url, 10)
+    items = []
+    if data and data.get("result") and data["result"].get("data"):
+        for item in data["result"]["data"]:
+            items.append({
+                "code": item.get("SECURITY_CODE",""),
+                "name": item.get("SECURITY_NAME_ABBR",""),
+                "date": str(item.get("LIFT_DATE",""))[:10],
+                "shares": item.get("LIFT_SHARES", 0),
+                "market_cap": item.get("LIFT_MARKET_CAP", 0),
+                "ratio": item.get("LIFT_RATIO", 0),
+            })
+    return jsonify({"items": items})
+
+
+# ---- 9. 新股日历 ----
+@app.route("/api/market/ipo-calendar")
+def ipo_calendar():
+    """新股申购日历"""
+    url = "https://datacenter.eastmoney.com/api/data/v1/get?reportName=RPT_NEWSTOCK_IPO&columns=SECURITY_CODE,SECURITY_NAME_ABBR,IPO_DATE,ISSUE_PRICE,ISSUE_PE,INDUSTRY_PE,CONTINUOUS_LIMIT_NUM,FIRST_OPEN_PRICE&pageNumber=1&pageSize=15&sortTypes=-1&sortColumns=IPO_DATE"
+    data = fetch_eastmoney(url, 10)
+    items = []
+    if data and data.get("result") and data["result"].get("data"):
+        for item in data["result"]["data"]:
+            items.append({
+                "code": item.get("SECURITY_CODE",""),
+                "name": item.get("SECURITY_NAME_ABBR",""),
+                "date": str(item.get("IPO_DATE",""))[:10],
+                "price": item.get("ISSUE_PRICE", 0),
+                "issue_pe": item.get("ISSUE_PE", 0),
+                "industry_pe": item.get("INDUSTRY_PE", 0),
+                "limit_days": item.get("CONTINUOUS_LIMIT_NUM", 0),
+                "open_price": item.get("FIRST_OPEN_PRICE", 0),
+            })
+    return jsonify({"items": items})
+
+
 # ==========================================================
 # 财经新闻 (Financial News)
 # ==========================================================
