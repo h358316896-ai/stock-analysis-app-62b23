@@ -1856,7 +1856,7 @@ def stock_money_flow():
             pass
 
     # ---- Smart fallback: estimate fund flow from kline volume ----
-    if not result["flows"] and market == "cn":
+    if len(result["flows"]) < 30 and market == "cn":
         try:
             prefix = "sh" if code.startswith(("6", "5", "1")) else "sz"
             kl_url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={prefix}{code},day,,,60,qfq"
