@@ -1292,23 +1292,18 @@ def stock_indicators():
 @app.route("/api/market/north-bound")
 def north_bound_flow():
     """获取沪深港通北向资金流向"""
-    try:
-        # Eastmoney API for north-bound capital flow
-        url = "https://push2.eastmoney.com/api/qt/kamt.kline/get?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54&klt=101&lmt=30"
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
-        data = resp.json()
-        flows = []
-        if data.get("data") and data["data"].get("klines"):
-            for line in data["data"]["klines"]:
-                parts = line.split(",")
-                if len(parts) >= 4:
-                    flows.append({
-                        "date": parts[0],
-                        "net_flow": float(parts[1]) if parts[1] != "-" else 0,
-                    })
-        return jsonify({"flows": flows, "updated": datetime.now().strftime("%H:%M:%S")})
-    except Exception as e:
-        return jsonify({"error": str(e), "flows": []})
+    url = "https://push2.eastmoney.com/api/qt/kamt.kline/get?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54&klt=101&lmt=30"
+    data = fetch_eastmoney(url)
+    flows = []
+    if data and data.get("data") and data["data"].get("klines"):
+        for line in data["data"]["klines"]:
+            parts = line.split(",")
+            if len(parts) >= 4:
+                flows.append({
+                    "date": parts[0],
+                    "net_flow": float(parts[1]) if parts[1] != "-" else 0,
+                })
+    return jsonify({"flows": flows, "updated": datetime.now().strftime("%H:%M:%S")})
 
 
 # ==========================================================
@@ -1351,24 +1346,17 @@ def concept_heatmap():
 @app.route("/api/market/dragon-tiger")
 def dragon_tiger():
     """获取每日龙虎榜数据"""
-    try:
-        today = datetime.now().strftime("%Y%m%d")
-        url = f"https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:4&fields=f2,f3,f4,f12,f14,f62,f184,f66,f72,f75,f78,f81,f84,f87,f204,f205,f206"
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
-        data = resp.json()
-        stocks = []
-        if data.get("data") and data["data"].get("diff"):
-            for item in data["data"]["diff"]:
-                stocks.append({
-                    "code": item.get("f12", ""),
-                    "name": item.get("f14", ""),
-                    "change_pct": item.get("f3", 0),
-                    "price": item.get("f2", 0),
-                    "net_buy": item.get("f62", 0),  # 龙虎榜净买额
-                })
-        return jsonify({"stocks": stocks, "date": datetime.now().strftime("%Y-%m-%d")})
-    except Exception as e:
-        return jsonify({"error": str(e), "stocks": []})
+    url = f"https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:4&fields=f2,f3,f4,f12,f14,f62,f184,f66,f72,f75,f78,f81,f84,f87,f204,f205,f206"
+    data = fetch_eastmoney(url)
+    stocks = []
+    if data and data.get("data") and data["data"].get("diff"):
+        for item in data["data"]["diff"]:
+            stocks.append({
+                "code": item.get("f12", ""), "name": item.get("f14", ""),
+                "change_pct": item.get("f3", 0), "price": item.get("f2", 0),
+                "net_buy": item.get("f62", 0),
+            })
+    return jsonify({"stocks": stocks, "date": datetime.now().strftime("%Y-%m-%d")})
 
 
 # ==========================================================
@@ -1391,9 +1379,8 @@ def stock_financials():
             prefix = "1" if code.startswith("6") else "0"
             secid = f"{prefix}.{code}"
             url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f9,f20,f23,f37,f38,f39,f40,f41,f43,f44,f45,f46,f55,f57,f58,f115,f162,f167,f170,f173"
-            resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
-            data = resp.json()
-            if data.get("data"):
+            data = fetch_eastmoney(url)
+            if data and data.get("data"):
                 d = data["data"]
                 result = {
                     "pe": d.get("f9"),           # 市盈率(动态)
@@ -1490,45 +1477,40 @@ def stock_screener():
         "roe_min": data.get("roe_min"),
     }
 
-    try:
-        # Eastmoney stock list with filters
-        # 沪深A股, filtered by PE, market cap
-        url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid=f3"
-               "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
-               "&fields=f2,f3,f4,f9,f12,f14,f15,f16,f17,f18,f20,f21,f23,f173")
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Referer": "https://data.eastmoney.com/"}, timeout=10)
-        result = resp.json()
-        stocks = []
-        if result.get("data") and result["data"].get("diff"):
-            for item in result["data"]["diff"]:
-                pe = item.get("f9")
-                price = item.get("f2", 0)
-                change_pct = item.get("f3", 0)
-                market_cap = item.get("f20", 0)
+    # Eastmoney stock list with filters
+    url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid=f3"
+           "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
+           "&fields=f2,f3,f4,f9,f12,f14,f15,f16,f17,f18,f20,f21,f23,f173")
+    data = fetch_eastmoney(url)
+    stocks = []
+    if data and data.get("data") and data["data"].get("diff"):
+        for item in data["data"]["diff"]:
+            pe = item.get("f9")
+            price = item.get("f2", 0)
+            change_pct = item.get("f3", 0)
+            market_cap = item.get("f20", 0)
 
-                # Apply filters
-                if filters["pe_max"] and (pe is None or pe > filters["pe_max"]):
-                    continue
-                if filters["pe_min"] and (pe is None or pe < filters["pe_min"]):
-                    continue
-                if filters["market_cap_min"] and market_cap < filters["market_cap_min"] * 1e8:
-                    continue
-                if filters["change_pct_min"] is not None and change_pct < filters["change_pct_min"]:
-                    continue
-                if filters["change_pct_max"] is not None and change_pct > filters["change_pct_max"]:
-                    continue
+            # Apply filters
+            if filters["pe_max"] and (pe is None or pe > filters["pe_max"]):
+                continue
+            if filters["pe_min"] and (pe is None or pe < filters["pe_min"]):
+                continue
+            if filters["market_cap_min"] and market_cap < filters["market_cap_min"] * 1e8:
+                continue
+            if filters["change_pct_min"] is not None and change_pct < filters["change_pct_min"]:
+                continue
+            if filters["change_pct_max"] is not None and change_pct > filters["change_pct_max"]:
+                continue
 
-                stocks.append({
-                    "code": item.get("f12", ""),
-                    "name": item.get("f14", ""),
-                    "price": price,
-                    "change_pct": change_pct,
-                    "pe": pe,
-                    "market_cap": market_cap,
-                })
-        return jsonify({"stocks": stocks, "total": len(stocks)})
-    except Exception as e:
-        return jsonify({"error": str(e), "stocks": []})
+            stocks.append({
+                "code": item.get("f12", ""),
+                "name": item.get("f14", ""),
+                "price": price,
+                "change_pct": change_pct,
+                "pe": pe,
+                "market_cap": market_cap,
+            })
+    return jsonify({"stocks": stocks, "total": len(stocks)})
 
 
 # ==========================================================
@@ -1589,9 +1571,8 @@ def top_movers():
         # A股涨幅榜
         url_up = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20,f9"
         url_down = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=0&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20,f9"
-        h = {"User-Agent": "Mozilla/5.0"}
-        up_data = requests.get(url_up, headers=h, timeout=10).json()
-        down_data = requests.get(url_down, headers=h, timeout=10).json()
+        up_data = fetch_eastmoney(url_up) or {}
+        down_data = fetch_eastmoney(url_down) or {}
 
         def parse_mover(item):
             return {
