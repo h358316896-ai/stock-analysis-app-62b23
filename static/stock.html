@@ -1076,8 +1076,10 @@ function toggleDropdown() { /* simplified */ }
 // MARKET DATA
 // ============================================================
 async function loadAllMarketData() {
-  await Promise.all([loadIndices(), loadGlobalIndices()]);
+  await loadIndices();      // fast: Tencent API (domestic)
   loadTickerTape();
+  // Defer slow global indices (yfinance ~10s) to avoid blocking page
+  setTimeout(loadGlobalIndices, 3000);
 }
 
 async function loadIndices() {
@@ -1542,7 +1544,7 @@ function drawRSI(canvas, data, hoverIdx) {
 
 async function loadIndicatorsChart(code, mkt) {
   try {
-    const r = await fetch(`/api/stock/indicators?code=${code}&market=${mkt}&limit=120`);
+    const r = await fetch(`/api/stock/indicators?code=${code}&market=${mkt}&limit=60`);
     const data = await r.json();
     if (data.error) return;
     window._chartData = data;
