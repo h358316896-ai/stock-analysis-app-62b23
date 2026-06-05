@@ -1746,9 +1746,9 @@ def stock_money_flow():
         # Try multiple Eastmoney API URLs (different subdomains / parameter orders)
         em_urls = [
             # push2his — more reliable for historical kline data
-            f"https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=60&klt=101&secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56",
+            f"https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=90&klt=101&secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56",
             # push2 — realtime variant
-            f"https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get?secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56&lmt=60",
+            f"https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get?secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56&lmt=90",
         ]
 
         data = None
@@ -1828,7 +1828,7 @@ def stock_money_flow():
             sina_data = fetch_json(sina_url, 10)
             if isinstance(sina_data, list) and len(sina_data) > 0:
                 # Sina returns list of daily fund flow records
-                for day in sina_data[-60:]:
+                for day in sina_data[-90:]:
                     try:
                         result["flows"].append({
                             "date": str(day.get("opendate", "")),
@@ -1904,10 +1904,10 @@ def stock_money_flow():
                 "cached_days": len(result["flows"]),
             }
 
-        # Save file cache (trim to 90 days per stock)
+        # Save file cache (trim to 120 days per stock)
         for key in list(_file_cache.keys()):
             dates = sorted(_file_cache[key].keys())
-            for old_date in dates[:-90]:
+            for old_date in dates[:-120]:
                 del _file_cache[key][old_date]
         try:
             with open(_cache_file, "w", encoding="utf-8") as f:
@@ -1953,7 +1953,7 @@ def hot_topics():
         {"tag": "AI工具", "hot": 98, "desc": "AI工具推荐与评测持续火爆"},
         {"tag": "副业赚钱", "hot": 95, "desc": "经济下行期副业内容需求大"},
         {"tag": "股票投资", "hot": 92, "desc": "震荡市中股民关注度高"},
-        {"tag": "人工智能", "hot": 90, "desc": "AI技术科普类内容长盛不衰"},
+        {"tag": "人工智能", "hot": 120, "desc": "AI技术科普类内容长盛不衰"},
         {"tag": "自媒体运营", "hot": 88, "desc": "新人入局需求持续增长"},
         {"tag": "职场技能", "hot": 85, "desc": "技能提升类内容稳定流量"},
         {"tag": "数码评测", "hot": 82, "desc": "新品发布带动评测热度"},
