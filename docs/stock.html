@@ -1296,7 +1296,6 @@ async function loadIndices() {
   } catch(e) {} }
 async function loadGlobalIndices() {
   try { var r = await fetch('/api/market/global-indices'); state.globalData = await r.json(); } catch(e) {} }
-}
 
 // ============================================================
 // PANELS: Sectors, Movers, News, Calendar
