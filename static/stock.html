@@ -1836,8 +1836,54 @@ async function loadMoneyFlow() {
     const r = await fetch('/api/stock/money-flow?code=' + state.stock.code + '&market=' + state.stock.market);
     const d = await r.json();
     if (!d.flows || d.flows.length < 1) {
-      document.getElementById('flowSummary').innerHTML = '<p style="color:var(--text-tertiary);padding:20px;text-align:center">No money flow data available</p>';
+      // Check if we have summary data from Tencent fallback
+      var sum = d.summary || {};
+      if (sum.main_5d !== undefined || sum.main_net !== undefined) {
+        var mVal = sum.main_5d !== undefined ? sum.main_5d : parseFloat(sum.main_net) / 1e4 || 0;
+        var rVal = sum.retail_5d !== undefined ? sum.retail_5d : parseFloat(sum.retail_net) / 1e4 || 0;
+        document.getElementById('flowSummary').innerHTML =
+          '<div style="grid-column:1/-1;text-align:center;padding:14px;background:rgba(255,255,255,0.02);border-radius:8px">'+
+          '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">Realtime snapshot (historical kline unavailable)</div>'+
+          '<div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;font-size:13px">'+
+          '<div><span style="color:var(--text-tertiary)">Main Force:</span> <b style="color:'+(mVal>=0?'#22c55e':'#ef4444')+'">'+(mVal>=0?'+':'')+mVal.toFixed(0)+'W</b></div>'+
+          '<div><span style="color:var(--text-tertiary)">Retail:</span> <b style="color:'+(rVal>=0?'#22c55e':'#ef4444')+'">'+(rVal>=0?'+':'')+rVal.toFixed(0)+'W</b></div>'+
+          '<div><span style="color:var(--text-tertiary)">Signal:</span> <b>'+(sum.main_vs_retail||'')+' | '+(sum.strength||'')+'</b></div>'+
+          '</div></div>';
+        // Render single-point bar charts
+        var cM = document.getElementById('flowMainCanvas'), cR = document.getElementById('flowRetailCanvas');
+        if (cM) drawSingleFlowBar(cM, mVal, '#3b82f6', 'Main Force (snapshot)');
+        if (cR) drawSingleFlowBar(cR, rVal, '#f97316', 'Retail (snapshot)');
+      } else {
+        document.getElementById('flowSummary').innerHTML = '<p style="color:var(--text-tertiary);padding:20px;text-align:center">No money flow data available<br><small>Try searching an A-share stock (e.g. 600519)</small></p>';
+      }
       return;
+    }
+
+    function drawSingleFlowBar(canvas, value, color, label) {
+      var ctx = canvas.getContext('2d');
+      var rect = canvas.getBoundingClientRect();
+      var dpr = window.devicePixelRatio || 1;
+      var W = rect.width || 300, H = rect.height || 200;
+      if (W < 10 || H < 10) { W = 300; H = 200; }
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+      ctx.scale(dpr, dpr);
+      var PAD = {T:30,R:20,B:40,L:20}, cw = W - PAD.L - PAD.R, ch = H - PAD.T - PAD.B;
+      var zeroY = PAD.T + ch / 2;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#111118'; ctx.fillRect(PAD.L, PAD.T, cw, ch);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(PAD.L, zeroY); ctx.lineTo(W - PAD.R, zeroY); ctx.stroke();
+      var bw = Math.min(80, cw * 0.5);
+      var barH = Math.min(ch * 0.45, Math.abs(value) / Math.max(Math.abs(value), 1) * ch * 0.45);
+      barH = Math.max(4, barH);
+      var x = PAD.L + cw / 2;
+      ctx.fillStyle = value >= 0 ? color : 'rgba(239,68,68,0.7)';
+      ctx.fillRect(x - bw / 2, value >= 0 ? zeroY - barH : zeroY, bw, barH);
+      ctx.fillStyle = '#f0f0f5'; ctx.font = 'bold 14px Inter, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText((value >= 0 ? '+' : '') + value.toFixed(0) + 'W', x, value >= 0 ? zeroY - barH - 8 : zeroY + barH + 18);
+      ctx.fillStyle = '#585870'; ctx.font = '11px Inter, sans-serif';
+      ctx.fillText(label, x, H - 8);
     }
 
     function drawFlowBar(canvasId, key, color, label) {
