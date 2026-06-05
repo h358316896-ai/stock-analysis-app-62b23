@@ -157,6 +157,54 @@
       {"f2": 876.54, "f3": 0.5, "f4": 4.3, "f12": "BK0434", "f14": "证券", "f62": 1123456700, "f184": 876543200, "f66": 246913500}
     ]}}
   },
+  "dragon_tiger": {
+    "ts": 1749168000,
+    "data": {"data": {"diff": [
+      {"f2": 34.56, "f3": 10.02, "f12": "600001", "f14": "AI科技", "f62": 87654300},
+      {"f2": 23.45, "f3": 10.01, "f12": "300001", "f14": "特锐德", "f62": 56789000},
+      {"f2": 67.89, "f3": 9.98, "f12": "600002", "f14": "新能源", "f62": 45678900},
+      {"f2": 12.34, "f3": 9.95, "f12": "000001", "f14": "平安银行", "f62": 34567800},
+      {"f2": 56.78, "f3": 9.93, "f12": "600030", "f14": "中信证券", "f62": 23456700},
+      {"f2": 89.01, "f3": 9.90, "f12": "688001", "f14": "芯片龙头", "f62": 19876500},
+      {"f2": 15.67, "f3": -9.95, "f12": "300010", "f14": "立思辰", "f62": -12345600},
+      {"f2": 8.76, "f3": -9.89, "f12": "600010", "f14": "包钢股份", "f62": -23456700},
+      {"f2": 21.09, "f3": 5.67, "f12": "000010", "f14": "深圳华强", "f62": 11223300},
+      {"f2": 45.32, "f3": 4.56, "f12": "600050", "f14": "中国联通", "f62": 9988700},
+      {"f2": 33.21, "f3": -3.45, "f12": "000002", "f14": "万科A", "f62": -8877600},
+      {"f2": 78.90, "f3": 3.21, "f12": "688002", "f14": "医药龙头", "f62": 7766500}
+    ]}}
+  },
+  "lockup": {
+    "ts": 1749168000,
+    "data": {"result": {"data": [
+      {"SECURITY_CODE": "300750", "SECURITY_NAME_ABBR": "宁德时代", "LIFT_DATE": "2026-06-15", "LIFT_SHARES": 234567800, "LIFT_MARKET_CAP": 4567890123, "LIFT_RATIO": 5.2},
+      {"SECURITY_CODE": "002594", "SECURITY_NAME_ABBR": "比亚迪", "LIFT_DATE": "2026-06-20", "LIFT_SHARES": 123456700, "LIFT_MARKET_CAP": 2345678901, "LIFT_RATIO": 3.8},
+      {"SECURITY_CODE": "601318", "SECURITY_NAME_ABBR": "中国平安", "LIFT_DATE": "2026-06-25", "LIFT_SHARES": 345678900, "LIFT_MARKET_CAP": 6789012345, "LIFT_RATIO": 8.5},
+      {"SECURITY_CODE": "600519", "SECURITY_NAME_ABBR": "贵州茅台", "LIFT_DATE": "2026-07-01", "LIFT_SHARES": 56789000, "LIFT_MARKET_CAP": 9876543210, "LIFT_RATIO": 1.2},
+      {"SECURITY_CODE": "000858", "SECURITY_NAME_ABBR": "五粮液", "LIFT_DATE": "2026-07-05", "LIFT_SHARES": 87654300, "LIFT_MARKET_CAP": 3456789012, "LIFT_RATIO": 2.1},
+      {"SECURITY_CODE": "601012", "SECURITY_NAME_ABBR": "隆基绿能", "LIFT_DATE": "2026-07-10", "LIFT_SHARES": 234567800, "LIFT_MARKET_CAP": 1234567890, "LIFT_RATIO": 6.7}
+    ]}}
+  },
+  "ipo_cal": {
+    "ts": 1749168000,
+    "data": {"result": {"data": [
+      {"SECURITY_CODE": "688888", "SECURITY_NAME_ABBR": "AI芯片科技", "IPO_DATE": "2026-06-12", "ISSUE_PRICE": 36.80, "ISSUE_PE": 45.2, "INDUSTRY_PE": 52.8, "CONTINUOUS_LIMIT_NUM": 5, "FIRST_OPEN_PRICE": 89.50},
+      {"SECURITY_CODE": "301555", "SECURITY_NAME_ABBR": "新能源材料", "IPO_DATE": "2026-06-08", "ISSUE_PRICE": 22.50, "ISSUE_PE": 38.6, "INDUSTRY_PE": 42.1, "CONTINUOUS_LIMIT_NUM": 3, "FIRST_OPEN_PRICE": 45.20},
+      {"SECURITY_CODE": "001300", "SECURITY_NAME_ABBR": "生物医药", "IPO_DATE": "2026-06-05", "ISSUE_PRICE": 18.60, "ISSUE_PE": 32.4, "INDUSTRY_PE": 35.9, "CONTINUOUS_LIMIT_NUM": 2, "FIRST_OPEN_PRICE": 28.30},
+      {"SECURITY_CODE": "603200", "SECURITY_NAME_ABBR": "智能制造", "IPO_DATE": "2026-06-18", "ISSUE_PRICE": 28.90, "ISSUE_PE": 41.8, "INDUSTRY_PE": 48.5, "CONTINUOUS_LIMIT_NUM": null, "FIRST_OPEN_PRICE": null},
+      {"SECURITY_CODE": "301600", "SECURITY_NAME_ABBR": "数字经济", "IPO_DATE": "2026-06-22", "ISSUE_PRICE": 15.70, "ISSUE_PE": 28.3, "INDUSTRY_PE": 33.6, "CONTINUOUS_LIMIT_NUM": null, "FIRST_OPEN_PRICE": null}
+    ]}}
+  },
+  "shareholders_600519": {
+    "ts": 1749168000,
+    "data": {"result": {"data": [
+      {"END_DATE": "2026-03-31", "HOLDER_NUM": 189765, "HOLDER_NUM_CHANGE": -12345, "HOLDER_NUM_RATIO": -6.1, "AVG_HOLD_NUM": 5268},
+      {"END_DATE": "2025-12-31", "HOLDER_NUM": 202110, "HOLDER_NUM_CHANGE": -8765, "HOLDER_NUM_RATIO": -4.2, "AVG_HOLD_NUM": 4945},
+      {"END_DATE": "2025-09-30", "HOLDER_NUM": 210875, "HOLDER_NUM_CHANGE": -5678, "HOLDER_NUM_RATIO": -2.6, "AVG_HOLD_NUM": 4740},
+      {"END_DATE": "2025-06-30", "HOLDER_NUM": 216553, "HOLDER_NUM_CHANGE": -3456, "HOLDER_NUM_RATIO": -1.6, "AVG_HOLD_NUM": 4615},
+      {"END_DATE": "2025-03-31", "HOLDER_NUM": 220009, "HOLDER_NUM_CHANGE": 2345, "HOLDER_NUM_RATIO": 1.1, "AVG_HOLD_NUM": 4542}
+    ]}}
+  },
   "limit_review": {
     "ts": 1749168000,
     "data": {"data": {"diff": [

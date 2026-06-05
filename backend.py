@@ -1434,7 +1434,7 @@ def concept_heatmap():
 def dragon_tiger():
     """获取每日龙虎榜数据"""
     url = f"https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:4&fields=f2,f3,f4,f12,f14,f62,f184,f66,f72,f75,f78,f81,f84,f87,f204,f205,f206"
-    data = fetch_eastmoney(url)
+    data = _cached_eastmoney("dragon_tiger", url, ttl=1800)
     stocks = []
     if data and data.get("data") and data["data"].get("diff"):
         for item in data["data"]["diff"]:
@@ -1759,7 +1759,7 @@ def stock_shareholders():
     prefix = "1" if code.startswith("6") else "0"
     secid = f"{prefix}.{code}"
     url = f"https://datacenter.eastmoney.com/api/data/v1/get?reportName=RPT_F10_EQUITY_STRUCTURE&columns=END_DATE,HOLDER_NUM,HOLDER_NUM_CHANGE,HOLDER_NUM_RATIO,AVG_HOLD_NUM&filter=(SECURITY_CODE=%22{code}%22)&pageNumber=1&pageSize=20&sortTypes=-1&sortColumns=END_DATE"
-    data = fetch_eastmoney(url, 10)
+    data = _cached_eastmoney("shareholders_"+code, url, ttl=86400)
     result = []
     if data and data.get("result") and data["result"].get("data"):
         for item in data["result"]["data"]:
@@ -1869,7 +1869,7 @@ def _guess_limit_reason(name):
 def lockup_schedule():
     """近期解禁股票列表"""
     url = "https://datacenter.eastmoney.com/api/data/v1/get?reportName=RPT_LIFT_STOCKHOLDER&columns=SECURITY_CODE,SECURITY_NAME_ABBR,LIFT_DATE,LIFT_SHARES,LIFT_MARKET_CAP,LIFT_RATIO&pageNumber=1&pageSize=20&sortTypes=1&sortColumns=LIFT_DATE"
-    data = fetch_eastmoney(url, 10)
+    data = _cached_eastmoney("lockup", url, ttl=3600)
     items = []
     if data and data.get("result") and data["result"].get("data"):
         for item in data["result"]["data"]:
@@ -1889,7 +1889,7 @@ def lockup_schedule():
 def ipo_calendar():
     """新股申购日历"""
     url = "https://datacenter.eastmoney.com/api/data/v1/get?reportName=RPT_NEWSTOCK_IPO&columns=SECURITY_CODE,SECURITY_NAME_ABBR,IPO_DATE,ISSUE_PRICE,ISSUE_PE,INDUSTRY_PE,CONTINUOUS_LIMIT_NUM,FIRST_OPEN_PRICE&pageNumber=1&pageSize=15&sortTypes=-1&sortColumns=IPO_DATE"
-    data = fetch_eastmoney(url, 10)
+    data = _cached_eastmoney("ipo_cal", url, ttl=3600)
     items = []
     if data and data.get("result") and data["result"].get("data"):
         for item in data["result"]["data"]:
