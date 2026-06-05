@@ -1971,7 +1971,74 @@ async function loadMoneyFlow() {
       '<div><span style="color:var(--text-tertiary)">Main Force 5D:</span> <b style="color:'+(s.main_5d>=0?'#22c55e':'#ef4444')+'">'+(s.main_5d||0)+'W</b></div>'+
       '<div><span style="color:var(--text-tertiary)">Retail 5D:</span> <b style="color:'+(s.retail_5d>=0?'#22c55e':'#ef4444')+'">'+(s.retail_5d||0)+'W</b></div>'+
       '<div><span style="color:var(--text-tertiary)">Signal:</span> <b>'+(s.main_vs_retail||'')+' · '+(s.strength||'')+'</b></div>';
+
+    // Main Force Tracker
+    drawMainForceTracker(d.flows);
   } catch(e) { console.error(e); }
+}
+
+function drawMainForceTracker(flows) {
+  if (!flows || flows.length < 2) return;
+  var mains = flows.map(function(f){return f.main||0;});
+
+  // Consecutive days
+  var consUp = 0, consDown = 0;
+  for (var i = mains.length-1; i >= 0; i--) {
+    if (mains[i] > 0) consUp++; else break;
+  }
+  for (var j = mains.length-1; j >= 0; j--) {
+    if (mains[j] < 0) consDown++; else break;
+  }
+
+  // Cumulative flows
+  var cum5 = 0, cum10 = 0, cum30 = 0, cumAll = 0;
+  var last5 = mains.slice(-5), last10 = mains.slice(-10), last30 = mains.slice(-30);
+  last5.forEach(function(v){cum5+=v;});
+  last10.forEach(function(v){cum10+=v;});
+  last30.forEach(function(v){cum30+=v;});
+  mains.forEach(function(v){cumAll+=v;});
+
+  // Trend rating
+  var rating, ratingColor;
+  if (cum5 > 0 && cum10 > 0 && cum30 > 0 && consUp >= 3) {
+    rating = 'Strong Buy'; ratingColor = '#22c55e';
+  } else if (cum5 > 0 && cum10 > 0) {
+    rating = 'Buy'; ratingColor = '#4ade80';
+  } else if (cum5 > 0 || cum10 > 0) {
+    rating = 'Neutral'; ratingColor = '#eab308';
+  } else if (cum5 < 0 && cum10 < 0 && cum30 < 0) {
+    rating = 'Sell'; ratingColor = '#f97316';
+  } else if (consDown >= 5) {
+    rating = 'Strong Sell'; ratingColor = '#ef4444';
+  } else {
+    rating = 'Neutral'; ratingColor = '#eab308';
+  }
+
+  // Render tracker panel
+  var el = document.getElementById('flowTracker');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'flowTracker';
+    el.style.cssText = 'margin-top:14px;padding:16px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid rgba(255,255,255,0.04)';
+    var flowSummary = document.getElementById('flowSummary');
+    if (flowSummary) flowSummary.parentNode.insertBefore(el, flowSummary.nextSibling);
+  }
+
+  var arrow = consUp > 0 ? '▲' : (consDown > 0 ? '▼' : '─');
+  var consColor = consUp > 0 ? '#22c55e' : '#ef4444';
+
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+    '<span style="font-size:13px;font-weight:700;color:#f0f0f5">🎯 Main Force Tracker</span>'+
+    '<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:'+ratingColor+'22;color:'+ratingColor+';font-weight:700">'+rating+'</span>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;font-size:12px">'+
+    '<div><span style="color:var(--text-tertiary)">Consecutive:</span> <b style="color:'+consColor+'">'+arrow+' '+(consUp||consDown)+'d</b></div>'+
+    '<div><span style="color:var(--text-tertiary)">5D Cum:</span> <b style="color:'+(cum5>=0?'#22c55e':'#ef4444')+'">'+(cum5>=0?'+':'')+cum5.toFixed(0)+'W</b></div>'+
+    '<div><span style="color:var(--text-tertiary)">10D Cum:</span> <b style="color:'+(cum10>=0?'#22c55e':'#ef4444')+'">'+(cum10>=0?'+':'')+cum10.toFixed(0)+'W</b></div>'+
+    '<div><span style="color:var(--text-tertiary)">30D Cum:</span> <b style="color:'+(cum30>=0?'#22c55e':'#ef4444')+'">'+(cum30>=0?'+':'')+cum30.toFixed(0)+'W</b></div>'+
+    '<div><span style="color:var(--text-tertiary)">Total:</span> <b style="color:'+(cumAll>=0?'#22c55e':'#ef4444')+'">'+(cumAll>=0?'+':'')+cumAll.toFixed(0)+'W</b></div>'+
+    '</div>';
 }
 
 // ============================================================
