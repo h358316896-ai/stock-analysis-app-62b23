@@ -1604,11 +1604,13 @@ async function loadIntraday() {
   try {
     const r = await fetch(`/api/stock/intraday?code=${state.stock.code}&market=${state.stock.market}`);
     const d = await r.json();
-    if (!d.points?.length) {
+    if (!d.points || !d.points.length) {
       const canvas = document.getElementById('intradayCanvas');
-      if (canvas) { const ctx = canvas.getContext('2d'); canvas.width = canvas.offsetWidth || 600; canvas.height = canvas.offsetHeight || 380; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = '#585870'; ctx.font = '13px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('No intraday data available for this stock', canvas.width/2, canvas.height/2); }
+      if (canvas) { const ctx = canvas.getContext('2d'); var cw2 = canvas.offsetWidth || 600; var ch2 = canvas.offsetHeight || 380; canvas.width = cw2; canvas.height = ch2; ctx.clearRect(0,0,cw2,ch2); ctx.fillStyle = '#585870'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('No intraday data available', cw2/2, ch2/2); }
       return;
     }
+    // Wait for panel display to settle (canvas needs visible dimensions)
+    await new Promise(r => setTimeout(r, 50));
     const canvas = document.getElementById('intradayCanvas'), ctx = canvas.getContext('2d');
     canvas.width = canvas.offsetWidth || 600; canvas.height = canvas.offsetHeight || 380;
     const W = canvas.width, H = canvas.height, PAD = { T: 20, R: 60, B: 28, L: 60 }, cw = W-PAD.L-PAD.R, ch = H-PAD.T-PAD.B;
