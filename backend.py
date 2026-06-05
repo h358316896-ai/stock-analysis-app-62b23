@@ -134,6 +134,74 @@ try:
 except ImportError:
     HK_STOCK_NAMES = {}
 
+# -----------------------------------------------------------
+# Admin endpoint: refresh HK stock database from Eastmoney
+# -----------------------------------------------------------
+@app.route("/api/admin/refresh-hk-stocks")
+def refresh_hk_stocks():
+    """Fetch all HK stocks from Eastmoney and regenerate hk_stock_names.py"""
+    import threading
+
+    def _do_refresh():
+        global HK_STOCK_NAMES
+        stocks = {}
+        page = 1
+        page_size = 500
+
+        while True:
+            url = (
+                f"https://push2.eastmoney.com/api/qt/clist/get"
+                f"?pn={page}&pz={page_size}&po=1&np=1&fltt=2&invt=2"
+                f"&fid=f12&fs=m:128+t:3,m:128+t:4,m:128+t:1,m:128+t:2"
+                f"&fields=f12,f14"
+            )
+            try:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Referer": "https://data.eastmoney.com/",
+                }
+                resp = requests.get(url, headers=headers, timeout=20)
+                data = resp.json()
+                items = data.get("data", {}).get("diff", [])
+                if not items:
+                    break
+                for item in items:
+                    code = item.get("f12", "").strip()
+                    name = item.get("f14", "").strip()
+                    if code and name:
+                        stocks[code.zfill(5)] = name
+                total = data.get("data", {}).get("total", 0)
+                print(f"[refresh-hk-stocks] Page {page}: {len(items)} items, total collected: {len(stocks)}, server total: {total}")
+                if len(items) < page_size:
+                    break
+                page += 1
+            except Exception as e:
+                print(f"[refresh-hk-stocks] Error page {page}: {e}")
+                break
+
+        if stocks:
+            sorted_stocks = dict(sorted(stocks.items()))
+            filepath = os.path.join(BASE_DIR, "hk_stock_names.py")
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write("# Auto-generated HK stock database\n")
+                f.write(f"# Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"# Total: {len(sorted_stocks)}\n")
+                f.write("HK_STOCK_NAMES = {\n")
+                for c, n in sorted_stocks.items():
+                    safe = n.replace('"', '\\"').replace("'", "\\'")
+                    f.write(f'    "{c}": "{safe}",\n')
+                f.write("}\n")
+            # Reload in memory
+            HK_STOCK_NAMES = sorted_stocks
+            print(f"[refresh-hk-stocks] Done. {len(sorted_stocks)} HK stocks written and loaded.")
+        else:
+            print("[refresh-hk-stocks] FAILED: no stocks fetched.")
+
+    # Run in background thread to avoid timeout
+    t = threading.Thread(target=_do_refresh, daemon=True)
+    t.start()
+    return jsonify({"message": "HK stock refresh started in background. Check server logs for progress.", "status": "running"})
+
 
 def _fetch_tencent_raw(url):
     """Fetch raw GBK text from Tencent Finance API using Python requests (no curl dependency)"""
