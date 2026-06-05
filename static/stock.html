@@ -1080,8 +1080,7 @@ const MKT_CLR = { cn: '#ef4444', hk: '#22c55e', us: '#3b82f6' };
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   checkLogin();
-  loadAllMarketData();
-  loadSectors();  // heatmap is default active panel
+  loadAllMarketData();  // dashboard: indices + sectors + concepts + movers in ONE call
   setInterval(loadAllMarketData, 60000);
 
   document.getElementById('stockSearch').addEventListener('keydown', e => { if (e.key === 'Enter') searchStock(); });
@@ -1182,37 +1181,59 @@ function toggleDropdown() { /* simplified */ }
 // MARKET DATA
 // ============================================================
 async function loadAllMarketData() {
-  await loadIndices();      // fast: Tencent API (domestic)
-  loadTickerTape();
-  // Defer slow global indices (yfinance ~10s) to avoid blocking page
-  setTimeout(loadGlobalIndices, 3000);
+  try {
+    var r = await fetch('/api/dashboard'); var d = await r.json();
+    state.indices = d.indices || [];
+    state.globalData = null;
+
+    // Market strip
+    var labels = { 'sh000001': 'SSE Composite', 'sz399001': 'SZSE Component', 'sz399006': 'ChiNext', 'hk800000': 'Hang Seng', 'us.INX': 'S&P 500', 'us.IXIC': 'NASDAQ', 'us.DJI': 'DJIA' };
+    document.getElementById('marketStrip').innerHTML = (d.indices||[]).map(function(idx){
+      var up = idx.change_pct >= 0, cls = up ? 'up' : 'down', sym = up ? '+' : '';
+      return '<div class="market-card '+cls+'" onclick="quickSearch(\''+idx.code+'\')"><div class="mc-label">'+(labels[idx.code]||idx.name)+'</div><div class="mc-price '+(up?'text-green':'text-red')+'">'+idx.price.toFixed(2)+'</div><div class="mc-change '+(up?'text-green':'text-red')+'">'+sym+idx.change_pct.toFixed(2)+'%</div></div>';
+    }).join('');
+
+    // Ticker tape
+    var items = (d.indices||[]).slice();
+    if (items.length) {
+      var all = items.concat(items);
+      document.getElementById('tickerTape').innerHTML = all.map(function(i){
+        var up = i.change_pct >= 0, c = up ? 'text-green' : 'text-red', s = up ? '+' : '';
+        return '<span class="ticker-item" onclick="quickSearch(\''+i.code+'\')"><span class="ticker-symbol">'+i.name+'</span><span class="ticker-price">'+i.price.toFixed(2)+'</span><span class="'+c+'" style="font-size:11px">'+s+i.change_pct.toFixed(2)+'%</span></span><span class="ticker-divider"></span>';
+      }).join('');
+    }
+
+    // Sectors heatmap (if panel active)
+    renderHeatmap('sectorHeatmap', d.sectors||[]);
+    renderHeatmap('conceptHeatmap', d.concepts||[]);
+
+    // Movers
+    renderMoversTable('gainersBody', d.gainers||[]);
+    renderMoversTable('losersBody', d.losers||[]);
+
+    // Defer global indices
+    setTimeout(function(){
+      fetch('/api/market/global-indices').then(function(r2){return r2.json();}).then(function(gd){state.globalData=gd;}).catch(function(){});
+    }, 5000);
+  } catch(e) { console.error(e); }
 }
 
-async function loadIndices() {
+function renderMoversTable(id, arr) {
   try {
-    const r = await fetch('/api/market/indices'); const d = await r.json();
-    if (!d.indices) return;
-    state.indices = d.indices;
-    const labels = { 'sh000001': 'SSE Composite', 'sz399001': 'SZSE Component', 'sz399006': 'ChiNext', 'hk800000': 'Hang Seng', 'us.INX': 'S&P 500', 'us.IXIC': 'NASDAQ', 'us.DJI': 'DJIA' };
-    document.getElementById('marketStrip').innerHTML = d.indices.map(idx => {
-      const up = idx.change_pct >= 0, cls = up ? 'up' : 'down', sym = up ? '+' : '';
-      return `<div class="market-card ${cls}" onclick="quickSearch('${idx.code}')">
-        <div class="mc-label">${labels[idx.code] || idx.name}</div>
-        <div class="mc-price ${cls === 'up' ? 'text-green' : 'text-red'}">${idx.price.toFixed(2)}</div>
-        <div class="mc-change ${cls === 'up' ? 'text-green' : 'text-red'}">${sym}${idx.change_pct.toFixed(2)}%</div>
-      </div>`;
+    document.getElementById(id).innerHTML = (arr||[]).slice(0,12).map(function(s){
+      var up = s.change_pct >= 0, c = up ? 'text-green' : 'text-red';
+      return '<tr><td><span class="mover-symbol" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span><br><span style="font-size:11px;color:var(--text-tertiary)">'+s.code+'</span></td><td>'+s.price.toFixed(2)+'</td><td class="'+c+'">'+(up?'+':'')+s.change_pct.toFixed(2)+'%</td></tr>';
     }).join('');
   } catch(e) {}
 }
 
+// Keep old functions for backward compat
+async function loadIndices() {
+  try { var r = await fetch('/api/market/indices'); var d = await r.json();
+    if (!d.indices) return; state.indices = d.indices;
+  } catch(e) {} }
 async function loadGlobalIndices() {
-  try {
-    const r = await fetch('/api/market/global-indices');
-    state.globalData = await r.json();
-  } catch(e) {}
-}
-
-function loadTickerTape() {
+  try { var r = await fetch('/api/market/global-indices'); state.globalData = await r.json(); } catch(e) {} }
   if (!state.indices) return;
   const items = [...state.indices];
   // Add global if available

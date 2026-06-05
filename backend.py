@@ -138,6 +138,56 @@ def fetch_text_gbk(url, timeout=10):
 def home():
     return send_file(os.path.join(STATIC_DIR, "index.html"), mimetype="text/html; charset=utf-8")
 
+# -----------------------------------------------------------
+# Unified dashboard endpoint - combines indices + sectors + movers in ONE call
+# -----------------------------------------------------------
+@app.route("/api/dashboard")
+def api_dashboard():
+    """Return all homepage data in a single response"""
+    # Indices (Tencent API - always works)
+    codes = "sh000001,sz399001,sz399006,hk800000,us.INX,us.IXIC,us.DJI"
+    indices = []
+    try:
+        text = _fetch_tencent_raw(f"https://qt.gtimg.cn/q={codes}")
+        if text:
+            for m in re.finditer(r'v_([^=]+)="([^"]*)"', text):
+                fields = m.group(2).split("~")
+                if len(fields) >= 35:
+                    try:
+                        price = float(fields[3]) if fields[3] else 0.0
+                        prev_close = float(fields[4]) if fields[4] else price
+                        change_pct = (price - prev_close) / prev_close * 100 if prev_close else 0.0
+                        indices.append({"code": m.group(1), "name": fields[1] if fields[1] else m.group(1), "price": round(price,2), "change_pct": round(change_pct,2)})
+                    except (ValueError, IndexError):
+                        continue
+    except Exception:
+        pass
+
+    # Sectors & Concepts & Movers from cache
+    sectors_data = _cached_eastmoney("sectors", "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2&fields=f2,f3,f4,f12,f14", ttl=1800)
+    concepts_data = _cached_eastmoney("concepts", "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:3&fields=f2,f3,f4,f12,f14", ttl=1800)
+    gainers_data = _cached_eastmoney("gainers", "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20,f9", ttl=600)
+    losers_data = _cached_eastmoney("losers", "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=0&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20,f9", ttl=600)
+
+    def parse_sectors(data):
+        if not data or not data.get("data") or not data["data"].get("diff"): return []
+        return [{"code":i.get("f12",""),"name":i.get("f14",""),"price":i.get("f2",0),"change_pct":i.get("f3",0),"change":i.get("f4",0)} for i in data["data"]["diff"]]
+
+    def parse_mover(item):
+        return {"code":item.get("f12",""),"name":item.get("f14",""),"price":item.get("f2",0),"change_pct":item.get("f3",0),"market_cap":item.get("f20",0),"pe":item.get("f9")}
+
+    gainers = [parse_mover(i) for i in gainers_data.get("data",{}).get("diff",[])[:15]] if gainers_data else []
+    losers = [parse_mover(i) for i in losers_data.get("data",{}).get("diff",[])[:15]] if losers_data else []
+
+    return jsonify({
+        "indices": indices,
+        "sectors": parse_sectors(sectors_data),
+        "concepts": parse_sectors(concepts_data),
+        "gainers": gainers,
+        "losers": losers,
+        "updated": datetime.now().strftime("%H:%M:%S"),
+    })
+
 @app.route("/stock")
 def stock_page():
     return send_file(os.path.join(STATIC_DIR, "stock.html"), mimetype="text/html; charset=utf-8")
