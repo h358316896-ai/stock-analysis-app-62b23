@@ -136,7 +136,7 @@ def fetch_text_gbk(url, timeout=10):
 # ==========================================================
 @app.route("/")
 def home():
-    return render_template_string(open(os.path.join(STATIC_DIR, "index.html"), encoding="utf-8").read())
+    return send_file(os.path.join(STATIC_DIR, "index.html"), mimetype="text/html; charset=utf-8")
 
 @app.route("/stock")
 def stock_page():
@@ -144,11 +144,11 @@ def stock_page():
 
 @app.route("/media")
 def media_page():
-    return render_template_string(open(os.path.join(STATIC_DIR, "media.html"), encoding="utf-8").read())
+    return send_file(os.path.join(STATIC_DIR, "media.html"), mimetype="text/html; charset=utf-8")
 
 @app.route("/services")
 def services_page():
-    return render_template_string(open(os.path.join(STATIC_DIR, "services.html"), encoding="utf-8").read())
+    return send_file(os.path.join(STATIC_DIR, "services.html"), mimetype="text/html; charset=utf-8")
 
 
 # ==========================================================
