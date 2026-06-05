@@ -1296,18 +1296,6 @@ async function loadIndices() {
   } catch(e) {} }
 async function loadGlobalIndices() {
   try { var r = await fetch('/api/market/global-indices'); state.globalData = await r.json(); } catch(e) {} }
-  if (!state.indices) return;
-  const items = [...state.indices];
-  // Add global if available
-  if (state.globalData) {
-    Object.values(state.globalData).forEach(arr => arr.forEach(i => items.push({ code: i.code, name: i.name, price: i.price, change_pct: i.change_pct })));
-  }
-  // Duplicate for seamless loop
-  const all = [...items, ...items];
-  document.getElementById('tickerTape').innerHTML = all.map(i => {
-    const up = i.change_pct >= 0, c = up ? 'text-green' : 'text-red', s = up ? '+' : '';
-    return `<span class="ticker-item" onclick="quickSearch('${i.code}')"><span class="ticker-symbol">${i.name}</span><span class="ticker-price">${i.price?.toFixed(2) || '--'}</span><span class="${c}" style="font-size:11px">${s}${i.change_pct?.toFixed(2) || '0'}%</span></span><span class="ticker-divider"></span>`;
-  }).join('');
 }
 
 // ============================================================
