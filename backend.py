@@ -1739,13 +1739,16 @@ def stock_money_flow():
 
         data = None
         for url in em_urls:
-            try:
-                resp = requests.get(url, headers=em_headers, timeout=10)
-                data = resp.json()
-                if data.get("data") and data["data"].get("klines"):
-                    break  # got valid data, stop trying
-            except Exception:
-                continue
+            for ssl_verify in (True, False):
+                try:
+                    resp = requests.get(url, headers=em_headers, timeout=15, verify=ssl_verify)
+                    data = resp.json()
+                    if data.get("data") and data["data"].get("klines"):
+                        break
+                except Exception:
+                    continue
+            if data and data.get("data") and data["data"].get("klines"):
+                break
 
         # Parse kline data if we got any
         if data and data.get("data") and data["data"].get("klines"):
@@ -1777,7 +1780,7 @@ def stock_money_flow():
                 "period": f"{recent[0]['date']} ~ {recent[-1]['date']}",
             }
 
-    # ---- Fallback: if Eastmoney returned no flows, try Tencent real-time fund flow ----
+    # ---- Fallback 1: Tencent real-time fund flow ----
     if not result["flows"] and market == "cn":
         try:
             prefix = "sh" if code.startswith(("6", "5", "1")) else "sz"
@@ -1788,8 +1791,6 @@ def stock_money_flow():
                 if match:
                     fields = match.group(1).split("~")
                     if len(fields) >= 10:
-                        # Tencent provides real-time snapshot, not historical kline.
-                        # Synthesize a single-point flow entry so the frontend can render.
                         try:
                             main_net = float(fields[1]) if fields[1] else 0.0
                             retail_net = float(fields[3]) if fields[3] else 0.0
@@ -1798,20 +1799,52 @@ def stock_money_flow():
                                 "date": today_str,
                                 "main": round(main_net / 1e4, 2),
                                 "retail": round(retail_net / 1e4, 2),
-                                "mid": 0,
-                                "large": 0,
-                                "xl": 0,
+                                "mid": 0, "large": 0, "xl": 0,
                             }]
                             result["summary"] = {
                                 "main_5d": round(main_net / 1e4, 2),
                                 "retail_5d": round(retail_net / 1e4, 2),
                                 "main_vs_retail": "主力流入" if main_net > 0 else "主力流出",
                                 "strength": "主力偏强" if abs(main_net) > abs(retail_net) else "散户偏强",
-                                "period": today_str,
-                                "source": "tencent",
+                                "period": today_str, "source": "tencent",
                             }
                         except (ValueError, TypeError):
                             pass
+        except Exception:
+            pass
+
+    # ---- Fallback 2: Sina Finance fund flow ----
+    if not result["flows"] and market == "cn":
+        try:
+            prefix = "sh" if code.startswith(("6", "5", "1")) else "sz"
+            sina_url = f"https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow/ss{prefix}{code}"
+            sina_data = fetch_json(sina_url, 10)
+            if isinstance(sina_data, list) and len(sina_data) > 0:
+                # Sina returns list of daily fund flow records
+                for day in sina_data[-60:]:
+                    try:
+                        result["flows"].append({
+                            "date": str(day.get("opendate", "")),
+                            "main": round(float(day.get("f14", 0)) / 1e4, 2),
+                            "retail": round(float(day.get("f16", 0)) / 1e4, 2),
+                            "mid": round(float(day.get("f18", 0)) / 1e4, 2),
+                            "large": round(float(day.get("f20", 0)) / 1e4, 2),
+                            "xl": 0,
+                        })
+                    except (ValueError, TypeError, KeyError):
+                        continue
+                if result["flows"]:
+                    recent = result["flows"][-5:]
+                    main_sum = sum(f["main"] for f in recent)
+                    retail_sum = sum(f["retail"] for f in recent)
+                    result["summary"] = {
+                        "main_5d": round(main_sum, 2),
+                        "retail_5d": round(retail_sum, 2),
+                        "main_vs_retail": "主力流入" if main_sum > 0 else "主力流出",
+                        "strength": "偏强" if main_sum > retail_sum else "偏弱",
+                        "period": f"{recent[0]['date']} ~ {recent[-1]['date']}",
+                        "source": "sina",
+                    }
         except Exception:
             pass
 

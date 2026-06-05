@@ -995,6 +995,7 @@ const MKT_CLR = { cn: '#ef4444', hk: '#22c55e', us: '#3b82f6' };
 document.addEventListener('DOMContentLoaded', () => {
   checkLogin();
   loadAllMarketData();
+  loadSectors();  // heatmap is default active panel
   setInterval(loadAllMarketData, 60000);
 
   document.getElementById('stockSearch').addEventListener('keydown', e => { if (e.key === 'Enter') searchStock(); });
