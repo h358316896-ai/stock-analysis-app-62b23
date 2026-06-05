@@ -917,7 +917,7 @@ def global_indices():
 
     # Return cached result if fresh
     now = time.time()
-    if _global_indices_cache["data"] is not None and (now - _global_indices_cache["ts"]) < _GLOBAL_INDICES_CACHE_TTL:
+    if _global_indices_cache["data"] is not None and (now - _global_indices_cache["ts"]) < _CACHE_TTL_LONG:
         return jsonify(_global_indices_cache["data"])
 
     def _parse_tencent_indices(codes_str, name_map):
@@ -1270,7 +1270,7 @@ def stock_indicators():
             prefix, c = prefix_map.get(market, ("sh", code))
             url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={prefix}{c},day,,,{limit},qfq"
             data = fetch_json(url, 15)
-            if not isinstance(data, dict) or "error" not in data:
+            if data is not None and (not isinstance(data, dict) or "error" not in data):
                 klines_raw = data.get("data", {}).get(f"{prefix}{c}", {}).get("qfqday", [])
                 for k in klines_raw:
                     if len(k) >= 6:

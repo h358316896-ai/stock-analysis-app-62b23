@@ -2054,7 +2054,7 @@ async function downloadPDF() {
   } catch(e) { alert('Error: ' + e.message); }
   finally { btn.textContent = 'Download PDF Report'; btn.disabled = false; }
 }
-async function saveToHistory() { if (state.isLogin && state.analysis) { alert('Analysis saved to history'); loadHistory(); } }
+async function saveToHistory() { if (state.isLogin && state.analysis) { showToast('Analysis auto-saved to history', 'success'); loadHistory(); } }
 
 // ============================================================
 // WATCHLIST, ALERTS, HISTORY
