@@ -40,12 +40,24 @@ def login_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
-# Manual CORS (replaces flask-cors)
+# Manual CORS + Gzip (replaces flask-cors)
 @app.after_request
-def add_cors_headers(response):
+def add_cors_and_gzip(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "*"
+    # Gzip compress text responses
+    accept_encoding = request.headers.get("Accept-Encoding", "")
+    content_type = response.headers.get("Content-Type", "")
+    if "gzip" in accept_encoding and (
+        "text" in content_type or "json" in content_type or "javascript" in content_type or "css" in content_type
+    ):
+        import gzip
+        response.direct_passthrough = False
+        compressed = gzip.compress(response.get_data())
+        response.set_data(compressed)
+        response.headers["Content-Encoding"] = "gzip"
+        response.headers["Content-Length"] = str(len(compressed))
     return response
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -213,9 +225,14 @@ def _fetch_tencent_raw(url):
         return None
 
 
-# Simple in-memory cache with TTL for global-indices
+# Simple in-memory cache with TTL
 _global_indices_cache = {"data": None, "ts": 0}
-_GLOBAL_INDICES_CACHE_TTL = 60  # seconds
+_indices_cache = {"data": None, "ts": 0}
+_movers_cache = {"data": None, "ts": 0}
+_sectors_cache = {"data": None, "ts": 0}
+_CONCEPTS_CACHE = {"data": None, "ts": 0}
+_CACHE_TTL_SHORT = 60      # 1 minute for market indices
+_CACHE_TTL_LONG = 300      # 5 minutes for global indices / sectors
 
 
 def fetch_cn_quote(code):
@@ -760,6 +777,10 @@ def generate_report():
 @app.route("/api/market/indices")
 def market_indices():
     """获取主要大盘指数实时数据"""
+    global _indices_cache
+    now = time.time()
+    if _indices_cache["data"] is not None and (now - _indices_cache["ts"]) < _CACHE_TTL_SHORT:
+        return jsonify(_indices_cache["data"])
     # 指数代码：上证(sh000001)、深证成指(sz399001)、创业板(sz399006)
     #           恒生(hk800000)、标普500(us.INX)、纳斯达克(us.IXIC)、道琼斯(us.DJI)
     codes = "sh000001,sz399001,sz399006,hk800000,us.INX,us.IXIC,us.DJI"
@@ -789,6 +810,8 @@ def market_indices():
                 })
             except (ValueError, IndexError):
                 continue
+        _indices_cache["data"] = {"indices": results}
+        _indices_cache["ts"] = time.time()
         return jsonify({"indices": results})
     except Exception as e:
         return jsonify({"error": str(e), "indices": []}), 500
@@ -2031,71 +2054,10 @@ def check_all_alerts():
 # ==========================================================
 # STARTUP
 # ==========================================================
-def _refresh_hk_stocks_on_startup():
-    """Background thread: refresh HK stock database from Eastmoney on startup"""
-    import time as _time
-    _time.sleep(5)  # wait for Flask to fully start
-    print("[startup] Refreshing HK stock database from Eastmoney...")
-    stocks = {}
-    page = 1
-    page_size = 500
-    while True:
-        url = (
-            f"https://push2.eastmoney.com/api/qt/clist/get"
-            f"?pn={page}&pz={page_size}&po=1&np=1&fltt=2&invt=2"
-            f"&fid=f12&fs=m:128+t:3,m:128+t:4,m:128+t:1,m:128+t:2"
-            f"&fields=f12,f14"
-        )
-        try:
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Referer": "https://data.eastmoney.com/",
-            }
-            resp = requests.get(url, headers=headers, timeout=20)
-            data = resp.json()
-            items = data.get("data", {}).get("diff", [])
-            if not items:
-                break
-            for item in items:
-                code = item.get("f12", "").strip()
-                name = item.get("f14", "").strip()
-                if code and name:
-                    stocks[code.zfill(5)] = name
-            total = data.get("data", {}).get("total", 0)
-            print(f"[startup] HK page {page}: {len(items)} stocks (collected: {len(stocks)}, total: {total})")
-            if len(items) < page_size:
-                break
-            page += 1
-        except Exception as e:
-            print(f"[startup] HK fetch error page {page}: {e}")
-            break
-
-    if stocks:
-        sorted_stocks = dict(sorted(stocks.items()))
-        filepath = os.path.join(BASE_DIR, "hk_stock_names.py")
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write("# Auto-generated HK stock database\n")
-            f.write(f"# Auto-refreshed on startup: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"# Total: {len(sorted_stocks)}\n")
-            f.write("HK_STOCK_NAMES = {\n")
-            for c, n in sorted_stocks.items():
-                safe = n.replace('"', '\\"').replace("'", "\\'")
-                f.write(f'    "{c}": "{safe}",\n')
-            f.write("}\n")
-        # Reload in memory
-        global HK_STOCK_NAMES
-        HK_STOCK_NAMES = sorted_stocks
-        print(f"[startup] HK stock database refreshed: {len(sorted_stocks)} stocks loaded.")
-    else:
-        print("[startup] WARNING: HK stock refresh failed, keeping existing database.")
-
-
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5003))
     print(f"[AI Workshop] Starting on http://0.0.0.0:{port}")
     print(f"[AI Workshop] DeepSeek: {'configured' if DEEPSEEK_API_KEY else 'MISSING'}")
     print(f"[AI Workshop] Claude:    {'configured' if CLAUDE_API_KEY else 'MISSING'}")
-    # Auto-refresh HK stocks in background on first deploy
-    import threading as _thr
-    _thr.Thread(target=_refresh_hk_stocks_on_startup, daemon=True).start()
+    print(f"[AI Workshop] HK stocks: {len(HK_STOCK_NAMES)} loaded from local DB")
     app.run(host="0.0.0.0", port=port, debug=False)
