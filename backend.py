@@ -1746,9 +1746,9 @@ def stock_money_flow():
         # Try multiple Eastmoney API URLs (different subdomains / parameter orders)
         em_urls = [
             # push2his — more reliable for historical kline data
-            f"https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=30&klt=101&secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56",
+            f"https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=60&klt=101&secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56",
             # push2 — realtime variant
-            f"https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get?secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56&lmt=30",
+            f"https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get?secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56&lmt=60",
         ]
 
         data = None
@@ -1828,7 +1828,7 @@ def stock_money_flow():
             sina_data = fetch_json(sina_url, 10)
             if isinstance(sina_data, list) and len(sina_data) > 0:
                 # Sina returns list of daily fund flow records
-                for day in sina_data[-30:]:
+                for day in sina_data[-60:]:
                     try:
                         result["flows"].append({
                             "date": str(day.get("opendate", "")),
@@ -1904,10 +1904,10 @@ def stock_money_flow():
                 "cached_days": len(result["flows"]),
             }
 
-        # Save file cache (trim to 60 days per stock)
+        # Save file cache (trim to 90 days per stock)
         for key in list(_file_cache.keys()):
             dates = sorted(_file_cache[key].keys())
-            for old_date in dates[:-60]:
+            for old_date in dates[:-90]:
                 del _file_cache[key][old_date]
         try:
             with open(_cache_file, "w", encoding="utf-8") as f:
