@@ -46,10 +46,13 @@ def add_cors_and_gzip(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "*"
-    # Cache static assets for 1 hour in browser
+    # Browser caching
     req_path = request.path
-    if req_path.startswith("/static/") and "html" not in (response.headers.get("Content-Type") or ""):
-        response.headers["Cache-Control"] = "public, max-age=3600"
+    ct = response.headers.get("Content-Type") or ""
+    if req_path.startswith("/static/"):
+        response.headers["Cache-Control"] = "public, max-age=3600"  # static assets: 1 hour
+    elif "html" in ct:
+        response.headers["Cache-Control"] = "public, max-age=300"   # HTML pages: 5 minutes
     # Gzip compress text responses
     accept_encoding = request.headers.get("Accept-Encoding", "")
     content_type = response.headers.get("Content-Type", "")
@@ -122,7 +125,7 @@ def home():
 
 @app.route("/stock")
 def stock_page():
-    return render_template_string(open(os.path.join(STATIC_DIR, "stock.html"), encoding="utf-8").read())
+    return send_file(os.path.join(STATIC_DIR, "stock.html"), mimetype="text/html; charset=utf-8")
 
 @app.route("/media")
 def media_page():
