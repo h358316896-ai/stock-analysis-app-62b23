@@ -1691,6 +1691,9 @@ def economic_calendar():
 # ==========================================================
 # 主力/散户资金流向 (Institutional vs Retail Money Flow)
 # ==========================================================
+# Per-stock money flow cache (5 min TTL)
+_money_flow_cache = {}  # key: "code|market" -> {"data": ..., "ts": ...}
+
 @app.route("/api/stock/money-flow")
 def stock_money_flow():
     """获取个股资金流向 — 主力/超大单/大单/中单/小单/散户"""
@@ -1698,6 +1701,13 @@ def stock_money_flow():
     market = request.args.get("market", "cn").strip()
     if not code:
         return jsonify({"error": "no code"}), 400
+
+    cache_key = f"{code}|{market}"
+    now_ts = time.time()
+    if cache_key in _money_flow_cache:
+        entry = _money_flow_cache[cache_key]
+        if (now_ts - entry["ts"]) < 300:  # 5 min cache
+            return jsonify(entry["data"])
 
     result = {"flows": [], "summary": {}}
 
@@ -1798,6 +1808,8 @@ def stock_money_flow():
         except Exception:
             pass
 
+    # Cache result for 5 minutes
+    _money_flow_cache[cache_key] = {"data": result, "ts": time.time()}
     return jsonify(result)
 
 

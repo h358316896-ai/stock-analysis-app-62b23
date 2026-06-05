@@ -1673,7 +1673,7 @@ function drawFlowCompare(flows, hoverIdx) {
   // Use getBoundingClientRect for better cross-browser support (WeChat etc)
   var rect = canvas.getBoundingClientRect();
   var ctx = canvas.getContext('2d');
-  var dpr = window.devicePixelRatio || 1;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
   var W = rect.width || 700, H = rect.height || 280;
   if (W < 10 || H < 10) { W = 700; H = 280; }
   canvas.width = W * dpr;
@@ -1862,7 +1862,7 @@ async function loadMoneyFlow() {
     function drawSingleFlowBar(canvas, value, color, label) {
       var ctx = canvas.getContext('2d');
       var rect = canvas.getBoundingClientRect();
-      var dpr = window.devicePixelRatio || 1;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
       var W = rect.width || 300, H = rect.height || 200;
       if (W < 10 || H < 10) { W = 300; H = 200; }
       canvas.width = W * dpr; canvas.height = H * dpr;
@@ -1891,7 +1891,7 @@ async function loadMoneyFlow() {
       if (!canvas) return;
       var ctx = canvas.getContext('2d');
       var rect = canvas.getBoundingClientRect();
-      var dpr = window.devicePixelRatio || 1;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
       var W = rect.width || 600, H = rect.height || 200;
       if (W < 10 || H < 10) { W = 600; H = 200; }
       canvas.width = W * dpr; canvas.height = H * dpr;
