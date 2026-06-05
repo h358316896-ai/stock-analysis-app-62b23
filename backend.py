@@ -1630,6 +1630,142 @@ def top_movers():
 
 
 # ==========================================================
+# 大数据功能集
+# ==========================================================
+
+# ---- 1. 融资融券 ----
+@app.route("/api/market/margin-trading")
+def margin_trading():
+    """获取融资融券余额数据"""
+    url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=1&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f12,f14,f20,f124,f125,f126,f127,f128"
+    data = _cached_eastmoney("margin_total", url, ttl=3600)
+    total_rz = total_rq = 0
+    if data and data.get("data") and data["data"].get("diff"):
+        total_rz = sum(float(i.get("f124", 0) or 0) for i in data["data"]["diff"]) / 1e8
+        total_rq = sum(float(i.get("f126", 0) or 0) for i in data["data"]["diff"]) / 1e8
+    # Top margin stocks
+    url2 = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=1&np=1&fltt=2&invt=2&fid=f124&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f12,f14,f124,f125,f128"
+    data2 = _cached_eastmoney("margin_top", url2, ttl=1800)
+    stocks = []
+    if data2 and data2.get("data") and data2["data"].get("diff"):
+        for item in data2["data"]["diff"]:
+            stocks.append({
+                "code": item.get("f12",""), "name": item.get("f14",""),
+                "rz_balance": item.get("f124", 0),  # 融资余额
+                "rq_balance": item.get("f125", 0),  # 融券余额
+                "rz_rq_ratio": item.get("f128", 0), # 融资融券余额比
+            })
+    return jsonify({"total_rz": round(total_rz,2), "total_rq": round(total_rq,2), "stocks": stocks})
+
+
+# ---- 2. 涨跌停统计 ----
+@app.route("/api/market/limit-up-down")
+def limit_up_down():
+    """获取涨跌停统计"""
+    # 涨停
+    url_up = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=20&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f12,f14,f20,f8,f10&f3=9.9"
+    up_data = _cached_eastmoney("limit_up", url_up, ttl=300)
+    # 跌停
+    url_down = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=20&po=0&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f12,f14,f20,f8,f10&f3=-9.9"
+    down_data = _cached_eastmoney("limit_down", url_down, ttl=300)
+
+    def parse_limit(item):
+        return {"code":item.get("f12",""),"name":item.get("f14",""),"price":item.get("f2",0),"change_pct":item.get("f3",0),"turnover_rate":item.get("f8",0)}
+
+    up_list = [parse_limit(i) for i in up_data.get("data",{}).get("diff",[])[:20]] if up_data else []
+    down_list = [parse_limit(i) for i in down_data.get("data",{}).get("diff",[])[:20]] if down_data else []
+    # Count total limit-ups
+    url_count = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=1&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12"
+    count_data = _cached_eastmoney("limit_count", url_count, ttl=300)
+    total = count_data.get("data",{}).get("total",0) if count_data else 0
+    return jsonify({"up_count": len(up_list), "down_count": len(down_list), "total_stocks": total, "up_list": up_list, "down_list": down_list})
+
+
+# ---- 3. 板块资金净流入排行 ----
+@app.route("/api/market/sector-flow-ranking")
+def sector_flow_ranking():
+    """获取行业板块资金净流入排行"""
+    url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid=f62&fs=m:90+t:2&fields=f2,f3,f4,f12,f14,f62,f184,f66"
+    data = _cached_eastmoney("sector_flow", url, ttl=600)
+    sectors = []
+    if data and data.get("data") and data["data"].get("diff"):
+        for item in data["data"]["diff"]:
+            sectors.append({
+                "code": item.get("f12",""), "name": item.get("f14",""),
+                "change_pct": item.get("f3",0),
+                "main_net": item.get("f62",0),    # 主力净流入
+                "xl_net": item.get("f184",0),     # 超大单净流入
+                "lg_net": item.get("f66",0),      # 大单净流入
+            })
+    return jsonify({"sectors": sectors})
+
+
+# ---- 4. 股东人数变化 ----
+@app.route("/api/stock/shareholders")
+def stock_shareholders():
+    """获取股东人数变化趋势"""
+    code = request.args.get("code","").strip()
+    if not code: return jsonify({"error":"no code"}), 400
+    prefix = "1" if code.startswith("6") else "0"
+    secid = f"{prefix}.{code}"
+    url = f"https://datacenter.eastmoney.com/api/data/v1/get?reportName=RPT_F10_EQUITY_STRUCTURE&columns=END_DATE,HOLDER_NUM,HOLDER_NUM_CHANGE,HOLDER_NUM_RATIO,AVG_HOLD_NUM&filter=(SECURITY_CODE=%22{code}%22)&pageNumber=1&pageSize=20&sortTypes=-1&sortColumns=END_DATE"
+    data = fetch_eastmoney(url, 10)
+    result = []
+    if data and data.get("result") and data["result"].get("data"):
+        for item in data["result"]["data"]:
+            result.append({
+                "date": str(item.get("END_DATE",""))[:10],
+                "holders": item.get("HOLDER_NUM", 0),
+                "change": item.get("HOLDER_NUM_CHANGE", 0),
+                "avg_hold": item.get("AVG_HOLD_NUM", 0),
+            })
+    return jsonify({"shareholders": result, "code": code})
+
+
+# ---- 5. 大宗交易 ----
+@app.route("/api/stock/block-trades")
+def block_trades():
+    """获取个股大宗交易明细"""
+    code = request.args.get("code","").strip()
+    if not code: return jsonify({"error":"no code"}), 400
+    url = f"https://datacenter.eastmoney.com/api/data/v1/get?reportName=RPT_BLOCKTRADE_DET&columns=TRADE_DATE,SECURITY_CODE,SECURITY_NAME,TRADE_PRICE,TRADE_VOL,TRADE_AMT,PREMIUM_RATIO,BUYER_NAME,SELLER_NAME&filter=(SECURITY_CODE=%22{code}%22)&pageNumber=1&pageSize=30&sortTypes=-1&sortColumns=TRADE_DATE"
+    data = fetch_eastmoney(url, 10)
+    trades = []
+    if data and data.get("result") and data["result"].get("data"):
+        for item in data["result"]["data"]:
+            trades.append({
+                "date": str(item.get("TRADE_DATE",""))[:10],
+                "price": item.get("TRADE_PRICE",0),
+                "volume": item.get("TRADE_VOL",0),
+                "amount": item.get("TRADE_AMT",0),
+                "premium": item.get("PREMIUM_RATIO",0),
+                "buyer": item.get("BUYER_NAME",""),
+                "seller": item.get("SELLER_NAME",""),
+            })
+    return jsonify({"trades": trades, "code": code})
+
+
+# ---- 6. 机构调研 ----
+@app.route("/api/market/institutional-research")
+def institutional_research():
+    """获取机构调研记录"""
+    url = "https://datacenter.eastmoney.com/api/data/v1/get?reportName=RPT_ORG_SURVEY&columns=SECURITY_CODE,SECURITY_NAME_ABBR,SURVEY_DATE,ORG_NUM,MAIN_BUSINESS,RESEARCH_TYPE&pageNumber=1&pageSize=30&sortTypes=-1&sortColumns=SURVEY_DATE"
+    data = fetch_eastmoney(url, 10)
+    records = []
+    if data and data.get("result") and data["result"].get("data"):
+        for item in data["result"]["data"]:
+            records.append({
+                "code": item.get("SECURITY_CODE",""),
+                "name": item.get("SECURITY_NAME_ABBR",""),
+                "date": str(item.get("SURVEY_DATE",""))[:10],
+                "org_count": item.get("ORG_NUM",0),
+                "biz": (item.get("MAIN_BUSINESS","") or "")[:80],
+                "type": item.get("RESEARCH_TYPE",""),
+            })
+    return jsonify({"records": records})
+
+
+# ==========================================================
 # 财经新闻 (Financial News)
 # ==========================================================
 @app.route("/api/news/finance")

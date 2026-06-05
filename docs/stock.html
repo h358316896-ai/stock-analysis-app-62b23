@@ -764,6 +764,7 @@ body {
     <button data-panel="calendar">📅 Calendar</button>
     <button data-panel="screener">🔍 Screener</button>
     <button data-panel="compare">⚖ Compare</button>
+    <button data-panel="bigdata">📊 Big Data</button>
   </div>
 
   <!-- Panel: Heatmap -->
@@ -838,6 +839,55 @@ body {
         <button onclick="runCompare()" style="padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-family:var(--font);font-size:12px">Compare</button>
       </div>
       <div id="compareResult"></div>
+    </div>
+  </div>
+
+  <!-- Panel: Big Data -->
+  <div class="panel" id="panel-bigdata">
+    <div class="glass" style="padding:14px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+        <!-- 北向资金 -->
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h4 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)">🔄 北向资金</h4>
+          <div id="northFlow"></div>
+        </div>
+        <!-- 融资融券 -->
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h4 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)">💰 融资融券</h4>
+          <div id="marginPanel"></div>
+        </div>
+        <!-- 涨跌停 -->
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h4 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)">📈 涨跌停板</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><span style="font-size:11px;color:var(--red)">涨停</span><div id="limitUpList" style="font-size:11px;max-height:200px;overflow-y:auto"></div></div>
+            <div><span style="font-size:11px;color:var(--green)">跌停</span><div id="limitDownList" style="font-size:11px;max-height:200px;overflow-y:auto"></div></div>
+          </div>
+        </div>
+        <!-- 板块资金排行 -->
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h4 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)">🔥 板块资金</h4>
+          <div id="sectorFlowList" style="font-size:11px;max-height:250px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <!-- 第二行：个股相关 -->
+      <div id="bigdataStock" style="display:none;margin-top:12px">
+        <h4 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)" id="bigdataStockTitle"></h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">
+          <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+            <h5 style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px">👥 股东人数变化</h5>
+            <div id="shareholdersPanel" style="font-size:11px;max-height:200px;overflow-y:auto"></div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+            <h5 style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px">📋 大宗交易</h5>
+            <div id="blockTradesPanel" style="font-size:11px;max-height:200px;overflow-y:auto"></div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+            <h5 style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px">🔬 机构调研</h5>
+            <div id="researchPanel" style="font-size:11px;max-height:200px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1012,6 +1062,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (b.dataset.panel === 'movers') loadMovers();
       if (b.dataset.panel === 'news') loadNews();
       if (b.dataset.panel === 'calendar') loadCalendar();
+      if (b.dataset.panel === 'bigdata') loadBigData();
     });
   });
 
@@ -1195,6 +1246,112 @@ async function loadCalendar() {
         <div class="cal-date">${day.day}, ${day.date.slice(5)}</div>
         ${day.events.map(ev => `<div class="cal-event"><span class="importance-dot importance-${ev.importance}"></span><div class="ev-time">${ev.time}</div><div class="ev-name">${ev.event} <span style="font-size:10px;color:var(--text-tertiary)">${ev.country}</span></div></div>`).join('')}
       </div>`).join('');
+  } catch(e) {}
+}
+
+// ============================================================
+// BIG DATA PANEL
+// ============================================================
+async function loadBigData() {
+  loadNorthBound();
+  loadMarginTrading();
+  loadLimitUpDown();
+  loadSectorFlowRanking();
+  if (state.stock) loadBigDataStock();
+}
+
+async function loadNorthBound() {
+  try {
+    var r = await fetch('/api/market/north-bound'); var d = await r.json();
+    var el = document.getElementById('northFlow');
+    if (!d.flows || !d.flows.length) { el.innerHTML = '<p style="color:var(--text-tertiary);font-size:11px">Data loading...</p>'; return; }
+    var recent = d.flows.slice(-10);
+    var total = recent.reduce(function(s,f){return s+f.net_flow;},0);
+    el.innerHTML =
+      '<div style="font-size:20px;font-weight:700;color:'+(total>=0?'#ef4444':'#22c55e')+'">'+(total>=0?'+':'')+total.toFixed(0)+'亿</div>'+
+      '<div style="font-size:11px;color:var(--text-tertiary)">近10日累计净'+(total>=0?'买入':'卖出')+'</div>'+
+      '<div style="margin-top:6px;font-size:11px;color:var(--text-tertiary)">更新: '+d.updated+'</div>';
+  } catch(e) {}
+}
+
+async function loadMarginTrading() {
+  try {
+    var r = await fetch('/api/market/margin-trading'); var d = await r.json();
+    var el = document.getElementById('marginPanel');
+    el.innerHTML =
+      '<div style="display:flex;gap:16px;margin-bottom:8px">'+
+      '<div><span style="font-size:11px;color:var(--text-tertiary)">融资余额</span><div style="font-weight:700;color:#ef4444">'+(d.total_rz||0).toFixed(0)+'亿</div></div>'+
+      '<div><span style="font-size:11px;color:var(--text-tertiary)">融券余额</span><div style="font-weight:700;color:#22c55e">'+(d.total_rq||0).toFixed(0)+'亿</div></div>'+
+      '</div>'+
+      (d.stocks||[]).slice(0,8).map(function(s){
+        return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02)"><span style="color:var(--accent);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span><span>'+(s.rz_balance/1e8).toFixed(1)+'亿</span></div>';
+      }).join('');
+  } catch(e) {}
+}
+
+async function loadLimitUpDown() {
+  try {
+    var r = await fetch('/api/market/limit-up-down'); var d = await r.json();
+    document.getElementById('limitUpList').innerHTML = (d.up_list||[]).slice(0,10).map(function(s){
+      return '<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02)"><span style="color:var(--accent);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span> <span style="color:#ef4444">+'+s.change_pct+'%</span></div>';
+    }).join('')||'<span style="color:var(--text-tertiary)">--</span>';
+    document.getElementById('limitDownList').innerHTML = (d.down_list||[]).slice(0,10).map(function(s){
+      return '<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02)"><span style="color:var(--accent);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span> <span style="color:#22c55e">'+s.change_pct+'%</span></div>';
+    }).join('')||'<span style="color:var(--text-tertiary)">--</span>';
+  } catch(e) {}
+}
+
+async function loadSectorFlowRanking() {
+  try {
+    var r = await fetch('/api/market/sector-flow-ranking'); var d = await r.json();
+    document.getElementById('sectorFlowList').innerHTML = (d.sectors||[]).slice(0,15).map(function(s,i){
+      var clr = (s.main_net||0)>=0 ? '#ef4444' : '#22c55e';
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:11px"><span>'+(i+1)+'. '+s.name+'</span><span style="color:'+clr+'">'+(s.main_net>=0?'+':'')+(s.main_net/1e4).toFixed(1)+'亿</span></div>';
+    }).join('')||'<span style="color:var(--text-tertiary);font-size:11px">Loading...</span>';
+  } catch(e) {}
+}
+
+async function loadBigDataStock() {
+  if (!state.stock) return;
+  document.getElementById('bigdataStock').style.display = 'block';
+  document.getElementById('bigdataStockTitle').textContent = state.stock.name+' ('+state.stock.code+') 深度数据';
+  loadShareholders(state.stock.code);
+  loadBlockTrades(state.stock.code);
+  loadInstitutionalResearch();
+}
+
+async function loadShareholders(code) {
+  try {
+    var r = await fetch('/api/stock/shareholders?code='+code); var d = await r.json();
+    var el = document.getElementById('shareholdersPanel');
+    if (!d.shareholders||!d.shareholders.length) { el.innerHTML='<span style="color:var(--text-tertiary)">暂无数据</span>'; return; }
+    el.innerHTML = d.shareholders.slice(0,8).map(function(s){
+      var chg = s.change||0, arrow = chg>0?'▲':chg<0?'▼':'─', clr = chg>0?'#ef4444':'#22c55e';
+      return '<div style="padding:2px 0;font-size:11px">'+s.date+' <b>'+(s.holders/1e4).toFixed(1)+'万户</b> <span style="color:'+clr+'">'+arrow+' '+Math.abs(chg||0).toLocaleString()+'</span></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+async function loadBlockTrades(code) {
+  try {
+    var r = await fetch('/api/stock/block-trades?code='+code); var d = await r.json();
+    var el = document.getElementById('blockTradesPanel');
+    if (!d.trades||!d.trades.length) { el.innerHTML='<span style="color:var(--text-tertiary)">近期无大宗交易</span>'; return; }
+    el.innerHTML = d.trades.slice(0,8).map(function(t){
+      var p = t.premium||0, clr = p>0?'#ef4444':p<0?'#22c55e':'var(--text-tertiary)';
+      return '<div style="padding:2px 0;font-size:11px">'+t.date+' <b>'+t.price.toFixed(2)+'</b> <span style="color:'+clr+'">'+(p>0?'+':'')+p.toFixed(1)+'%</span><br><span style="color:var(--text-tertiary)">量:'+(t.volume/1e4).toFixed(0)+'万股</span></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+async function loadInstitutionalResearch() {
+  try {
+    var r = await fetch('/api/market/institutional-research'); var d = await r.json();
+    var el = document.getElementById('researchPanel');
+    if (!d.records||!d.records.length) { el.innerHTML='<span style="color:var(--text-tertiary)">暂无数据</span>'; return; }
+    el.innerHTML = d.records.slice(0,10).map(function(rec){
+      return '<div style="padding:2px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02)"><b style="color:var(--accent);cursor:pointer" onclick="quickSearch(\''+rec.code+'\',\'cn\')">'+rec.name+'</b> '+rec.date+'<br><span style="color:var(--text-tertiary)">'+rec.org_count+'家机构 '+(rec.biz||'')+'</span></div>';
+    }).join('');
   } catch(e) {}
 }
 
