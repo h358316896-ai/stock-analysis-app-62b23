@@ -1330,7 +1330,7 @@ def stock_indicators():
 def north_bound_flow():
     """获取沪深港通北向资金流向"""
     url = "https://push2.eastmoney.com/api/qt/kamt.kline/get?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54&klt=101&lmt=30"
-    data = fetch_eastmoney(url)
+    data = _cached_eastmoney("north_bound", url, ttl=1800)
     flows = []
     if data and data.get("data") and data["data"].get("klines"):
         for line in data["data"]["klines"]:
