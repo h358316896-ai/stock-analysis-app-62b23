@@ -40,12 +40,16 @@ def login_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
-# Manual CORS + Gzip (replaces flask-cors)
+# Manual CORS + Gzip + Cache (replaces flask-cors)
 @app.after_request
 def add_cors_and_gzip(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "*"
+    # Cache static assets for 1 hour in browser
+    req_path = request.path
+    if req_path.startswith("/static/") and "html" not in (response.headers.get("Content-Type") or ""):
+        response.headers["Cache-Control"] = "public, max-age=3600"
     # Gzip compress text responses
     accept_encoding = request.headers.get("Accept-Encoding", "")
     content_type = response.headers.get("Content-Type", "")
