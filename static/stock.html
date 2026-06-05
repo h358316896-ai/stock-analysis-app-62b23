@@ -1292,10 +1292,10 @@ async function loadMarginTrading() {
 async function loadLimitUpDown() {
   try {
     var r = await fetch('/api/market/limit-up-down'); var d = await r.json();
-    document.getElementById('limitUpList').innerHTML = (d.up_list||[]).slice(0,10).map(function(s){
+    document.getElementById('limitUpList').innerHTML = (d.up_list||[]).slice(0,15).map(function(s){
       return '<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02)"><span style="color:var(--accent);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span> <span style="color:#ef4444">+'+s.change_pct+'%</span></div>';
     }).join('')||'<span style="color:var(--text-tertiary)">--</span>';
-    document.getElementById('limitDownList').innerHTML = (d.down_list||[]).slice(0,10).map(function(s){
+    document.getElementById('limitDownList').innerHTML = (d.down_list||[]).slice(0,15).map(function(s){
       return '<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02)"><span style="color:var(--accent);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span> <span style="color:#22c55e">'+s.change_pct+'%</span></div>';
     }).join('')||'<span style="color:var(--text-tertiary)">--</span>';
   } catch(e) {}

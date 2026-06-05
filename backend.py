@@ -1663,7 +1663,7 @@ def margin_trading():
 def limit_up_down():
     """获取涨跌停统计"""
     # 涨停
-    url_up = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=20&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f12,f14,f20,f8,f10&f3=9.9"
+    url_up = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f12,f14,f20,f8,f10&f3=9.9"
     up_data = _cached_eastmoney("limit_up", url_up, ttl=300)
     # 跌停
     url_down = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=20&po=0&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f12,f14,f20,f8,f10&f3=-9.9"
