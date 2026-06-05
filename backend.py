@@ -1582,22 +1582,41 @@ def stock_money_flow():
 
     result = {"flows": [], "summary": {}}
 
-    try:
-        if market == "cn":
-            # Eastmoney fund flow API
-            prefix = "1" if code.startswith("6") else "0"
-            secid = f"{prefix}.{code}"
-            url = (
-                f"https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get"
-                f"?secid={secid}&fields1=f1,f2,f3,f7"
-                f"&fields2=f51,f52,f53,f54,f55,f56&lmt=60"
-            )
-            resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-            data = resp.json()
-            if data.get("data") and data["data"].get("klines"):
-                for line in data["data"]["klines"]:
-                    parts = line.split(",")
-                    if len(parts) >= 6:
+    if market == "cn":
+        prefix = "1" if code.startswith("6") else "0"
+        secid = f"{prefix}.{code}"
+
+        # Headers that mimic browser request (Eastmoney blocks requests without Referer)
+        em_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://data.eastmoney.com/",
+            "Accept": "application/json, text/plain, */*",
+        }
+
+        # Try multiple Eastmoney API URLs (different subdomains / parameter orders)
+        em_urls = [
+            # push2his — more reliable for historical kline data
+            f"https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=60&klt=101&secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56",
+            # push2 — realtime variant
+            f"https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get?secid={secid}&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56&lmt=60",
+        ]
+
+        data = None
+        for url in em_urls:
+            try:
+                resp = requests.get(url, headers=em_headers, timeout=10)
+                data = resp.json()
+                if data.get("data") and data["data"].get("klines"):
+                    break  # got valid data, stop trying
+            except Exception:
+                continue
+
+        # Parse kline data if we got any
+        if data and data.get("data") and data["data"].get("klines"):
+            for line in data["data"]["klines"]:
+                parts = line.split(",")
+                if len(parts) >= 6:
+                    try:
                         result["flows"].append({
                             "date": parts[0],
                             "main": round(float(parts[1]) / 1e4, 2),     # 主力净流入(万)
@@ -1606,8 +1625,10 @@ def stock_money_flow():
                             "large": round(float(parts[4]) / 1e4, 2),    # 大单净流入(万)
                             "xl": round(float(parts[5]) / 1e4, 2),       # 超大单净流入(万)
                         })
+                    except (ValueError, IndexError):
+                        continue
 
-        # Summary stats (last 5 days)
+        # Summary stats (last 5 days) from Eastmoney data
         if result["flows"]:
             recent = result["flows"][-5:]
             main_sum = sum(f["main"] for f in recent)
@@ -1619,8 +1640,9 @@ def stock_money_flow():
                 "strength": "偏强" if main_sum > retail_sum else "偏弱",
                 "period": f"{recent[0]['date']} ~ {recent[-1]['date']}",
             }
-    except Exception as e:
-        # Fallback: try Tencent fund flow
+
+    # ---- Fallback: if Eastmoney returned no flows, try Tencent real-time fund flow ----
+    if not result["flows"] and market == "cn":
         try:
             prefix = "sh" if code.startswith(("6", "5", "1")) else "sz"
             ff_url = f"https://qt.gtimg.cn/q=ff_{prefix}{code}"
@@ -1630,11 +1652,30 @@ def stock_money_flow():
                 if match:
                     fields = match.group(1).split("~")
                     if len(fields) >= 10:
-                        result["summary"] = {
-                            "main_net": fields[1] if len(fields) > 1 else "0",
-                            "retail_net": fields[3] if len(fields) > 3 else "0",
-                            "source": "tencent",
-                        }
+                        # Tencent provides real-time snapshot, not historical kline.
+                        # Synthesize a single-point flow entry so the frontend can render.
+                        try:
+                            main_net = float(fields[1]) if fields[1] else 0.0
+                            retail_net = float(fields[3]) if fields[3] else 0.0
+                            today_str = datetime.now().strftime("%Y-%m-%d")
+                            result["flows"] = [{
+                                "date": today_str,
+                                "main": round(main_net / 1e4, 2),
+                                "retail": round(retail_net / 1e4, 2),
+                                "mid": 0,
+                                "large": 0,
+                                "xl": 0,
+                            }]
+                            result["summary"] = {
+                                "main_5d": round(main_net / 1e4, 2),
+                                "retail_5d": round(retail_net / 1e4, 2),
+                                "main_vs_retail": "主力流入" if main_net > 0 else "主力流出",
+                                "strength": "主力偏强" if abs(main_net) > abs(retail_net) else "散户偏强",
+                                "period": today_str,
+                                "source": "tencent",
+                            }
+                        except (ValueError, TypeError):
+                            pass
         except Exception:
             pass
 
