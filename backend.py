@@ -2031,9 +2031,71 @@ def check_all_alerts():
 # ==========================================================
 # STARTUP
 # ==========================================================
+def _refresh_hk_stocks_on_startup():
+    """Background thread: refresh HK stock database from Eastmoney on startup"""
+    import time as _time
+    _time.sleep(5)  # wait for Flask to fully start
+    print("[startup] Refreshing HK stock database from Eastmoney...")
+    stocks = {}
+    page = 1
+    page_size = 500
+    while True:
+        url = (
+            f"https://push2.eastmoney.com/api/qt/clist/get"
+            f"?pn={page}&pz={page_size}&po=1&np=1&fltt=2&invt=2"
+            f"&fid=f12&fs=m:128+t:3,m:128+t:4,m:128+t:1,m:128+t:2"
+            f"&fields=f12,f14"
+        )
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": "https://data.eastmoney.com/",
+            }
+            resp = requests.get(url, headers=headers, timeout=20)
+            data = resp.json()
+            items = data.get("data", {}).get("diff", [])
+            if not items:
+                break
+            for item in items:
+                code = item.get("f12", "").strip()
+                name = item.get("f14", "").strip()
+                if code and name:
+                    stocks[code.zfill(5)] = name
+            total = data.get("data", {}).get("total", 0)
+            print(f"[startup] HK page {page}: {len(items)} stocks (collected: {len(stocks)}, total: {total})")
+            if len(items) < page_size:
+                break
+            page += 1
+        except Exception as e:
+            print(f"[startup] HK fetch error page {page}: {e}")
+            break
+
+    if stocks:
+        sorted_stocks = dict(sorted(stocks.items()))
+        filepath = os.path.join(BASE_DIR, "hk_stock_names.py")
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write("# Auto-generated HK stock database\n")
+            f.write(f"# Auto-refreshed on startup: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"# Total: {len(sorted_stocks)}\n")
+            f.write("HK_STOCK_NAMES = {\n")
+            for c, n in sorted_stocks.items():
+                safe = n.replace('"', '\\"').replace("'", "\\'")
+                f.write(f'    "{c}": "{safe}",\n')
+            f.write("}\n")
+        # Reload in memory
+        global HK_STOCK_NAMES
+        HK_STOCK_NAMES = sorted_stocks
+        print(f"[startup] HK stock database refreshed: {len(sorted_stocks)} stocks loaded.")
+    else:
+        print("[startup] WARNING: HK stock refresh failed, keeping existing database.")
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5003))
     print(f"[AI Workshop] Starting on http://0.0.0.0:{port}")
     print(f"[AI Workshop] DeepSeek: {'configured' if DEEPSEEK_API_KEY else 'MISSING'}")
     print(f"[AI Workshop] Claude:    {'configured' if CLAUDE_API_KEY else 'MISSING'}")
+    # Auto-refresh HK stocks in background on first deploy
+    import threading as _thr
+    _thr.Thread(target=_refresh_hk_stocks_on_startup, daemon=True).start()
     app.run(host="0.0.0.0", port=port, debug=False)
