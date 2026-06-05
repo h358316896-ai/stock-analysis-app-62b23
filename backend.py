@@ -1713,7 +1713,7 @@ def stock_money_flow():
     now_ts = time.time()
     if cache_key in _money_flow_cache:
         entry = _money_flow_cache[cache_key]
-        if (now_ts - entry["ts"]) < 300:  # 5 min cache
+        if (now_ts - entry["ts"]) < 300 and entry["data"].get("flows"):  # Only use cache if has data
             return jsonify(entry["data"])
 
     result = {"flows": [], "summary": {}}
@@ -1815,8 +1815,12 @@ def stock_money_flow():
         except Exception:
             pass
 
-    # Cache result for 5 minutes
-    _money_flow_cache[cache_key] = {"data": result, "ts": time.time()}
+    # Only cache successful results; don't cache failures
+    if result["flows"]:
+        _money_flow_cache[cache_key] = {"data": result, "ts": time.time()}
+    else:
+        # Clear any stale cache for this stock
+        _money_flow_cache.pop(cache_key, None)
     return jsonify(result)
 
 
