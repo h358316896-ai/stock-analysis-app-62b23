@@ -1818,12 +1818,69 @@ def stock_money_flow():
         except Exception:
             pass
 
-    # Only cache successful results; don't cache failures
+    # ---- Persistent file-based cache: accumulate data over time ----
+    _cache_file = os.path.join(BASE_DIR, "money_flow_cache.json")
+    _file_cache = {}
+    try:
+        if os.path.exists(_cache_file):
+            with open(_cache_file, "r", encoding="utf-8") as f:
+                _file_cache = json.load(f)
+    except Exception:
+        pass
+
+    # Merge today's live data into file cache
+    if result["flows"]:
+        today = datetime.now().strftime("%Y-%m-%d")
+        for flow in result["flows"]:
+            date = flow["date"]
+            if date not in _file_cache.get(cache_key, {}):
+                _file_cache.setdefault(cache_key, {})[date] = {
+                    "main": flow["main"], "retail": flow["retail"],
+                    "mid": flow.get("mid", 0), "large": flow.get("large", 0), "xl": flow.get("xl", 0),
+                }
+
+        # Also merge historical file cache data into result
+        if cache_key in _file_cache:
+            existing_dates = {f["date"] for f in result["flows"]}
+            for date_str, cached in _file_cache[cache_key].items():
+                if date_str not in existing_dates:
+                    result["flows"].append({
+                        "date": date_str,
+                        "main": cached["main"], "retail": cached["retail"],
+                        "mid": cached.get("mid", 0), "large": cached.get("large", 0), "xl": cached.get("xl", 0),
+                    })
+
+        # Sort by date
+        result["flows"].sort(key=lambda x: x["date"])
+
+        # Recompute summary with all data
+        if result["flows"]:
+            recent = result["flows"][-5:]
+            main_sum = sum(f["main"] for f in recent)
+            retail_sum = sum(f["retail"] for f in recent)
+            result["summary"] = {
+                "main_5d": round(main_sum, 2),
+                "retail_5d": round(retail_sum, 2),
+                "main_vs_retail": "主力流入" if main_sum > 0 else "主力流出",
+                "strength": "偏强" if main_sum > retail_sum else "偏弱",
+                "period": f"{result['flows'][0]['date']} ~ {result['flows'][-1]['date']}",
+                "cached_days": len(result["flows"]),
+            }
+
+        # Save file cache (trim to 60 days per stock)
+        for key in list(_file_cache.keys()):
+            dates = sorted(_file_cache[key].keys())
+            for old_date in dates[:-60]:
+                del _file_cache[key][old_date]
+        try:
+            with open(_cache_file, "w", encoding="utf-8") as f:
+                json.dump(_file_cache, f, ensure_ascii=False)
+        except Exception:
+            pass
+
+    # Memory cache
     if result["flows"]:
         _money_flow_cache[cache_key] = {"data": result, "ts": time.time()}
-    else:
-        # Clear any stale cache for this stock
-        _money_flow_cache.pop(cache_key, None)
     return jsonify(result)
 
 
