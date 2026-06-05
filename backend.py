@@ -247,6 +247,43 @@ def _fetch_tencent_raw(url):
         return None
 
 
+# Persistent file cache for market data (survives weekends / non-trading hours)
+_MARKET_CACHE_FILE = os.path.join(BASE_DIR, "market_cache.json")
+
+def _load_market_cache():
+    try:
+        if os.path.exists(_MARKET_CACHE_FILE):
+            with open(_MARKET_CACHE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def _save_market_cache(data):
+    try:
+        with open(_MARKET_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+def _cached_eastmoney(key, url, ttl=1800):
+    """Fetch from Eastmoney + cache. On failure, return stale cache. Cache TTL in seconds."""
+    cache = _load_market_cache()
+    now_ts = time.time()
+
+    # Try live data
+    data = fetch_eastmoney(url)
+    if data and data.get("data") and data["data"].get("diff"):
+        cache[key] = {"ts": now_ts, "data": data}
+        _save_market_cache(cache)
+        return data
+
+    # Return stale cache if available
+    entry = cache.get(key)
+    if entry:
+        return entry["data"]
+    return None
+
 # Simple in-memory cache with TTL
 _global_indices_cache = {"data": None, "ts": 0}
 _indices_cache = {"data": None, "ts": 0}
@@ -1313,7 +1350,7 @@ def north_bound_flow():
 def sector_heatmap():
     """获取行业板块涨跌数据"""
     url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2&fields=f2,f3,f4,f12,f14"
-    data = fetch_eastmoney(url)
+    data = _cached_eastmoney("sectors", url)
     sectors = []
     if data and data.get("data") and data["data"].get("diff"):
         for item in data["data"]["diff"]:
@@ -1329,7 +1366,7 @@ def sector_heatmap():
 def concept_heatmap():
     """获取概念板块涨跌数据"""
     url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:3&fields=f2,f3,f4,f12,f14"
-    data = fetch_eastmoney(url)
+    data = _cached_eastmoney("concepts", url)
     sectors = []
     if data and data.get("data") and data["data"].get("diff"):
         for item in data["data"]["diff"]:
@@ -1571,8 +1608,8 @@ def top_movers():
         # A股涨幅榜
         url_up = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20,f9"
         url_down = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=0&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20,f9"
-        up_data = fetch_eastmoney(url_up) or {}
-        down_data = fetch_eastmoney(url_down) or {}
+        up_data = _cached_eastmoney("gainers", url_up) or {}
+        down_data = _cached_eastmoney("losers", url_down) or {}
 
         def parse_mover(item):
             return {
