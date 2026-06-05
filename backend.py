@@ -71,7 +71,11 @@ import auth_db
 def fetch_json(url, timeout=10):
     """Fetch JSON from URL using Python requests"""
     try:
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=timeout)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://gu.qq.com/",
+        }
+        resp = requests.get(url, headers=headers, timeout=timeout)
         return resp.json()
     except Exception as e:
         print(f"[fetch_json] Error for {url[:80]}: {e}")
@@ -81,7 +85,12 @@ def fetch_json(url, timeout=10):
 def fetch_text_gbk(url, timeout=10):
     """Fetch raw text as GBK from URL"""
     try:
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=timeout)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://gu.qq.com/",
+            "Accept": "*/*",
+        }
+        resp = requests.get(url, headers=headers, timeout=timeout)
         resp.encoding = "gb18030"
         return resp.text
     except Exception as e:
@@ -337,15 +346,17 @@ def _search_online_tencent(keyword, market_type="gp"):
 
 
 def _search_us_stocks(keyword):
-    """Search US stocks: use Tencent smartbox API"""
+    """Search US stocks: use Tencent smartbox API first, fallback to yfinance"""
     results = []
     from urllib.parse import quote
+
+    # --- Primary: Tencent smartbox ---
     try:
         gbk_bytes = keyword.encode("gbk") if any(ord(c) > 127 for c in keyword) else keyword.encode("ascii")
         encoded = quote(gbk_bytes, safe="")
     except Exception:
         encoded = quote(keyword)
-    
+
     url = f"https://smartbox.gtimg.cn/s3/?q={encoded}&t=us"
     try:
         text = fetch_text_gbk(url, 10)
@@ -355,7 +366,7 @@ def _search_us_stocks(keyword):
                 for item in match.group(1).split("^"):
                     parts = item.split("~")
                     if len(parts) >= 3 and parts[1] and parts[2] and parts[2] != "*":
-                        code = parts[1].split(".")[0].upper()  # strip .OQ/.N etc, uppercase
+                        code = parts[1].split(".")[0].upper()
                         name = parts[2]
                         if code and name:
                             results.append({"code": code, "name": name, "market": "us"})
@@ -363,6 +374,23 @@ def _search_us_stocks(keyword):
                             break
     except Exception:
         pass
+
+    # --- Fallback: yfinance ticker lookup (works without Tencent) ---
+    if not results:
+        try:
+            import yfinance as yf
+            # Try exact ticker match first
+            ticker = yf.Ticker(keyword.upper())
+            info = ticker.info
+            if info and info.get("symbol") and info.get("shortName"):
+                results.append({
+                    "code": info["symbol"].upper(),
+                    "name": info["shortName"],
+                    "market": "us"
+                })
+        except Exception:
+            pass
+
     return results
 
 
