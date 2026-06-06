@@ -717,20 +717,58 @@ body {
 .strategy-tag:hover { border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,0.08); }
 .strategy-tag.active { background:var(--accent);color:white;border-color:var(--accent); }
 
-/* === WeChat / X5 Browser Compat === */
+/* === iOS / Android / WeChat Universal Mobile Compat === */
+/* iOS safe area */
+@supports (padding: env(safe-area-inset-top)) {
+  .top-bar { padding-top: env(safe-area-inset-top); }
+  .container { padding-bottom: env(safe-area-inset-bottom); }
+}
+/* Prevent iOS input zoom */
+@media screen and (max-width: 768px) {
+  input, select, button { font-size: 16px !important; }
+}
+/* Mobile responsive */
 @media screen and (max-width: 768px) {
   .main-grid { grid-template-columns: 1fr; grid-gap: 16px; }
   .market-strip { grid-template-columns: repeat(2, 1fr); grid-gap: 8px; }
   .sidebar { display: none !important; }
-  .top-bar { padding: 0 12px; position: -webkit-sticky; position: sticky; }
-  .container { padding: 12px; }
+  .top-bar { padding: 0 12px; position: -webkit-sticky; position: sticky; height: 44px; }
+  .ticker-wrap { top: 44px; }
+  .container { padding: 8px 10px 24px; }
   .quote-price-lg { font-size: 28px; }
-  .tab-nav button { padding: 8px 10px; font-size: 11px; }
-  .chart-tabs button { padding: 6px 10px; font-size: 10px; }
-  .analysis-tabs button { padding: 6px 10px; font-size: 10px; }
+  .quote-name { font-size: 18px; }
+  .quote-panel { padding: 16px; }
+  .quote-grid { grid-template-columns: repeat(3, 1fr); grid-gap: 8px; }
+  .tab-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab-nav button { padding: 8px 10px; font-size: 11px; white-space: nowrap; flex: none; min-width: 60px; min-height: 36px; }
+  .chart-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chart-tabs button { padding: 6px 10px; font-size: 10px; white-space: nowrap; min-height: 32px; }
+  .analysis-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+  .analysis-tabs button { padding: 6px 10px; font-size: 10px; white-space: nowrap; min-height: 32px; }
+  .search-box { flex-wrap: wrap; }
+  .search-box input { min-width: 100%; }
+  .search-box select, .search-box button { flex: 1; min-height: 44px; }
+  .chart-panel canvas { max-width: 100%; height: auto !important; }
+  .btn-auth, .btn-auth-outline { min-height: 36px; padding: 6px 14px; }
+  .movers-table { font-size: 11px; }
+  .movers-table th, .movers-table td { padding: 6px 8px; }
+  .fin-grid { grid-template-columns: repeat(3, 1fr); grid-gap: 6px; }
+  .fin-card { padding: 10px; }
+  .fin-card .fc-value { font-size: 16px; }
+  /* Retail panel - single column */
+  #panel-retail .glass > div:first-child > div { grid-column: 1 / -1; }
+  #anomalyBar { flex-wrap: wrap; }
+  .alert-flash-up, .alert-flash-down { font-size: 10px; padding: 4px 6px; }
 }
+/* Sticky for all browsers */
 .top-bar { position: -webkit-sticky; position: sticky; }
 .ticker-wrap { position: -webkit-sticky; position: sticky; }
+/* Smooth scrolling iOS */
+.heatmap-grid, .news-list, .sidebar-card, #limitUpList, #limitDownList, #sectorFlowList, #limitReviewList, #techScreenResult {
+  -webkit-overflow-scrolling: touch;
+}
+/* Touch friendly links */
+.mover-symbol, .ticker-item, .heatmap-cell, .news-item { cursor: pointer; -webkit-tap-highlight-color: rgba(59,130,246,0.15); }
 </style>
 </head>
 <body>
