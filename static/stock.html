@@ -68,8 +68,7 @@ body {
 .glass {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* backdrop-filter removed for WeChat compat */
   border-radius: var(--radius-lg);
 }
 .glass:hover { border-color: var(--border-default); background: var(--bg-card-hover); }
@@ -90,7 +89,7 @@ body {
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 10px; grid-gap: 10px;
 }
 .logo-icon {
   width: 28px; height: 28px;
@@ -111,7 +110,9 @@ body {
   letter-spacing: -0.02em;
 }
 .logo-text span { color: var(--accent); }
-.top-nav { display: flex; gap: 4px; }
+.top-nav { display: flex; }
+.top-nav a { margin-right: 4px; }
+.top-nav a:last-child { margin-right: 0; }
 .top-nav a {
   color: var(--text-secondary);
   text-decoration: none;
@@ -370,7 +371,7 @@ body {
 .search-section { margin-bottom: 20px; }
 .search-box {
   display: flex;
-  gap: 10px;
+  gap: 10px; grid-gap: 10px;
 }
 .search-box input {
   flex: 1;
@@ -715,6 +716,21 @@ body {
 .strategy-tag { display:inline-block;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);transition:all .2s;margin:3px; }
 .strategy-tag:hover { border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,0.08); }
 .strategy-tag.active { background:var(--accent);color:white;border-color:var(--accent); }
+
+/* === WeChat / X5 Browser Compat === */
+@media screen and (max-width: 768px) {
+  .main-grid { grid-template-columns: 1fr; grid-gap: 16px; }
+  .market-strip { grid-template-columns: repeat(2, 1fr); grid-gap: 8px; }
+  .sidebar { display: none !important; }
+  .top-bar { padding: 0 12px; position: -webkit-sticky; position: sticky; }
+  .container { padding: 12px; }
+  .quote-price-lg { font-size: 28px; }
+  .tab-nav button { padding: 8px 10px; font-size: 11px; }
+  .chart-tabs button { padding: 6px 10px; font-size: 10px; }
+  .analysis-tabs button { padding: 6px 10px; font-size: 10px; }
+}
+.top-bar { position: -webkit-sticky; position: sticky; }
+.ticker-wrap { position: -webkit-sticky; position: sticky; }
 </style>
 </head>
 <body>
