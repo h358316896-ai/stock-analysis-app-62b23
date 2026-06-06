@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -7,7 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="/static/manifest.json">
-<title>StockAI — Professional Market Intelligence & AI Tools</title>
+<title>StockAI — 专业A股智能分析平台 | 实时行情·主力追踪·AI选股</title>
+<meta name="description" content="StockAI 提供A股实时行情、资金流向、主力追踪、龙虎榜、涨停复盘、智能选股等专业投资工具。覆盖沪深港美股，AI驱动深度分析。">
 <style>
 :root {
   --bg-primary: #060608; --bg-secondary: #0c0c14; --bg-card: #111118;
@@ -162,29 +163,29 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
     <div class="logo-text">Stock<span>AI</span></div>
   </div>
   <div class="top-nav">
-    <a href="/" class="active">Home</a>
-    <a href="/stock">Markets</a>
-    <a href="/media">Media</a>
-    <a href="/services">Services</a>
+    <a href="/" class="active">首页</a>
+    <a href="/stock">行情</a>
+    <a href="/media">自媒体</a>
+    <a href="/services">定制服务</a>
   </div>
-  <a href="/stock" class="btn-sign">Get Started →</a>
+  <a href="/stock" class="btn-sign">免费使用 →</a>
 </div>
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-badge">AI-Powered Finance Platform</div>
-  <h1>Professional Market Intelligence, <span>Simplified</span></h1>
-  <p>Real-time global markets, AI-powered analysis, and professional-grade tools — all in one platform. Built for traders, creators, and developers.</p>
+  <div class="hero-badge">AI 驱动的专业投资平台</div>
+  <h1>专业市场分析<span>化繁为简</span></h1>
+  <p>实时全球行情、AI深度分析、专业级投资工具，一站式平台。为交易者、创作者和开发者打造。</p>
   <div class="hero-actions">
-    <a href="/stock" class="btn-primary">Launch Terminal →</a>
-    <a href="#products" class="btn-outline">Explore Products</a>
+    <a href="/stock" class="btn-primary">进入行情终端 →</a>
+    <a href="#products" class="btn-outline">了解更多</a>
   </div>
 </div>
 
 <!-- TICKER STRIP -->
 <div class="ticker-strip">
   <div class="scroll" id="tickerEl">
-    <span style="padding:0 20px;color:var(--text-tertiary)">Loading market data...</span>
+    <span style="padding:0 20px;color:var(--text-tertiary)">正在加载实时行情...</span>
   </div>
 </div>
 
@@ -192,10 +193,10 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 <div class="stats-bar">
   <div class="section-inner">
     <div class="stats-grid">
-      <div class="stat-item"><div class="stat-num">5,000+</div><div class="stat-label">Listed Stocks</div></div>
-      <div class="stat-item"><div class="stat-num">7</div><div class="stat-label">Global Indices</div></div>
-      <div class="stat-item"><div class="stat-num">3</div><div class="stat-label">Markets Covered</div></div>
-      <div class="stat-item"><div class="stat-num">Real-time</div><div class="stat-label">Data Updates</div></div>
+      <div class="stat-item"><div class="stat-num">5,500+</div><div class="stat-label">覆盖A股</div></div>
+      <div class="stat-item"><div class="stat-num">7</div><div class="stat-label">全球指数</div></div>
+      <div class="stat-item"><div class="stat-num">3</div><div class="stat-label">交易市场</div></div>
+      <div class="stat-item"><div class="stat-num">实时</div><div class="stat-label">数据刷新</div></div>
     </div>
   </div>
 </div>
@@ -203,48 +204,48 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 <!-- PRODUCT CARDS -->
 <div class="products" id="products">
   <div class="section-inner">
-    <div class="section-tag">Products</div>
-    <div class="section-h2">Three powerful tools,<br>one platform</div>
-    <div class="section-p">Everything you need for financial analysis, content creation, and custom development.</div>
+    <div class="section-tag">核心产品</div>
+    <div class="section-h2">三大核心工具<br>一站式平台</div>
+    <div class="section-p">覆盖金融分析、内容创作、定制开发的全方位解决方案。</div>
     <div class="products-grid">
       <a href="/stock" class="prod-card">
         <div class="pc-icon pc-icon-stock">S</div>
-        <h3>Stock AI Analysis</h3>
-        <p>Real-time A-Share, HK, and US market data with AI-powered deep analysis, candlestick charts, and professional PDF reports.</p>
+        <h3>A股智能分析</h3>
+        <p>实时沪深港美股行情，AI驱动深度分析，K线图表，专业PDF报告一键导出。</p>
         <ul class="pc-features">
-          <li>Global market indices & heatmaps</li>
-          <li>Technical indicators (MACD, RSI, Bollinger)</li>
-          <li>North-bound capital flow tracking</li>
-          <li>Smart stock screener & comparison</li>
-          <li>Dragon-Tiger board ranking</li>
+          <li>全球指数实时追踪 & 板块热力图</li>
+          <li>技术指标 (MACD/RSI/KDJ/布林带)</li>
+          <li>北向资金 & 主力资金流向监控</li>
+          <li>智能选股 & 多股对比</li>
+          <li>龙虎榜 & 游资追踪</li>
         </ul>
-        <div class="pc-bottom"><span class="pc-price">¥39<span style="font-size:13px;font-weight:400">/mo</span></span><span class="pc-cta">Launch App →</span></div>
+        <div class="pc-bottom"><span class="pc-price">¥39<span style="font-size:13px;font-weight:400">/月</span></span><span class="pc-cta">立即使用 →</span></div>
       </a>
       <a href="/media" class="prod-card">
         <div class="pc-icon pc-icon-media">M</div>
-        <h3>Media AI Assistant</h3>
-        <p>AI content generation, trend analysis, video scripting, and voice-over production for content creators.</p>
+        <h3>自媒体AI助手</h3>
+        <p>AI内容生成、热点追踪、视频脚本创作、配音制作，一站式自媒体创作工具。</p>
         <ul class="pc-features">
-          <li>Multi-engine AI (DeepSeek + Claude)</li>
-          <li>Content style imitation & templates</li>
-          <li>Video script & voice-over generation</li>
-          <li>Hot topic trend discovery</li>
-          <li>Multi-platform content optimization</li>
+          <li>双引擎AI (DeepSeek + Claude)</li>
+          <li>爆款内容模仿 & 模板库</li>
+          <li>视频脚本 & 配音自动生成</li>
+          <li>热点话题趋势发现</li>
+          <li>多平台内容优化分发</li>
         </ul>
-        <div class="pc-bottom"><span class="pc-price">¥29<span style="font-size:13px;font-weight:400">/mo</span></span><span class="pc-cta">Launch App →</span></div>
+        <div class="pc-bottom"><span class="pc-price">¥29<span style="font-size:13px;font-weight:400">/月</span></span><span class="pc-cta">立即使用 →</span></div>
       </a>
       <a href="/services" class="prod-card">
         <div class="pc-icon pc-icon-dev">D</div>
-        <h3>Custom AI Development</h3>
-        <p>Tailored AI solutions, automation tools, and full-stack applications for enterprises and individuals.</p>
+        <h3>定制AI开发</h3>
+        <p>量身定制的AI解决方案、自动化工具和全栈应用开发，服务企业与个人。</p>
         <ul class="pc-features">
-          <li>AI tool MVP development</li>
-          <li>Full-stack web applications</li>
-          <li>Finance data systems</li>
-          <li>Automation & web scraping</li>
-          <li>WeChat mini-programs</li>
+          <li>AI工具MVP快速开发</li>
+          <li>全栈Web应用搭建</li>
+          <li>金融数据系统定制</li>
+          <li>自动化 & 数据采集</li>
+          <li>微信小程序开发</li>
         </ul>
-        <div class="pc-bottom"><span class="pc-price">¥500+<span style="font-size:13px;font-weight:400">/project</span></span><span class="pc-cta">Get a Quote →</span></div>
+        <div class="pc-bottom"><span class="pc-price">¥500+<span style="font-size:13px;font-weight:400">/项目起</span></span><span class="pc-cta">获取报价 →</span></div>
       </a>
     </div>
   </div>
@@ -253,17 +254,17 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 <!-- SHOWCASE -->
 <div class="showcase">
   <div class="section-inner" style="text-align:center;margin-bottom:60px">
-    <div class="section-tag">Features</div>
-    <div class="section-h2">Why traders choose StockAI</div>
+    <div class="section-tag">核心优势</div>
+    <div class="section-h2">为什么交易者选择 StockAI</div>
   </div>
   <div class="showcase-item">
     <div class="sc-text">
-      <h3>Real-time Global Market Data</h3>
-      <p>Track A-Share, Hong Kong, US, European, and Asian markets with live updates every 30 seconds. Monitor commodities and crypto alongside traditional indices.</p>
+      <h3>实时全球市场数据</h3>
+      <p>覆盖沪深A股、港股、美股、欧亚市场，每30秒自动刷新。商品期货和加密货币同步监控。</p>
       <ul class="sc-list">
-        <li>7 global indices + sector heatmaps</li>
-        <li>North-bound capital flow visualization</li>
-        <li>Live scrolling ticker tape</li>
+        <li>7大全球指数 + 行业概念热力图</li>
+        <li>北向资金可视化追踪</li>
+        <li>实时滚动行情条</li>
       </ul>
     </div>
     <div class="sc-preview">
@@ -277,18 +278,18 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <div class="sc-preview-bar" style="height:38px;background:var(--accent)"></div>
         <div class="sc-preview-bar" style="height:65px;background:#22c55e"></div>
       </div>
-      <strong>Live Market Indices</strong>
-      <span style="font-size:11px;margin-top:6px;color:var(--text-tertiary)">SSE +0.8% • SZSE +1.2% • ChiNext +2.1%</span>
+      <strong>实时大盘指数</strong>
+      <span style="font-size:11px;margin-top:6px;color:var(--text-tertiary)">上证 +0.8% • 深证 +1.2% • 创业板 +2.1%</span>
     </div>
   </div>
   <div class="showcase-item reverse">
     <div class="sc-text">
-      <h3>Professional Technical Analysis</h3>
-      <p>Candlestick charts with MA overlays, MACD momentum indicators, and RSI overbought/oversold signals. Built for serious traders.</p>
+      <h3>专业级技术分析</h3>
+      <p>K线蜡烛图叠加均线系统，MACD动量指标，RSI超买超卖信号，为专业交易者打造。</p>
       <ul class="sc-list">
-        <li>Candlestick + MA5/MA10/MA20/MA60</li>
-        <li>MACD histogram + DIF/DEA cross signals</li>
-        <li>RSI(14) with 30/70 threshold lines</li>
+        <li>K线 + MA5/MA10/MA20/MA60均线</li>
+        <li>MACD柱状图 + DIF/DEA金叉死叉</li>
+        <li>RSI(14)超买超卖 + 30/70警戒线</li>
       </ul>
     </div>
     <div class="sc-preview">
@@ -304,18 +305,18 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <div style="width:8px;height:48px;background:#ef4444;border-radius:2px"></div>
         <div style="width:8px;height:28px;background:#22c55e;border-radius:2px"></div>
       </div>
-      <strong>Candlestick + MACD</strong>
-      <span style="font-size:11px;margin-top:6px;color:var(--text-tertiary)">MA5·MA10·MA20·MA60 • RSI • Bollinger</span>
+      <strong>K线图 + MACD指标</strong>
+      <span style="font-size:11px;margin-top:6px;color:var(--text-tertiary)">MA5·MA10·MA20·MA60 • RSI • 布林带</span>
     </div>
   </div>
   <div class="showcase-item">
     <div class="sc-text">
-      <h3>AI-Powered Deep Analysis</h3>
-      <p>7 analysis dimensions from comprehensive to risk assessment. Powered by DeepSeek AI, delivering professional insights in seconds.</p>
+      <h3>AI驱动深度分析</h3>
+      <p>从综合评估到风险预警，7个分析维度全覆盖。DeepSeek大模型驱动，秒级生成专业洞察。</p>
       <ul class="sc-list">
-        <li>Comprehensive, Technical, Fundamental</li>
-        <li>News & Events, Valuation, Sector Comparison</li>
-        <li>Risk Assessment with specific recommendations</li>
+        <li>综合/技术面/基本面/估值分析</li>
+        <li>新闻事件/行业对比/风险评级</li>
+        <li>具体操作建议 + 目标价区间</li>
       </ul>
     </div>
     <div class="sc-preview">
@@ -328,8 +329,8 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <span class="sc-preview-dot" style="background:var(--yellow)"></span>
         <span class="sc-preview-dot" style="background:var(--accent)"></span>
       </div>
-      <strong>AI Multi-Dimension Analysis</strong>
-      <span style="font-size:11px;margin-top:6px;color:var(--text-tertiary)">7分析视角 • PDF报告 • 数据导出</span>
+      <strong>7维度AI深度分析</strong>
+      <span style="font-size:11px;margin-top:6px;color:var(--text-tertiary)">7个分析视角 • PDF报告 • 历史记录</span>
     </div>
   </div>
 </div>
@@ -337,34 +338,34 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 <!-- FAQ -->
 <div class="faq">
   <div class="section-inner" style="text-align:center">
-    <div class="section-tag">FAQ</div>
+    <div class="section-tag">常见问题</div>
     <div class="section-h2">Frequently asked questions</div>
   </div>
   <div class="faq-grid">
     <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">What markets does StockAI cover? <span>+</span></div>
-      <div class="faq-a">A-Share (Shanghai & Shenzhen), Hong Kong (HKEX), and US markets (NYSE & NASDAQ). Plus global indices from Japan, Korea, India, Europe, commodities, and cryptocurrencies.</div>
+      <div class="faq-q">StockAI 覆盖哪些市场？ <span>+</span></div>
+      <div class="faq-a">沪深A股、港股（港交所）、美股（纽交所+纳斯达克）。同时覆盖日本、韩国、印度、欧洲等全球主要指数，以及商品期货和加密货币行情。</div>
     </div>
     <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">How does the AI analysis work? <span>+</span></div>
-      <div class="faq-a">Our AI fetches real-time quotes, recent K-line data, and applies DeepSeek's large language model to generate multi-dimensional analysis reports covering technicals, fundamentals, valuation, news sentiment, sector comparison, and risk assessment.</div>
+      <div class="faq-q">AI分析是如何工作的？ <span>+</span></div>
+      <div class="faq-a">系统获取实时行情和近期K线数据，通过DeepSeek大语言模型进行多维度分析，生成覆盖技术面、基本面、估值、新闻情绪、行业对比和风险评估的专业报告。</div>
     </div>
     <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">Is the data real-time? <span>+</span></div>
-      <div class="faq-a">Yes. Market data refreshes every 30 seconds via Tencent Finance and Eastmoney APIs. US market data is sourced from Yahoo Finance for delayed quotes (15-min delay per exchange requirements).</div>
+      <div class="faq-q">数据是实时的吗？ <span>+</span></div>
+      <div class="faq-a">是的。A股和港股数据通过腾讯财经和东方财富接口每30秒刷新一次。美股数据来源于Yahoo Finance，有15分钟延迟（符合交易所要求）。</div>
     </div>
     <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">Can I save my analysis and track stocks? <span>+</span></div>
-      <div class="faq-a">Absolutely. Create a free account to maintain a watchlist, set price alerts (above/below thresholds, % change triggers), and save all your AI analysis history for later review.</div>
+      <div class="faq-q">可以保存分析和追踪股票吗？ <span>+</span></div>
+      <div class="faq-a">当然。注册免费账户即可管理自选股列表、设置价格提醒（突破/跌破/涨跌幅触发），并保存所有AI分析历史记录供后续复盘。</div>
     </div>
   </div>
 </div>
 
 <!-- CTA BANNER -->
 <div class="cta-banner">
-  <h2>Ready to level up your trading?</h2>
-  <p>Join thousands of traders using StockAI for professional market analysis.</p>
-  <a href="/stock" class="btn-primary" style="display:inline-block">Open Terminal →</a>
+  <h2>准备好提升交易水平了吗？</h2>
+  <p>加入数千名交易者，使用 StockAI 进行专业市场分析。</p>
+  <a href="/stock" class="btn-primary" style="display:inline-block">免费开始使用 →</a>
 </div>
 
 <!-- FOOTER -->
@@ -372,30 +373,30 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
   <div class="footer-grid">
     <div class="footer-col">
       <h4>StockAI</h4>
-      <a style="color:var(--text-secondary);font-size:13px;line-height:1.6;padding:0">Professional market intelligence platform. AI-powered analysis, real-time data, and professional tools for modern traders and creators.</a>
+      <a style="color:var(--text-secondary);font-size:13px;line-height:1.6;padding:0">专业市场智能分析平台。AI驱动深度分析，实时行情数据，为现代交易者和创作者打造的专业工具。</a>
     </div>
     <div class="footer-col">
-      <h4>Products</h4>
-      <a href="/stock">Stock Analysis</a>
-      <a href="/media">Media Assistant</a>
-      <a href="/services">Custom Development</a>
+      <h4>产品</h4>
+      <a href="/stock">A股智能分析</a>
+      <a href="/media">自媒体助手</a>
+      <a href="/services">定制开发</a>
     </div>
     <div class="footer-col">
-      <h4>Resources</h4>
-      <a href="/stock">Market Data</a>
-      <a href="/stock">Sector Heatmap</a>
-      <a href="/stock">Stock Screener</a>
+      <h4>资源</h4>
+      <a href="/stock">实时行情</a>
+      <a href="/stock">板块热力图</a>
+      <a href="/stock">智能选股</a>
     </div>
     <div class="footer-col">
-      <h4>Company</h4>
-      <a href="/services">Contact</a>
-      <a href="/services">Services</a>
-      <a href="/">About</a>
+      <h4>关于</h4>
+      <a href="/services">联系我们</a>
+      <a href="/services">服务介绍</a>
+      <a href="/">关于我们</a>
     </div>
   </div>
   <div class="footer-bottom">
-    <span>© 2026 StockAI. All rights reserved.</span>
-    <span>Built with AI · Deployed on Railway</span>
+    <span>© 2026 StockAI. 版权所有.</span>
+    <span>AI驱动 · Railway部署</span>
   </div>
 </div>
 
@@ -406,7 +407,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
     const r = await fetch('/api/market/indices');
     const d = await r.json();
     if (!d.indices) return;
-    const labels = { 'sh000001':'SSE','sz399001':'SZSE','sz399006':'ChiNext','hk800000':'HSI','us.INX':'S&P500','us.IXIC':'NASDAQ','us.DJI':'DJIA' };
+    const labels = { 'sh000001':'上证指数','sz399001':'深证成指','sz399006':'创业板指','hk800000':'恒生指数','us.INX':'标普500','us.IXIC':'纳斯达克','us.DJI':'道琼斯' };
     const all = [...d.indices, ...d.indices]; // duplicate for seamless loop
     document.getElementById('tickerEl').innerHTML = all.map(i => {
       const up = i.change_pct >= 0, c = up ? '#22c55e' : '#ef4444', s = up ? '+' : '';
