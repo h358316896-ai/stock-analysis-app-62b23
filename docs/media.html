@@ -339,11 +339,13 @@ function copyResult(id) {
 async function generateContent() {
   const topic = document.getElementById('topicInput').value.trim();
   const style = document.getElementById('styleSelect').value;
+  const styleLabel = {professional:'专业正式',casual:'轻松口语',trending:'爆款网感',tutorial:'教程步骤',story:'故事叙述'}[style]||style;
   const platform = document.getElementById('platformSelect').value;
+  const platformLabel = {general:'通用',wechat:'微信公众号',xiaohongshu:'小红书',douyin:'抖音',twitter:'Twitter/X',linkedin:'LinkedIn'}[platform]||platform;
   const reqs = document.getElementById('reqInput').value.trim();
   if (!topic) { alert('请输入话题'); return; }
   toggleLoading('loadingWrite', true);
-  const prompt = `请撰写一篇关于"${topic}"的${style}风格内容。发布平台：${platform}。${reqs ? '额外要求：' + reqs : ''} 请用中文撰写。包含：吸睛开头钩子、正文内容、结尾行动号召。`;
+  const prompt = `请撰写一篇关于"${topic}"的${styleLabel}风格内容。发布平台：${platformLabel}。${reqs ? '额外要求：' + reqs : ''} 请用中文撰写。包含：吸睛开头钩子、正文内容、结尾行动号召。`;
   const result = await callAI('你是一位专业的中文内容创作者。请用中文撰写高质量、平台优化的内容。', prompt);
   toggleLoading('loadingWrite', false);
   if (result) {
@@ -370,12 +372,14 @@ async function imitateContent() {
 
 async function generateScript() {
   const type = document.getElementById('scriptType').value;
+  const typeLabel = {short:'短视频(30-60秒)',medium:'中视频(1-3分钟)',long:'长视频(5-10分钟)'}[type]||type;
   const platform = document.getElementById('scriptPlatform').value;
+  const platformLabel = {douyin:'抖音',youtube:'YouTube',bilibili:'B站'}[platform]||platform;
   const topic = document.getElementById('scriptTopic').value.trim();
   const points = document.getElementById('scriptPoints').value.trim();
   if (!topic) { alert('请输入话题'); return; }
   toggleLoading('loadingScript', true);
-  const prompt = `为${platform}平台创作一个${type}视频脚本，主题：${topic}。${points ? '关键要点：\n' + points : ''} 格式要求：[HOOK]开头钩子、时间戳标注、[方括号]内写画面描述、旁白文字、[CTA]结尾行动号召。请用中文撰写。`;
+  const prompt = `为${platformLabel}平台创作一个${typeLabel}，主题：${topic}。${points ? '关键要点：\n' + points : ''} 格式要求：[HOOK]开头钩子、时间戳标注、[方括号]内写画面描述、旁白文字、[CTA]结尾行动号召。请用中文撰写。`;
   const result = await callAI('你是一位专业的视频脚本编剧。请用中文撰写。', prompt);
   toggleLoading('loadingScript', false);
   if (result) {
@@ -394,10 +398,12 @@ function exportScript() {
 async function generateVoice() {
   const content = document.getElementById('voiceContent').value.trim();
   const tone = document.getElementById('voiceTone').value;
+  const toneLabel = {professional:'专业正式',casual:'轻松亲切',dramatic:'戏剧张力',calm:'平静治愈'}[tone]||tone;
   const pacing = document.getElementById('voicePacing').value;
+  const pacingLabel = {fast:'快速(120字/分)',normal:'正常(90字/分)',slow:'慢速(60字/分)'}[pacing]||pacing;
   if (!content) { alert('请粘贴你的内容'); return; }
   toggleLoading('loadingVoice', true);
-  const prompt = `将以下内容转换为配音旁白脚本。语调：${tone}。语速：${pacing}。要求：添加[暂停]标记、用*星号*标注需要强调的关键词、每段预估时长、专业术语注音。保持原意不变。请用中文输出。\n\n内容：\n${content}`;
+  const prompt = `将以下内容转换为配音旁白脚本。语调：${toneLabel}。语速：${pacingLabel}。要求：添加[暂停]标记、用*星号*标注需要强调的关键词、每段预估时长、专业术语注音。保持原意不变。请用中文输出。\n\n内容：\n${content}`;
   const result = await callAI('你是一位专业的配音脚本撰写人。请用中文撰写。', prompt);
   toggleLoading('loadingVoice', false);
   if (result) {
