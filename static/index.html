@@ -16,7 +16,7 @@
   --text-primary: #f0f0f5; --text-secondary: #9090a8; --text-tertiary: #585870;
   --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.15);
   --green: #22c55e; --red: #ef4444; --yellow: #eab308; --orange: #f97316; --purple: #a855f7;
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-xl: 24px;
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
@@ -91,7 +91,10 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .prod-card:nth-child(1)::before { background:var(--accent); }
 .prod-card:nth-child(2)::before { background:var(--green); }
 .prod-card:nth-child(3)::before { background:var(--purple); }
-.prod-card .pc-icon { font-size:40px; margin-bottom:16px; }
+.prod-card .pc-icon { width:56px; height:56px; border-radius:14px; margin-bottom:16px; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; color:white; }
+.pc-icon-stock { background:linear-gradient(135deg,#3b82f6,#2563eb); }
+.pc-icon-media { background:linear-gradient(135deg,#a855f7,#7c3aed); }
+.pc-icon-dev { background:linear-gradient(135deg,#f97316,#ea580c); }
 .prod-card h3 { font-size:22px; font-weight:700; margin-bottom:8px; }
 .prod-card p { color:var(--text-secondary); font-size:14px; line-height:1.7; margin-bottom:16px; }
 .prod-card .pc-features { list-style:none; margin-bottom:20px; }
@@ -165,7 +168,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-badge">🚀 AI-Powered Finance Platform</div>
+  <div class="hero-badge">AI-Powered Finance Platform</div>
   <h1>Professional Market Intelligence, <span>Simplified</span></h1>
   <p>Real-time global markets, AI-powered analysis, and professional-grade tools — all in one platform. Built for traders, creators, and developers.</p>
   <div class="hero-actions">
@@ -201,7 +204,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
     <div class="section-p">Everything you need for financial analysis, content creation, and custom development.</div>
     <div class="products-grid">
       <a href="/stock" class="prod-card">
-        <div class="pc-icon">📈</div>
+        <div class="pc-icon pc-icon-stock">S</div>
         <h3>Stock AI Analysis</h3>
         <p>Real-time A-Share, HK, and US market data with AI-powered deep analysis, candlestick charts, and professional PDF reports.</p>
         <ul class="pc-features">
@@ -214,7 +217,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <div class="pc-bottom"><span class="pc-price">¥39<span style="font-size:13px;font-weight:400">/mo</span></span><span class="pc-cta">Launch App →</span></div>
       </a>
       <a href="/media" class="prod-card">
-        <div class="pc-icon">✍️</div>
+        <div class="pc-icon pc-icon-media">M</div>
         <h3>Media AI Assistant</h3>
         <p>AI content generation, trend analysis, video scripting, and voice-over production for content creators.</p>
         <ul class="pc-features">
@@ -227,7 +230,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <div class="pc-bottom"><span class="pc-price">¥29<span style="font-size:13px;font-weight:400">/mo</span></span><span class="pc-cta">Launch App →</span></div>
       </a>
       <a href="/services" class="prod-card">
-        <div class="pc-icon">🔧</div>
+        <div class="pc-icon pc-icon-dev">D</div>
         <h3>Custom AI Development</h3>
         <p>Tailored AI solutions, automation tools, and full-stack applications for enterprises and individuals.</p>
         <ul class="pc-features">
@@ -259,7 +262,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <li>Live scrolling ticker tape</li>
       </ul>
     </div>
-    <div class="sc-preview">📊 Live Market Data Visualization<br><span style="font-size:11px;margin-top:8px;display:block">Real-time indices • Sector heatmaps • Capital flows</span></div>
+    <div class="sc-preview"><strong>Live Market Data</strong> Visualization<br><span style="font-size:11px;margin-top:8px;display:block">Real-time indices • Sector heatmaps • Capital flows</span></div>
   </div>
   <div class="showcase-item reverse">
     <div class="sc-text">
@@ -271,7 +274,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <li>RSI(14) with 30/70 threshold lines</li>
       </ul>
     </div>
-    <div class="sc-preview">📈 Candlestick Charts<br><span style="font-size:11px;margin-top:8px;display:block">MACD • RSI • Bollinger Bands • KDJ</span></div>
+    <div class="sc-preview"><strong>Candlestick</strong> Charts<br><span style="font-size:11px;margin-top:8px;display:block">MACD • RSI • Bollinger Bands • KDJ</span></div>
   </div>
   <div class="showcase-item">
     <div class="sc-text">
@@ -283,7 +286,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <li>Risk Assessment with specific recommendations</li>
       </ul>
     </div>
-    <div class="sc-preview">🤖 AI Analysis Engine<br><span style="font-size:11px;margin-top:8px;display:block">7 Perspectives • PDF Reports • History</span></div>
+    <div class="sc-preview"><strong>AI Analysis</strong> Engine<br><span style="font-size:11px;margin-top:8px;display:block">7 Perspectives • PDF Reports • History</span></div>
   </div>
 </div>
 
