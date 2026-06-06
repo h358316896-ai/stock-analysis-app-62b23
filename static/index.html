@@ -95,7 +95,6 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .pc-icon-stock { background:linear-gradient(135deg,#3b82f6,#2563eb); }
 .pc-icon-media { background:linear-gradient(135deg,#a855f7,#7c3aed); }
 .pc-icon-dev { background:linear-gradient(135deg,#f97316,#ea580c); }
-@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:0.3}}
 .prod-card h3 { font-size:22px; font-weight:700; margin-bottom:8px; }
 .prod-card p { color:var(--text-secondary); font-size:14px; line-height:1.7; margin-bottom:16px; }
 .prod-card .pc-features { list-style:none; margin-bottom:20px; }
@@ -372,55 +371,15 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
   } catch(e) {}
 })();
 </script>
-<!-- LIVE MARKET SECTION -->
-<div class="section" style="padding:40px 24px">
+<!-- LIVE MARKET ENTRY -->
+<div class="section" style="padding:60px 24px;text-align:center">
   <div class="section-inner">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-      <h2 style="font-size:20px;font-weight:700">实时行情看板</h2>
-      <span style="font-size:11px;color:#22c55e;animation:pulseDot 1s infinite;display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;vertical-align:middle"></span>
-      <span style="font-size:11px;color:var(--text-tertiary)" id="liveTime"></span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:20px" id="liveIndices"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div style="background:var(--bg-card);border-radius:12px;padding:16px;border:1px solid var(--border-subtle)">
-        <h4 style="font-size:13px;margin-bottom:8px;color:var(--red)">TOP 涨幅榜</h4>
-        <div id="liveGainers" style="font-size:11px"></div>
-      </div>
-      <div style="background:var(--bg-card);border-radius:12px;padding:16px;border:1px solid var(--border-subtle)">
-        <h4 style="font-size:13px;margin-bottom:8px;color:var(--green)">TOP 跌幅榜</h4>
-        <div id="liveLosers" style="font-size:11px"></div>
-      </div>
-    </div>
+    <h2 style="font-size:28px;font-weight:800;margin-bottom:12px">实时行情终端</h2>
+    <p style="color:var(--text-secondary);font-size:16px;margin-bottom:8px">K线图表 · 资金流向 · 北向资金 · 龙虎榜 · 涨停复盘 · 概念轮动</p>
+    <p style="color:var(--text-tertiary);font-size:13px;margin-bottom:28px">主力追踪 · 智能选股 · 异动预警 · 筹码集中度 · 技术形态</p>
+    <a href="/stock" class="btn-primary" style="font-size:16px;padding:16px 40px;display:inline-block">进入实时行情 →</a>
   </div>
 </div>
-
-<script>
-(function(){
-  var API='https://stock-analysis-app-production-da60.up.railway.app';
-  function fmt(n){if(!n||n===0)return'--';if(n>=1e8)return(n/1e8).toFixed(1)+'亿';if(n>=1e4)return(n/1e4).toFixed(0)+'万';return n.toLocaleString();}
-  function loadLive(){
-    fetch(API+'/api/dashboard').then(function(r){return r.json();}).then(function(d){
-      document.getElementById('liveTime').textContent='更新 '+new Date().toLocaleTimeString();
-      // Indices
-      document.getElementById('liveIndices').innerHTML=(d.indices||[]).map(function(i){
-        var up=i.change_pct>=0,clr=up?'#ef4444':'#22c55e';
-        return '<div style="background:var(--bg-card);border-radius:8px;padding:12px;border:1px solid var(--border-subtle)"><div style="font-size:12px;color:var(--text-tertiary)">'+i.name+'</div><div style="font-size:20px;font-weight:700">'+i.price.toFixed(2)+'</div><div style="font-size:13px;color:'+clr+'">'+(up?'+':'')+i.change_pct.toFixed(2)+'%</div></div>';
-      }).join('');
-      // Gainers
-      document.getElementById('liveGainers').innerHTML=(d.gainers||[]).slice(0,8).map(function(s,i){
-        var up=s.change_pct>=0;
-        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span>'+(i+1)+'. <a href="/stock" style="color:var(--accent);text-decoration:none">'+s.name+'</a></span><span style="color:#ef4444">'+(up?'+':'')+s.change_pct.toFixed(2)+'%</span></div>';
-      }).join('')||'<span style="color:var(--text-tertiary)">--</span>';
-      // Losers
-      document.getElementById('liveLosers').innerHTML=(d.losers||[]).slice(0,8).map(function(s,i){
-        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span>'+(i+1)+'. <a href="/stock" style="color:var(--accent);text-decoration:none">'+s.name+'</a></span><span style="color:#22c55e">'+s.change_pct.toFixed(2)+'%</span></div>';
-      }).join('')||'<span style="color:var(--text-tertiary)">--</span>';
-    }).catch(function(){});
-  }
-  loadLive();
-  setInterval(loadLive,30000);
-})();
-</script>
 
 </body>
 </html>
