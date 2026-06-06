@@ -110,12 +110,11 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .showcase-item:last-child { margin-bottom:0; }
 .showcase-item.reverse { direction:rtl; }
 .showcase-item.reverse .sc-text { direction:ltr; }
-.sc-preview { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-xl); padding:24px; height:300px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-secondary); font-size:14px; position:relative; overflow:hidden; }
-.sc-preview::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
-.sc-preview:nth-child(2)::before { background:linear-gradient(90deg,var(--accent),var(--purple)); }
-.showcase-item.reverse .sc-preview::before { background:linear-gradient(90deg,var(--green),var(--accent)); }
-.showcase-item:last-child .sc-preview::before { background:linear-gradient(90deg,var(--orange),var(--red)); }
-.sc-preview-icon { font-size:48px; margin-bottom:12px; opacity:0.3; }
+.sc-preview { background:linear-gradient(135deg,var(--bg-card),var(--bg-elevated)); border:1px solid var(--border-default); border-radius:var(--radius-xl); padding:32px 24px; height:260px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-secondary); font-size:13px; position:relative; overflow:hidden; }
+.sc-preview::after { content:''; position:absolute; bottom:0; left:10%; right:10%; height:1px; background:linear-gradient(90deg,transparent,var(--border-strong),transparent); }
+.sc-preview-chart { width:100%; height:80px; display:flex; align-items:end; gap:6px; justify-content:center; margin-bottom:16px; }
+.sc-preview-bar { width:18px; border-radius:3px 3px 0 0; min-height:8px; }
+.sc-preview-dot { display:inline-block;width:10px;height:10px;border-radius:50%;margin:2px; }
 .sc-text h3 { font-size:28px; font-weight:800; margin-bottom:12px; letter-spacing:-0.02em; }
 .sc-text p { color:var(--text-secondary); font-size:15px; line-height:1.7; margin-bottom:20px; }
 .sc-list { list-style:none; }
@@ -267,7 +266,20 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <li>Live scrolling ticker tape</li>
       </ul>
     </div>
-    <div class="sc-preview"><div class="sc-preview-icon">◧</div><strong>Live Market Data</strong><br><span style="font-size:11px;margin-top:8px;color:var(--text-tertiary)">Real-time indices • Sector heatmaps • Capital flows</span></div>
+    <div class="sc-preview">
+      <div class="sc-preview-chart">
+        <div class="sc-preview-bar" style="height:35px;background:var(--accent)"></div>
+        <div class="sc-preview-bar" style="height:50px;background:var(--accent)"></div>
+        <div class="sc-preview-bar" style="height:28px;background:#ef4444"></div>
+        <div class="sc-preview-bar" style="height:60px;background:var(--accent)"></div>
+        <div class="sc-preview-bar" style="height:42px;background:var(--accent)"></div>
+        <div class="sc-preview-bar" style="height:55px;background:#22c55e"></div>
+        <div class="sc-preview-bar" style="height:38px;background:var(--accent)"></div>
+        <div class="sc-preview-bar" style="height:65px;background:#22c55e"></div>
+      </div>
+      <strong>Live Market Indices</strong>
+      <span style="font-size:11px;margin-top:6px;color:var(--text-tertiary)">SSE +0.8% • SZSE +1.2% • ChiNext +2.1%</span>
+    </div>
   </div>
   <div class="showcase-item reverse">
     <div class="sc-text">
@@ -279,7 +291,22 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <li>RSI(14) with 30/70 threshold lines</li>
       </ul>
     </div>
-    <div class="sc-preview"><div class="sc-preview-icon">▤</div><strong>Candlestick</strong> Charts<br><span style="font-size:11px;margin-top:8px;color:var(--text-tertiary)">MACD • RSI • Bollinger Bands • KDJ</span></div>
+    <div class="sc-preview">
+      <div style="display:flex;align-items:end;gap:4px;height:60px;margin-bottom:12px">
+        <div style="width:8px;height:30px;background:#ef4444;border-radius:2px"></div>
+        <div style="width:8px;height:45px;background:#22c55e;border-radius:2px"></div>
+        <div style="width:8px;height:25px;background:#ef4444;border-radius:2px"></div>
+        <div style="width:8px;height:50px;background:#22c55e;border-radius:2px"></div>
+        <div style="width:8px;height:20px;background:#22c55e;border-radius:2px"></div>
+        <div style="width:8px;height:40px;background:#ef4444;border-radius:2px"></div>
+        <div style="width:8px;height:55px;background:#22c55e;border-radius:2px"></div>
+        <div style="width:8px;height:35px;background:#22c55e;border-radius:2px"></div>
+        <div style="width:8px;height:48px;background:#ef4444;border-radius:2px"></div>
+        <div style="width:8px;height:28px;background:#22c55e;border-radius:2px"></div>
+      </div>
+      <strong>Candlestick + MACD</strong>
+      <span style="font-size:11px;margin-top:6px;color:var(--text-tertiary)">MA5·MA10·MA20·MA60 • RSI • Bollinger</span>
+    </div>
   </div>
   <div class="showcase-item">
     <div class="sc-text">
@@ -291,7 +318,19 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <li>Risk Assessment with specific recommendations</li>
       </ul>
     </div>
-    <div class="sc-preview"><div class="sc-preview-icon">◎</div><strong>AI Analysis</strong> Engine<br><span style="font-size:11px;margin-top:8px;color:var(--text-tertiary)">7 Perspectives • PDF Reports • History</span></div>
+    <div class="sc-preview">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <span class="sc-preview-dot" style="background:var(--accent)"></span>
+        <span class="sc-preview-dot" style="background:var(--purple)"></span>
+        <span class="sc-preview-dot" style="background:var(--green)"></span>
+        <span class="sc-preview-dot" style="background:var(--orange)"></span>
+        <span class="sc-preview-dot" style="background:var(--red)"></span>
+        <span class="sc-preview-dot" style="background:var(--yellow)"></span>
+        <span class="sc-preview-dot" style="background:var(--accent)"></span>
+      </div>
+      <strong>AI Multi-Dimension Analysis</strong>
+      <span style="font-size:11px;margin-top:6px;color:var(--text-tertiary)">7分析视角 • PDF报告 • 数据导出</span>
+    </div>
   </div>
 </div>
 
