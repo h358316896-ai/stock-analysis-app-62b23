@@ -1564,11 +1564,25 @@ def stock_screener():
         "roe_min": data.get("roe_min"),
     }
 
-    # Eastmoney stock list with cache fallback
-    url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3"
-           "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
-           "&fields=f2,f3,f4,f9,f12,f14,f15,f16,f17,f18,f20,f21,f23,f173")
-    data = _cached_eastmoney("screener_data", url, ttl=3600)
+    market = data.get("market", "cn")
+    # Build Eastmoney URL based on market
+    if market == "hk":
+        url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3"
+               "&fs=m:128+t:3,m:128+t:4,m:128+t:1,m:128+t:2"
+               "&fields=f2,f3,f4,f9,f12,f14,f20,f23")
+        cache_key = "screener_hk"
+    elif market == "us":
+        # US stocks via yfinance / preloaded cache only
+        url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3"
+               "&fs=m:105+t:3,m:105+t:4"
+               "&fields=f2,f3,f4,f9,f12,f14,f20,f23")
+        cache_key = "screener_us"
+    else:
+        url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3"
+               "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
+               "&fields=f2,f3,f4,f9,f12,f14,f15,f16,f17,f18,f20,f21,f23,f173")
+        cache_key = "screener_data"
+    data = _cached_eastmoney(cache_key, url, ttl=3600)
     stocks = []
     if data and data.get("data") and data["data"].get("diff"):
         for item in data["data"]["diff"]:
