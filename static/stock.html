@@ -1195,8 +1195,12 @@ const MKT_CLR = { cn: '#ef4444', hk: '#22c55e', us: '#3b82f6' };
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   checkLogin();
-  loadAllMarketData();  // dashboard: indices + sectors + concepts + movers in ONE call
-  setInterval(loadAllMarketData, 30000);  // auto-refresh every 30s for live data
+  loadAllMarketData();  // critical: indices + market strip
+  // Defer non-critical panels to speed up first paint
+  setTimeout(() => {
+    loadSectors();
+    setInterval(loadAllMarketData, 30000);
+  }, 2000);  // auto-refresh every 30s for live data
 
   document.getElementById('stockSearch').addEventListener('keydown', e => { if (e.key === 'Enter') searchStock(); });
   document.getElementById('stockSearch').addEventListener('input', debounce(autoSearch, 300));
