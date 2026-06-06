@@ -780,10 +780,10 @@ body {
     <div class="logo-text">Stock<span>AI</span></div>
   </div>
   <div class="top-nav">
-    <a href="/stock" class="active">Markets</a>
-    <a href="/">Home</a>
-    <a href="/media">Media</a>
-    <a href="/services">Services</a>
+    <a href="/stock" class="active">行情</a>
+    <a href="/">首页</a>
+    <a href="/media">自媒体</a>
+    <a href="/services">定制</a>
   </div>
   <div class="top-right">
     <button class="btn-auth" id="btnLogin" onclick="showAuthModal('login')">登录</button>
@@ -1059,11 +1059,11 @@ body {
           </div>
         </div>
         <div class="quote-grid" id="quoteGrid"></div>
-        <button class="btn-watchlist" id="watchlistBtn" onclick="toggleWatchlist()" style="display:none">+ Add to Watchlist</button>
+        <button class="btn-watchlist" id="watchlistBtn" onclick="toggleWatchlist()" style="display:none">+ 加入自选</button>
       </div>
 
       <!-- Chart Tabs -->
-      <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">📈 图表分析 · 搜索股票后点击切换</div>
+      <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:6px;font-weight:600;letter-spacing:0.05em">📈 图表分析 · 搜索股票后点击切换</div>
       <div class="chart-tabs">
         <button class="active" data-chart="kline">📊 K线图</button>
         <button data-chart="intraday">⏱ 日内走势</button>
@@ -1111,20 +1111,20 @@ body {
 
       <!-- AI Analysis -->
       <div class="analysis-tabs" id="analysisTabs" style="display:none">
-        <button class="active" data-aspect="comprehensive">Comprehensive</button>
-        <button data-aspect="technical">Technical</button>
-        <button data-aspect="fundamental">Fundamental</button>
-        <button data-aspect="news">News & Events</button>
-        <button data-aspect="valuation">Valuation</button>
-        <button data-aspect="sector">Sector</button>
-        <button data-aspect="risk">Risk</button>
+        <button class="active" data-aspect="comprehensive">综合分析</button>
+        <button data-aspect="technical">技术面</button>
+        <button data-aspect="fundamental">基本面</button>
+        <button data-aspect="news">新闻事件</button>
+        <button data-aspect="valuation">估值分析</button>
+        <button data-aspect="sector">行业对比</button>
+        <button data-aspect="risk">风险评估</button>
       </div>
       <div class="analysis-content" id="analysisBox">
         <h3 id="analysisTitle">AI Analysis</h3>
         <div class="text" id="analysisText"></div>
         <div class="analysis-actions">
           <button class="btn-sm btn-primary" id="pdfBtn" onclick="downloadPDF()" style="display:none">下载PDF报告</button>
-          <button class="btn-sm btn-secondary" id="saveHistoryBtn" onclick="saveToHistory()" style="display:none">Save to History</button>
+          <button class="btn-sm btn-secondary" id="saveHistoryBtn" onclick="saveToHistory()" style="display:none">保存到历史</button>
         </div>
       </div>
       <div class="spinner-wrap" id="loading"><div class="spinner"></div>Analyzing...</div>
@@ -1134,11 +1134,11 @@ body {
     <div class="sidebar" id="sidebar" style="display:none">
       <div class="sidebar-card" id="cardWatchlist">
         <h3>📌 Watchlist</h3>
-        <div id="watchlistList"><div class="empty">Sign in to manage watchlist</div></div>
+        <div id="watchlistList"><div class="empty">登录管理自选股</div></div>
       </div>
       <div class="sidebar-card" id="cardAlerts">
         <h3>🔔 Price Alerts</h3>
-        <div id="alertsList"><div class="empty">Sign in to manage alerts</div></div>
+        <div id="alertsList"><div class="empty">登录管理提醒</div></div>
         <button class="btn-sm btn-secondary" style="width:100%;margin-top:8px" onclick="showAlertForm()">+ New Alert</button>
         <div class="alert-form" id="alertForm">
           <select id="alertCondition">
@@ -1153,7 +1153,7 @@ body {
       </div>
       <div class="sidebar-card" id="cardHistory">
         <h3>📊 Analysis History</h3>
-        <div id="historyList"><div class="empty">Sign in to view history</div></div>
+        <div id="historyList"><div class="empty">登录查看历史</div></div>
       </div>
     </div>
   </div>
@@ -1273,7 +1273,7 @@ function switchAuthMode(f) {
   document.getElementById('authTitle').textContent = isReg ? '创建账号' : '登录';
   document.getElementById('authEmail').style.display = isReg ? 'block' : 'none';
   document.getElementById('authSubmit').textContent = isReg ? '创建账号' : '登录';
-  document.getElementById('authSwitchText').textContent = isReg ? 'Already have an account?' : "还没有账号？";
+  document.getElementById('authSwitchText').textContent = isReg ? '已有账号？' : "还没有账号？";
   document.getElementById('authSwitchText').nextElementSibling.textContent = isReg ? '登录' : '注册';
   document.getElementById('authError').classList.remove('show');
 }
@@ -1835,7 +1835,7 @@ async function searchStock() {
         searchInput.value = code;
         document.getElementById('marketSelect').value = mkt;
       } else {
-        showToast('Stock not found. Try the ticker code instead.', 'error');
+        showToast('未找到该股票，请尝试使用代码搜索', 'error');
         searchInput.style.borderColor = 'var(--red)';
         setTimeout(() => searchInput.style.borderColor = '', 1500);
         toggleLoading(false); searchBtn.disabled = false; searchBtn.textContent = 'Search';
@@ -1892,7 +1892,7 @@ async function searchStock() {
 
     showToast(`Loaded: ${q.name} (${q.code})`, 'success');
   } catch(e) {
-    showToast('Connection error. Please try again.', 'error');
+    showToast('网络连接失败，请重试', 'error');
   } finally {
     toggleLoading(false);
     searchBtn.disabled = false;
@@ -2154,7 +2154,7 @@ async function loadIntraday() {
     const d = await r.json();
     if (!d.points || !d.points.length) {
       const canvas = document.getElementById('intradayCanvas');
-      if (canvas) { const ctx = canvas.getContext('2d'); var cw2 = canvas.offsetWidth || 600; var ch2 = canvas.offsetHeight || 380; canvas.width = cw2; canvas.height = ch2; ctx.clearRect(0,0,cw2,ch2); ctx.fillStyle = '#585870'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('No intraday data available', cw2/2, ch2/2); }
+      if (canvas) { const ctx = canvas.getContext('2d'); var cw2 = canvas.offsetWidth || 600; var ch2 = canvas.offsetHeight || 380; canvas.width = cw2; canvas.height = ch2; ctx.clearRect(0,0,cw2,ch2); ctx.fillStyle = '#585870'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('暂无分时数据', cw2/2, ch2/2); }
       return;
     }
     // Wait for panel display to settle (canvas needs visible dimensions)
@@ -2413,7 +2413,7 @@ async function loadMoneyFlow() {
         var rVal = sum.retail_5d !== undefined ? sum.retail_5d : parseFloat(sum.retail_net) / 1e4 || 0;
         document.getElementById('flowSummary').innerHTML =
           '<div style="grid-column:1/-1;text-align:center;padding:14px;background:rgba(255,255,255,0.02);border-radius:8px">'+
-          '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">Realtime snapshot (historical kline unavailable)</div>'+
+          '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">实时快照（历史K线暂不可用）</div>'+
           '<div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;font-size:13px">'+
           '<div><span style="color:var(--text-tertiary)">Main Force:</span> <b style="color:'+(mVal>=0?'#22c55e':'#ef4444')+'">'+(mVal>=0?'+':'')+mVal.toFixed(0)+'W</b></div>'+
           '<div><span style="color:var(--text-tertiary)">Retail:</span> <b style="color:'+(rVal>=0?'#22c55e':'#ef4444')+'">'+(rVal>=0?'+':'')+rVal.toFixed(0)+'W</b></div>'+
@@ -2674,7 +2674,7 @@ async function saveToHistory() { if (state.isLogin && state.analysis) { showToas
 // WATCHLIST, ALERTS, HISTORY
 // ============================================================
 async function checkWatchlistStatus(c, m) {
-  try { const r = await fetch(`/api/watchlist/check/${encodeURIComponent(c)}?market=${m}`); const d = await r.json(); const btn = document.getElementById('watchlistBtn'); btn.textContent = d.in_watchlist ? '✓ In Watchlist' : '+ Add to Watchlist'; btn.classList.toggle('active', d.in_watchlist); } catch(e) {}
+  try { const r = await fetch(`/api/watchlist/check/${encodeURIComponent(c)}?market=${m}`); const d = await r.json(); const btn = document.getElementById('watchlistBtn'); btn.textContent = d.in_watchlist ? '✓ 已加自选' : '+ 加入自选'; btn.classList.toggle('active', d.in_watchlist); } catch(e) {}
 }
 async function toggleWatchlist() {
   if (!state.isLogin) { showAuthModal('login'); return; }
