@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#060608">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/static/manifest.json">
+<title>Media AI Assistant — StockAI</title>
+<style>
+:root {
+  --bg-primary: #060608; --bg-secondary: #0c0c14; --bg-card: #111118;
+  --bg-elevated: #1a1a28; --border-subtle: rgba(255,255,255,0.04);
+  --border-default: rgba(255,255,255,0.06); --border-strong: rgba(255,255,255,0.1);
+  --text-primary: #f0f0f5; --text-secondary: #9090a8; --text-tertiary: #585870;
+  --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.15); --green: #22c55e;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-xl: 20px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { font-size:15px; }
+body { font-family:var(--font); background:var(--bg-primary); color:var(--text-primary); -webkit-font-smoothing:antialiased; line-height:1.6; }
+::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:3px; }
+
+/* Nav */
+.top-bar { background:var(--bg-secondary); border-bottom:1px solid var(--border-subtle); height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:1000; }
+.logo-area { display:flex; align-items:center; gap:10px; }
+.logo-icon { width:30px; height:30px; background:var(--green); border-radius:7px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:15px; color:white; }
+.logo-text { font-weight:700; font-size:17px; } .logo-text span { color:var(--green); }
+.top-nav { display:flex; gap:4px; }
+.top-nav a { color:var(--text-secondary); text-decoration:none; padding:7px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; transition:var(--transition); }
+.top-nav a:hover, .top-nav a.active { color:var(--text-primary); background:rgba(255,255,255,0.04); }
+.btn-sign { padding:8px 20px; border-radius:var(--radius-sm); background:var(--green); color:#000; border:none; font-size:13px; font-weight:600; cursor:pointer; font-family:var(--font); transition:var(--transition); text-decoration:none; }
+.btn-sign:hover { opacity:0.85; }
+
+.container { max-width:900px; margin:0 auto; padding:24px; }
+
+/* Hero */
+.hero { text-align:center; padding:48px 0 32px; }
+.hero .tag { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; color:var(--green); margin-bottom:12px; }
+.hero h1 { font-size:36px; font-weight:800; letter-spacing:-0.02em; margin-bottom:12px; }
+.hero h1 span { color:var(--green); }
+.hero p { color:var(--text-secondary); font-size:16px; max-width:500px; margin:0 auto; }
+
+/* Tabs */
+.tabs { display:flex; gap:4px; margin-bottom:20px; background:var(--bg-card); border-radius:var(--radius-md); padding:3px; border:1px solid var(--border-subtle); }
+.tabs button { flex:1; padding:10px 14px; border-radius:var(--radius-sm); border:none; background:transparent; color:var(--text-secondary); font-size:12px; font-weight:500; cursor:pointer; font-family:var(--font); transition:var(--transition); white-space:nowrap; }
+.tabs button.active { background:var(--bg-elevated); color:var(--text-primary); font-weight:600; }
+.tabs button:hover:not(.active) { color:var(--text-primary); }
+
+/* Cards */
+.card { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:24px; margin-bottom:16px; }
+.card h3 { font-size:15px; font-weight:600; margin-bottom:16px; color:var(--green); text-transform:uppercase; letter-spacing:0.04em; }
+.card label { display:block; font-size:11px; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; font-weight:500; }
+.card input, .card textarea, .card select {
+  width:100%; padding:10px 14px; border:1px solid var(--border-default); border-radius:var(--radius-sm);
+  background:var(--bg-secondary); color:var(--text-primary); font-size:14px; font-family:var(--font);
+  margin-bottom:14px; outline:none; transition:var(--transition);
+}
+.card input:focus, .card textarea:focus, .card select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(34,197,94,0.1); }
+.card textarea { min-height:120px; resize:vertical; }
+
+.row { display:flex; gap:12px; }
+.row > * { flex:1; }
+
+/* Engine selector */
+.engine-row { display:flex; gap:8px; margin-bottom:14px; }
+.engine-btn { flex:1; padding:12px; border:1px solid var(--border-default); border-radius:var(--radius-sm); text-align:center; cursor:pointer; background:var(--bg-secondary); transition:var(--transition); }
+.engine-btn.active { border-color:var(--green); background:rgba(34,197,94,0.08); }
+.engine-btn .en { font-size:14px; font-weight:600; }
+.engine-btn .ed { font-size:11px; color:var(--text-tertiary); margin-top:2px; }
+
+/* Buttons */
+.btn { padding:10px 24px; border-radius:var(--radius-sm); border:none; font-size:14px; font-weight:600; cursor:pointer; font-family:var(--font); transition:var(--transition); }
+.btn-primary { background:var(--green); color:#000; }
+.btn-primary:hover { opacity:0.85; }
+.btn-primary:disabled { opacity:0.4; cursor:not-allowed; }
+.btn-sm { padding:6px 14px; font-size:12px; }
+.btn-ghost { background:transparent; color:var(--text-secondary); border:1px solid var(--border-strong); }
+.btn-ghost:hover { border-color:var(--green); color:var(--green); }
+
+/* Result */
+.result-box { background:var(--bg-secondary); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:20px; margin-top:16px; white-space:pre-wrap; line-height:1.8; font-size:14px; max-height:500px; overflow-y:auto; display:none; }
+.result-box.show { display:block; }
+.result-actions { display:flex; gap:8px; margin-top:12px; }
+
+/* Hot Topics */
+.hot-list { list-style:none; }
+.hot-list li { display:flex; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border-subtle); cursor:pointer; border-radius:var(--radius-sm); transition:var(--transition); }
+.hot-list li:hover { background:var(--bg-card-hover, rgba(255,255,255,0.02)); }
+.hot-rank { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; margin-right:14px; color:white; flex-shrink:0; }
+.r1 { background:#ef4444; } .r2 { background:#f97316; } .r3 { background:#eab308; } .r-def { background:var(--border-strong); color:var(--text-tertiary); }
+.hot-info { flex:1; }
+.hot-name { font-size:14px; font-weight:500; }
+.hot-desc { font-size:12px; color:var(--text-tertiary); margin-top:2px; }
+.hot-heat { font-size:12px; color:var(--green); font-weight:600; }
+.hot-tag { display:inline-block; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:600; margin-right:6px; background:rgba(34,197,94,0.1); color:var(--green); }
+
+/* Template Cards */
+.tpl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-bottom:16px; }
+.tpl-card { background:var(--bg-secondary); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:16px; cursor:pointer; transition:var(--transition); }
+.tpl-card:hover { border-color:var(--green); background:rgba(34,197,94,0.03); }
+.tpl-card .tpl-title { font-size:13px; font-weight:600; margin-bottom:4px; }
+.tpl-card .tpl-desc { font-size:11px; color:var(--text-tertiary); }
+
+/* History */
+.history-item { padding:12px 0; border-bottom:1px solid var(--border-subtle); cursor:pointer; transition:var(--transition); }
+.history-item:hover { color:var(--green); }
+.history-item .hi-type { font-size:11px; color:var(--text-tertiary); text-transform:uppercase; }
+.history-item .hi-preview { font-size:13px; margin-top:2px; }
+
+.panel { display:none; }
+.panel.active { display:block; }
+.spinner-wrap { text-align:center; padding:32px; color:var(--text-tertiary); display:none; }
+.spinner-wrap.show { display:block; }
+.spinner { width:24px; height:24px; border:2px solid var(--border-strong); border-top-color:var(--green); border-radius:50%; animation:spin .7s linear infinite; margin:0 auto 10px; }
+@keyframes spin { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="logo-area">
+    <div class="logo-icon">M</div>
+    <div class="logo-text">Stock<span>AI</span> / Media</div>
+  </div>
+  <div class="top-nav">
+    <a href="/">Home</a><a href="/stock">Markets</a><a href="/media" class="active">Media</a><a href="/services">Services</a>
+  </div>
+  <a href="/stock" class="btn-sign">Try Markets →</a>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <div class="tag">AI Content Studio</div>
+    <h1>AI-powered content creation, <span>professionally</span></h1>
+    <p>Generate, rewrite, and optimize content for every platform. Powered by DeepSeek & Claude.</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="mainTabs">
+    <button class="active" data-panel="write">✏️ Generate</button>
+    <button data-panel="imitate">🔥 Style Imitation</button>
+    <button data-panel="script">🎬 Video Script</button>
+    <button data-panel="voice">🎙️ Voice-Over</button>
+    <button data-panel="hot">📊 Trends</button>
+    <button data-panel="templates">📋 Templates</button>
+    <button data-panel="history">📜 History</button>
+  </div>
+
+  <!-- Panel: Write -->
+  <div class="panel active" id="panel-write">
+    <div class="card">
+      <h3>Content Generator</h3>
+      <div class="engine-row">
+        <div class="engine-btn active" data-engine="deepseek" onclick="setEngine('deepseek', this)"><div class="en">DeepSeek</div><div class="ed">Best for Chinese</div></div>
+        <div class="engine-btn" data-engine="claude" onclick="setEngine('claude', this)"><div class="en">Claude</div><div class="ed">Best for English</div></div>
+      </div>
+      <label>Topic / Keywords</label>
+      <input type="text" id="topicInput" placeholder="e.g. AI tools review, side hustle strategies, tech trends...">
+      <div class="row">
+        <div><label>Style</label><select id="styleSelect"><option value="professional">Professional</option><option value="casual" selected>Conversational</option><option value="trending">Trending / Engaging</option><option value="tutorial">Step-by-step Tutorial</option><option value="story">Storytelling</option></select></div>
+        <div><label>Platform</label><select id="platformSelect"><option value="general">General</option><option value="wechat">WeChat</option><option value="xiaohongshu">Xiaohongshu</option><option value="douyin">Douyin / TikTok</option><option value="twitter">Twitter / X</option><option value="linkedin">LinkedIn</option></select></div>
+      </div>
+      <label>Additional Requirements</label>
+      <textarea id="reqInput" placeholder="Word count, target audience, tone, specific points to cover..."></textarea>
+      <button class="btn btn-primary" onclick="generateContent()">Generate Content →</button>
+      <div class="result-box" id="resultWrite">
+        <div id="resultWriteContent"></div>
+        <div class="result-actions"><button class="btn btn-sm btn-ghost" onclick="copyResult('resultWriteContent')">Copy</button><button class="btn btn-sm btn-ghost" onclick="regenerate()">Regenerate</button></div>
+      </div>
+      <div class="spinner-wrap" id="loadingWrite"><div class="spinner"></div>Generating...</div>
+    </div>
+  </div>
+
+  <!-- Panel: Imitate -->
+  <div class="panel" id="panel-imitate">
+    <div class="card">
+      <h3>Style Imitation Engine</h3>
+      <label>Paste a reference post to analyze and imitate its style</label>
+      <textarea id="imitateSource" placeholder="Paste the reference content here... The AI will analyze its structure, tone, and hooks, then create a new version on your topic."></textarea>
+      <label>Your Topic</label>
+      <input type="text" id="imitateTopic" placeholder="e.g. 5 AI tools that save me 10 hours every week">
+      <button class="btn btn-primary" onclick="imitateContent()">Generate Inspired Version →</button>
+      <div class="result-box" id="resultImitate">
+        <div id="resultImitateContent"></div>
+        <div class="result-actions"><button class="btn btn-sm btn-ghost" onclick="copyResult('resultImitateContent')">Copy</button></div>
+      </div>
+      <div class="spinner-wrap" id="loadingImitate"><div class="spinner"></div>Analyzing style...</div>
+    </div>
+  </div>
+
+  <!-- Panel: Script -->
+  <div class="panel" id="panel-script">
+    <div class="card">
+      <h3>Video Script Generator</h3>
+      <div class="row">
+        <div><label>Video Type</label><select id="scriptType"><option value="short">Short (30-60s)</option><option value="medium">Medium (1-3min)</option><option value="long">Long (5-10min)</option></select></div>
+        <div><label>Platform</label><select id="scriptPlatform"><option value="douyin">TikTok / Douyin</option><option value="youtube" selected>YouTube</option><option value="bilibili">Bilibili</option></select></div>
+      </div>
+      <label>Topic</label>
+      <input type="text" id="scriptTopic" placeholder="e.g. How I built a trading bot with AI">
+      <label>Key Points (one per line)</label>
+      <textarea id="scriptPoints" placeholder="Introduce the problem...&#10;Show the solution step by step...&#10;Reveal the results...&#10;Call to action..."></textarea>
+      <button class="btn btn-primary" onclick="generateScript()">Generate Script →</button>
+      <div class="result-box" id="resultScript">
+        <div id="resultScriptContent"></div>
+        <div class="result-actions"><button class="btn btn-sm btn-ghost" onclick="copyResult('resultScriptContent')">Copy</button><button class="btn btn-sm btn-ghost" onclick="exportScript()">Export</button></div>
+      </div>
+      <div class="spinner-wrap" id="loadingScript"><div class="spinner"></div>Writing script...</div>
+    </div>
+  </div>
+
+  <!-- Panel: Voice -->
+  <div class="panel" id="panel-voice">
+    <div class="card">
+      <h3>Voice-Over Script</h3>
+      <label>Content (paste your video script or text)</label>
+      <textarea id="voiceContent" placeholder="Paste the text you want converted to a narration script..."></textarea>
+      <div class="row">
+        <div><label>Tone</label><select id="voiceTone"><option value="professional">Professional</option><option value="casual" selected>Casual / Friendly</option><option value="dramatic">Dramatic</option><option value="calm">Calm / Meditative</option></select></div>
+        <div><label>Pacing</label><select id="voicePacing"><option value="fast">Fast (120wpm)</option><option value="normal" selected>Normal (90wpm)</option><option value="slow">Slow (60wpm)</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="generateVoice()">Generate Voice Script →</button>
+      <div class="result-box" id="resultVoice">
+        <div id="resultVoiceContent"></div>
+        <div class="result-actions"><button class="btn btn-sm btn-ghost" onclick="copyResult('resultVoiceContent')">Copy</button></div>
+      </div>
+      <div class="spinner-wrap" id="loadingVoice"><div class="spinner"></div>Optimizing...</div>
+    </div>
+  </div>
+
+  <!-- Panel: Hot Topics -->
+  <div class="panel" id="panel-hot">
+    <div class="card">
+      <h3>Trending Topics Radar</h3>
+      <div class="hot-list" id="hotList">
+        <li><span style="color:var(--text-tertiary)">Loading trending topics...</span></li>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Templates -->
+  <div class="panel" id="panel-templates">
+    <div class="card">
+      <h3>Quick Templates</h3>
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">Click a template to pre-fill the generator with optimized prompts.</p>
+      <div class="tpl-grid" id="tplGrid">
+        <div class="tpl-card" onclick="useTemplate('tech-review')"><div class="tpl-title">📱 Tech Product Review</div><div class="tpl-desc">Structured review with pros/cons and verdict</div></div>
+        <div class="tpl-card" onclick="useTemplate('how-to')"><div class="tpl-title">📖 How-To Guide</div><div class="tpl-desc">Step-by-step tutorial with numbered steps</div></div>
+        <div class="tpl-card" onclick="useTemplate('list')"><div class="tpl-title">📋 Listicle</div><div class="tpl-desc">"Top 10" style with compelling hooks</div></div>
+        <div class="tpl-card" onclick="useTemplate('news')"><div class="tpl-title">📰 News Commentary</div><div class="tpl-desc">Breaking news analysis & opinion piece</div></div>
+        <div class="tpl-card" onclick="useTemplate('story')"><div class="tpl-title">💬 Personal Story</div><div class="tpl-desc">Narrative-driven post with emotional arc</div></div>
+        <div class="tpl-card" onclick="useTemplate('comparison')"><div class="tpl-title">⚖ Comparison</div><div class="tpl-desc">A vs B comparison with clear winner</div></div>
+        <div class="tpl-card" onclick="useTemplate('tool-rec')"><div class="tpl-title">🛠 Tool Recommendations</div><div class="tpl-desc">Curated tool list with use cases</div></div>
+        <div class="tpl-card" onclick="useTemplate('trend')"><div class="tpl-title">🔮 Trend Prediction</div><div class="tpl-desc">Future trends analysis & predictions</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: History -->
+  <div class="panel" id="panel-history">
+    <div class="card">
+      <h3>Recent Generations</h3>
+      <div id="historyList">
+        <p style="color:var(--text-tertiary);font-size:13px;text-align:center;padding:20px">Generation history is stored in your browser.<br>Generate some content to see it here!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// State
+let engine = 'claude';
+const history = JSON.parse(localStorage.getItem('mediaHistory') || '[]');
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#mainTabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#mainTabs button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-' + b.dataset.panel).classList.add('active');
+      if (b.dataset.panel === 'hot') loadHotTopics();
+      if (b.dataset.panel === 'history') renderHistory();
+    });
+  });
+});
+
+function setEngine(e, el) {
+  engine = e;
+  document.querySelectorAll('.engine-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function toggleLoading(id, show) {
+  document.getElementById(id).classList.toggle('show', show);
+  document.getElementById('result' + id.replace('loading', '')).classList.remove('show');
+}
+
+async function callAI(systemPrompt, userPrompt) {
+  try {
+    const r = await fetch('/api/media/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: userPrompt, engine })
+    });
+    const d = await r.json();
+    if (d.error) { alert(d.error); return null; }
+    return d.result;
+  } catch(e) { alert('Network error: ' + e.message); return null; }
+}
+
+function addToHistory(type, topic, result) {
+  history.unshift({ type, topic, preview: result.slice(0, 150), full: result, time: new Date().toISOString() });
+  if (history.length > 50) history.pop();
+  localStorage.setItem('mediaHistory', JSON.stringify(history));
+}
+
+function renderHistory() {
+  if (!history.length) { document.getElementById('historyList').innerHTML = '<p style="color:var(--text-tertiary);font-size:13px;text-align:center;padding:20px">No history yet. Start generating!</p>'; return; }
+  document.getElementById('historyList').innerHTML = history.map(h => `
+    <div class="history-item" onclick="document.getElementById('resultWriteContent').textContent=\`${h.full.replace(/`/g,'\\`')}\`;document.getElementById('resultWrite').classList.add('show')">
+      <div class="hi-type">${h.type}</div>
+      <div class="hi-preview">${h.preview}...</div>
+    </div>`).join('');
+}
+
+function copyResult(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btns = document.querySelectorAll('.btn-ghost');
+    btns.forEach(b => { if (b.textContent === 'Copy') { b.textContent = 'Copied!'; setTimeout(() => b.textContent = 'Copy', 2000); } });
+  });
+}
+
+// Content Generation
+async function generateContent() {
+  const topic = document.getElementById('topicInput').value.trim();
+  const style = document.getElementById('styleSelect').value;
+  const platform = document.getElementById('platformSelect').value;
+  const reqs = document.getElementById('reqInput').value.trim();
+  if (!topic) { alert('Please enter a topic'); return; }
+  toggleLoading('loadingWrite', true);
+  const prompt = `Write a ${style} content piece about: ${topic}. Platform: ${platform}. ${reqs ? 'Additional requirements: ' + reqs : ''} Write in Chinese if the topic is Chinese-focused, otherwise use English. Include an attention-grabbing hook, body content, and a call-to-action.`;
+  const result = await callAI('You are a professional content creator. Write engaging, platform-optimized content.', prompt);
+  toggleLoading('loadingWrite', false);
+  if (result) {
+    document.getElementById('resultWriteContent').textContent = result;
+    document.getElementById('resultWrite').classList.add('show');
+    addToHistory('Content: ' + topic.slice(0, 40), topic, result);
+  }
+}
+
+async function imitateContent() {
+  const source = document.getElementById('imitateSource').value.trim();
+  const topic = document.getElementById('imitateTopic').value.trim();
+  if (!source || !topic) { alert('Please provide both the source content and your topic'); return; }
+  toggleLoading('loadingImitate', true);
+  const prompt = `Analyze the following reference content's style, structure, hook technique, and tone. Then create a NEW piece on this topic: "${topic}" using the SAME style and techniques.\n\nReference content:\n${source}\n\nNew content about "${topic}":`;
+  const result = await callAI('You are a professional content strategist. Analyze and replicate successful content styles.', prompt);
+  toggleLoading('loadingImitate', false);
+  if (result) {
+    document.getElementById('resultImitateContent').textContent = result;
+    document.getElementById('resultImitate').classList.add('show');
+    addToHistory('Imitation: ' + topic.slice(0, 40), topic, result);
+  }
+}
+
+async function generateScript() {
+  const type = document.getElementById('scriptType').value;
+  const platform = document.getElementById('scriptPlatform').value;
+  const topic = document.getElementById('scriptTopic').value.trim();
+  const points = document.getElementById('scriptPoints').value.trim();
+  if (!topic) { alert('Please enter a topic'); return; }
+  toggleLoading('loadingScript', true);
+  const prompt = `Create a ${type} video script for ${platform} about: ${topic}. ${points ? 'Key points to cover:\n' + points : ''} Format with: [HOOK] opening, timestamps, visual descriptions in [brackets], narration text, and [CTA] ending. Write in Chinese.`;
+  const result = await callAI('You are a professional video script writer.', prompt);
+  toggleLoading('loadingScript', false);
+  if (result) {
+    document.getElementById('resultScriptContent').textContent = result;
+    document.getElementById('resultScript').classList.add('show');
+    addToHistory('Script: ' + topic.slice(0, 40), topic, result);
+  }
+}
+
+function exportScript() {
+  const text = document.getElementById('resultScriptContent').textContent;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'script.txt'; a.click();
+}
+
+async function generateVoice() {
+  const content = document.getElementById('voiceContent').value.trim();
+  const tone = document.getElementById('voiceTone').value;
+  const pacing = document.getElementById('voicePacing').value;
+  if (!content) { alert('Please paste your content'); return; }
+  toggleLoading('loadingVoice', true);
+  const prompt = `Convert this content into a voice-over narration script. Tone: ${tone}. Pacing: ${pacing}. Add: [PAUSE] markers, emphasis on key words with *asterisks*, estimated duration per section, and pronunciation guides for technical terms. Keep the original meaning intact.\n\nContent:\n${content}`;
+  const result = await callAI('You are a professional voice-over script writer.', prompt);
+  toggleLoading('loadingVoice', false);
+  if (result) {
+    document.getElementById('resultVoiceContent').textContent = result;
+    document.getElementById('resultVoice').classList.add('show');
+    addToHistory('Voice: ' + content.slice(0, 40), content.slice(0, 60), result);
+  }
+}
+
+async function loadHotTopics() {
+  try {
+    const r = await fetch('/api/media/hot-topics');
+    const d = await r.json();
+    if (!d.topics) return;
+    document.getElementById('hotList').innerHTML = d.topics.map((t, i) => {
+      const rc = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : 'r-def';
+      return `<li onclick="document.getElementById('topicInput').value='${t.tag}';switchToWrite()">
+        <div class="hot-rank ${rc}">${i+1}</div>
+        <div class="hot-info"><div class="hot-name"><span class="hot-tag">🔥 ${t.hot}</span>${t.tag}</div><div class="hot-desc">${t.desc}</div></div>
+      </li>`;
+    }).join('');
+  } catch(e) {}
+}
+
+function useTemplate(type) {
+  const presets = {
+    'tech-review': { topic: 'Review of [product name]: is it worth it?', style: 'professional', platform: 'general', reqs: 'Include: unboxing/first impressions, key features, pros & cons comparison table, who should buy, final verdict with rating' },
+    'how-to': { topic: 'How to [achieve specific result] in [timeframe]', style: 'tutorial', platform: 'general', reqs: 'Step-by-step numbered format. Each step with a bold heading. Include: prerequisites, estimated time per step, common mistakes to avoid' },
+    'list': { topic: 'Top 10 [tools/tips/resources] for [audience]', style: 'trending', platform: 'xiaohongshu', reqs: 'Numbered list with emojis. Each item: name + one-line description + why it matters. Strong closing statement at the end' },
+    'news': { topic: 'Breaking: [news event] — what it means for you', style: 'professional', platform: 'linkedin', reqs: 'Include: what happened, why it matters, expert perspective, actionable takeaways' },
+    'story': { topic: 'I tried [something] for [time period] and here is what happened', style: 'story', platform: 'general', reqs: 'Personal narrative. Include: why I started, the struggle/journey, key turning point, results, lessons learned' },
+    'comparison': { topic: '[Product A] vs [Product B]: which one wins?', style: 'professional', platform: 'general', reqs: 'Side-by-side comparison table. Categories: price, features, ease of use, performance, support. Clear winner for each use case' },
+    'tool-rec': { topic: '5 AI tools that will save you 10+ hours every week', style: 'casual', platform: 'twitter', reqs: 'Each tool: name, what it does, why it is great, who it is for. Include pricing info' },
+    'trend': { topic: '3 trends that will define [industry] in [year]', style: 'professional', platform: 'linkedin', reqs: 'Each trend: what it is, why it matters, data/evidence, how to prepare. Conclude with strategic recommendations' }
+  };
+  const p = presets[type];
+  if (!p) return;
+  document.getElementById('topicInput').value = p.topic;
+  document.getElementById('styleSelect').value = p.style;
+  document.getElementById('platformSelect').value = p.platform;
+  document.getElementById('reqInput').value = p.reqs;
+  switchToWrite();
+}
+
+function switchToWrite() {
+  document.querySelectorAll('#mainTabs button').forEach(b => b.classList.remove('active'));
+  document.querySelector('#mainTabs button[data-panel="write"]').classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-write').classList.add('active');
+  window.scrollTo({ top: document.getElementById('panel-write').offsetTop - 80, behavior: 'smooth' });
+}
+
+function regenerate() { generateContent(); }
+</script>
+</body>
+</html>
