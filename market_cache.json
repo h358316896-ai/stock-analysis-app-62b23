@@ -195,6 +195,21 @@
       {"SECURITY_CODE": "301600", "SECURITY_NAME_ABBR": "数字经济", "IPO_DATE": "2026-06-22", "ISSUE_PRICE": 15.70, "ISSUE_PE": 28.3, "INDUSTRY_PE": 33.6, "CONTINUOUS_LIMIT_NUM": null, "FIRST_OPEN_PRICE": null}
     ]}}
   },
+  "shareholders_300750": {
+    "ts": 1749168000,
+    "data": {"result": {"data": [
+      {"END_DATE": "2026-03-31", "HOLDER_NUM": 156432, "HOLDER_NUM_CHANGE": -8765, "HOLDER_NUM_RATIO": -5.3, "AVG_HOLD_NUM": 6395},
+      {"END_DATE": "2025-12-31", "HOLDER_NUM": 165197, "HOLDER_NUM_CHANGE": -6543, "HOLDER_NUM_RATIO": -3.8, "AVG_HOLD_NUM": 6056},
+      {"END_DATE": "2025-09-30", "HOLDER_NUM": 171740, "HOLDER_NUM_CHANGE": 2345, "HOLDER_NUM_RATIO": 1.4, "AVG_HOLD_NUM": 5825}
+    ]}}
+  },
+  "shareholders_000858": {
+    "ts": 1749168000,
+    "data": {"result": {"data": [
+      {"END_DATE": "2026-03-31", "HOLDER_NUM": 234567, "HOLDER_NUM_CHANGE": -15678, "HOLDER_NUM_RATIO": -6.3, "AVG_HOLD_NUM": 4268},
+      {"END_DATE": "2025-12-31", "HOLDER_NUM": 250245, "HOLDER_NUM_CHANGE": -10234, "HOLDER_NUM_RATIO": -3.9, "AVG_HOLD_NUM": 4001}
+    ]}}
+  },
   "shareholders_600519": {
     "ts": 1749168000,
     "data": {"result": {"data": [

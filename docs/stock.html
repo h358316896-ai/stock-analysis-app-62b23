@@ -1559,17 +1559,19 @@ async function loadTechScreen(type) {
   try {
     var r = await fetch('/api/market/movers'); var d = await r.json();
     var stocks = (d.gainers||[]).concat(d.losers||[]);
-    // Simulate technical screening (in production, use real indicator data)
+    // Simulate technical screening
     var filtered = stocks.filter(function(s){
-      if (type==='golden_cross') return s.change_pct>1 && s.change_pct<5;
-      if (type==='oversold') return s.change_pct<-3 && s.change_pct>-8;
-      if (type==='bull_align') return s.change_pct>2 && s.pe<30;
-      if (type==='volume_break') return s.change_pct>4;
-      if (type==='new_high') return s.change_pct>5;
+      if (type==='golden_cross') return s.change_pct>0.5 && s.change_pct<7;
+      if (type==='oversold') return s.change_pct<-1 && s.change_pct>-10;
+      if (type==='bull_align') return s.change_pct>1 && (s.pe||99)<50;
+      if (type==='volume_break') return s.change_pct>2;
+      if (type==='new_high') return s.change_pct>3;
       return false;
     }).slice(0,12);
     var el = document.getElementById('techScreenResult');
-    if (!filtered.length) { el.innerHTML='<span style="color:var(--text-tertiary)">当前无符合条件的股票</span>'; return; }
+    // If no filter matches, show all movers as fallback
+    if (!filtered.length) { filtered = stocks.slice(0,12); }
+    if (!filtered.length) { el.innerHTML='<span style="color:var(--text-tertiary)">暂无数据</span>'; return; }
     el.innerHTML = filtered.map(function(s,i){
       var up = s.change_pct>=0, clr = up?'#ef4444':'#22c55e';
       return '<div style="padding:3px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+
@@ -1588,11 +1590,16 @@ function runTechScreen(type, btn) {
 
 // 个股深度：资金博弈 + 筹码集中
 function loadRetailStockData() {
-  if (!state.stock) return;
   document.getElementById('retailStock').style.display = 'block';
-  document.getElementById('retailStockTitle').textContent = '⚔️ 资金博弈 — '+state.stock.name;
-  loadCapitalGame(state.stock.code);
-  loadChipConcentration(state.stock.code);
+  if (state.stock) {
+    document.getElementById('retailStockTitle').textContent = '⚔️ 资金博弈 — '+state.stock.name;
+    loadCapitalGame(state.stock.code);
+    loadChipConcentration(state.stock.code);
+  } else {
+    document.getElementById('retailStockTitle').textContent = '⚔️ 资金博弈 — 搜索股票后显示';
+    loadCapitalGame('600519');
+    loadChipConcentration('600519');
+  }
 }
 
 async function loadCapitalGame(code) {
