@@ -79,6 +79,14 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .btn-sm { padding:6px 14px; font-size:12px; }
 .btn-ghost { background:transparent; color:var(--text-secondary); border:1px solid var(--border-strong); }
 .btn-ghost:hover { border-color:var(--green); color:var(--green); }
+.result-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.result-actions .btn { flex:1; min-width:60px; min-height:44px; display:flex; align-items:center; justify-content:center; gap:4px; font-size:13px; border-radius:10px; }
+@media (max-width:768px) {
+  .result-box { padding:14px; font-size:15px; line-height:1.9; }
+  .result-actions .btn { min-height:48px; font-size:14px; border-radius:12px; }
+  .card { padding:16px; }
+  .btn-primary { padding:12px 20px; font-size:15px; min-height:48px; }
+}
 
 /* Result */
 .result-box { background:var(--bg-secondary); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:20px; margin-top:16px; white-space:pre-wrap; line-height:1.8; font-size:14px; max-height:500px; overflow-y:auto; display:none; }
@@ -168,7 +176,12 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
       <button class="btn btn-primary" onclick="generateContent()">生成内容 →</button>
       <div class="result-box" id="resultWrite">
         <div id="resultWriteContent"></div>
-        <div class="result-actions"><button class="btn btn-sm btn-ghost" onclick="copyResult('resultWriteContent')">复制</button><button class="btn btn-sm btn-ghost" onclick="regenerate()">重新生成</button></div>
+        <div class="result-actions">
+          <button class="btn btn-sm btn-primary" onclick="copyResult('resultWriteContent')">📋 一键复制</button>
+          <button class="btn btn-sm btn-ghost" onclick="shareContent('resultWriteContent')">📤 分享</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportTxt('resultWriteContent')">💾 导出</button>
+          <button class="btn btn-sm btn-ghost" onclick="regenerate()">🔄 重写</button>
+        </div>
       </div>
       <div class="spinner-wrap" id="loadingWrite"><div class="spinner"></div>正在生成...</div>
     </div>
@@ -185,7 +198,11 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
       <button class="btn btn-primary" onclick="imitateContent()">生成仿写版本 →</button>
       <div class="result-box" id="resultImitate">
         <div id="resultImitateContent"></div>
-        <div class="result-actions"><button class="btn btn-sm btn-ghost" onclick="copyResult('resultImitateContent')">复制</button></div>
+        <div class="result-actions">
+          <button class="btn btn-sm btn-primary" onclick="copyResult('resultImitateContent')">📋 一键复制</button>
+          <button class="btn btn-sm btn-ghost" onclick="shareContent('resultImitateContent')">📤 分享</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportTxt('resultImitateContent')">💾 导出</button>
+        </div>
       </div>
       <div class="spinner-wrap" id="loadingImitate"><div class="spinner"></div>正在分析风格...</div>
     </div>
@@ -206,7 +223,11 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
       <button class="btn btn-primary" onclick="generateScript()">生成脚本 →</button>
       <div class="result-box" id="resultScript">
         <div id="resultScriptContent"></div>
-        <div class="result-actions"><button class="btn btn-sm btn-ghost" onclick="copyResult('resultScriptContent')">复制</button><button class="btn btn-sm btn-ghost" onclick="exportScript()">导出</button></div>
+        <div class="result-actions">
+          <button class="btn btn-sm btn-primary" onclick="copyResult('resultScriptContent')">📋 一键复制</button>
+          <button class="btn btn-sm btn-ghost" onclick="shareContent('resultScriptContent')">📤 分享</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportTxt('resultScriptContent')">💾 导出</button>
+        </div>
       </div>
       <div class="spinner-wrap" id="loadingScript"><div class="spinner"></div>正在撰写脚本...</div>
     </div>
@@ -225,7 +246,11 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
       <button class="btn btn-primary" onclick="generateVoice()">生成配音脚本 →</button>
       <div class="result-box" id="resultVoice">
         <div id="resultVoiceContent"></div>
-        <div class="result-actions"><button class="btn btn-sm btn-ghost" onclick="copyResult('resultVoiceContent')">复制</button></div>
+        <div class="result-actions">
+          <button class="btn btn-sm btn-primary" onclick="copyResult('resultVoiceContent')">📋 一键复制</button>
+          <button class="btn btn-sm btn-ghost" onclick="shareContent('resultVoiceContent')">📤 分享</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportTxt('resultVoiceContent')">💾 导出</button>
+        </div>
       </div>
       <div class="spinner-wrap" id="loadingVoice"><div class="spinner"></div>正在优化...</div>
     </div>
@@ -329,10 +354,52 @@ function renderHistory() {
 
 function copyResult(id) {
   const text = document.getElementById(id).textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btns = document.querySelectorAll('.btn-ghost');
-    btns.forEach(b => { if (b.textContent === '复制') { b.textContent = '已复制!'; setTimeout(() => b.textContent = '复制', 2000); } });
-  });
+  // Try modern clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板'));
+  } else {
+    // Fallback for older browsers / WeChat
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('已复制到剪贴板');
+  }
+}
+
+function shareContent(id) {
+  const text = document.getElementById(id).textContent;
+  const shareData = { title: 'AI生成内容 - StockAI', text: text.slice(0, 200) + '...' };
+  // Try Web Share API (works on mobile Safari/Chrome)
+  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    navigator.share(shareData).catch(() => {});
+  } else {
+    // Fallback: copy + prompt
+    copyResult(id);
+    alert('内容已复制！可粘贴到微信/朋友圈/小红书分享。');
+  }
+}
+
+function exportTxt(id) {
+  const text = document.getElementById(id).textContent;
+  const blob = new Blob(['﻿' + text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'StockAI_' + new Date().toISOString().slice(0,10) + '.txt';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('文件已下载');
+}
+
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div'); t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;padding:10px 24px;border-radius:20px;font-size:14px;font-weight:600;z-index:9999;transition:all .3s;pointer-events:none;white-space:nowrap;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1'; t.style.bottom = '80px';
+  setTimeout(() => { t.style.opacity = '0'; }, 2000);
 }
 
 // Content Generation
