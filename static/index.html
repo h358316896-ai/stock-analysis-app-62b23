@@ -110,7 +110,12 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .showcase-item:last-child { margin-bottom:0; }
 .showcase-item.reverse { direction:rtl; }
 .showcase-item.reverse .sc-text { direction:ltr; }
-.sc-preview { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-xl); padding:24px; height:300px; display:flex; align-items:center; justify-content:center; color:var(--text-tertiary); font-size:14px; }
+.sc-preview { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-xl); padding:24px; height:300px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-secondary); font-size:14px; position:relative; overflow:hidden; }
+.sc-preview::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.sc-preview:nth-child(2)::before { background:linear-gradient(90deg,var(--accent),var(--purple)); }
+.showcase-item.reverse .sc-preview::before { background:linear-gradient(90deg,var(--green),var(--accent)); }
+.showcase-item:last-child .sc-preview::before { background:linear-gradient(90deg,var(--orange),var(--red)); }
+.sc-preview-icon { font-size:48px; margin-bottom:12px; opacity:0.3; }
 .sc-text h3 { font-size:28px; font-weight:800; margin-bottom:12px; letter-spacing:-0.02em; }
 .sc-text p { color:var(--text-secondary); font-size:15px; line-height:1.7; margin-bottom:20px; }
 .sc-list { list-style:none; }
@@ -262,7 +267,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <li>Live scrolling ticker tape</li>
       </ul>
     </div>
-    <div class="sc-preview"><strong>Live Market Data</strong> Visualization<br><span style="font-size:11px;margin-top:8px;display:block">Real-time indices • Sector heatmaps • Capital flows</span></div>
+    <div class="sc-preview"><div class="sc-preview-icon">◧</div><strong>Live Market Data</strong><br><span style="font-size:11px;margin-top:8px;color:var(--text-tertiary)">Real-time indices • Sector heatmaps • Capital flows</span></div>
   </div>
   <div class="showcase-item reverse">
     <div class="sc-text">
@@ -274,7 +279,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <li>RSI(14) with 30/70 threshold lines</li>
       </ul>
     </div>
-    <div class="sc-preview"><strong>Candlestick</strong> Charts<br><span style="font-size:11px;margin-top:8px;display:block">MACD • RSI • Bollinger Bands • KDJ</span></div>
+    <div class="sc-preview"><div class="sc-preview-icon">▤</div><strong>Candlestick</strong> Charts<br><span style="font-size:11px;margin-top:8px;color:var(--text-tertiary)">MACD • RSI • Bollinger Bands • KDJ</span></div>
   </div>
   <div class="showcase-item">
     <div class="sc-text">
@@ -286,7 +291,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
         <li>Risk Assessment with specific recommendations</li>
       </ul>
     </div>
-    <div class="sc-preview"><strong>AI Analysis</strong> Engine<br><span style="font-size:11px;margin-top:8px;display:block">7 Perspectives • PDF Reports • History</span></div>
+    <div class="sc-preview"><div class="sc-preview-icon">◎</div><strong>AI Analysis</strong> Engine<br><span style="font-size:11px;margin-top:8px;color:var(--text-tertiary)">7 Perspectives • PDF Reports • History</span></div>
   </div>
 </div>
 
