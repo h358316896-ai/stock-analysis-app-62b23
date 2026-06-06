@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "buildCommand": "",
+  "outputDirectory": "docs",
+  "cleanUrls": true,
+  "framework": null
+}
