@@ -786,7 +786,7 @@ body {
     <a href="/services">Services</a>
   </div>
   <div class="top-right">
-    <button class="btn-auth" id="btnLogin" onclick="showAuthModal('login')">Sign In</button>
+    <button class="btn-auth" id="btnLogin" onclick="showAuthModal('login')">登录</button>
     <div id="userChip" class="user-chip" style="display:none" onclick="toggleDropdown()">
       <div class="avatar" id="userAvatar"></div>
       <span class="name" id="userName"></span>
@@ -802,13 +802,13 @@ body {
 <!-- ========== AUTH MODAL ========== -->
 <div class="modal-overlay" id="authModal">
   <div class="modal">
-    <h2 id="authTitle">Sign In</h2>
+    <h2 id="authTitle">登录</h2>
     <div class="err" id="authError"></div>
     <input type="text" id="authUsername" placeholder="Username">
     <input type="email" id="authEmail" placeholder="Email (required for sign up)" style="display:none">
     <input type="password" id="authPassword" placeholder="Password (6+ characters)">
-    <button type="submit" id="authSubmit" onclick="submitAuth()">Sign In</button>
-    <div class="switch"><span id="authSwitchText">Don't have an account?</span> <a onclick="switchAuthMode()">Sign Up</a></div>
+    <button type="submit" id="authSubmit" onclick="submitAuth()">登录</button>
+    <div class="switch"><span id="authSwitchText">还没有账号？</span> <a onclick="switchAuthMode()">注册</a></div>
   </div>
 </div>
 
@@ -817,7 +817,7 @@ body {
   <!-- Search -->
   <div class="search-section">
     <div class="search-box">
-      <input type="text" id="stockSearch" placeholder="Search by code or name — e.g. 600519, AAPL, 00700" autocomplete="off" list="stockDatalist">
+      <input type="text" id="stockSearch" placeholder="输入代码或名称搜索 — 例如：600519 茅台、AAPL 苹果、00700 腾讯" autocomplete="off" list="stockDatalist">
       <datalist id="stockDatalist"></datalist>
       <select id="marketSelect">
         <option value="cn">🇨🇳 A-Share</option>
@@ -847,7 +847,7 @@ body {
   <!-- Panel: Heatmap -->
   <div class="panel active" id="panel-heatmap">
     <div class="glass" style="padding:16px;margin-bottom:16px">
-      <h4 style="font-size:13px;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-secondary)">Sector Heatmap</h4>
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-secondary)">板块热力图</h4>
       <div class="heatmap-grid" id="sectorHeatmap"></div>
       <h4 style="font-size:13px;font-weight:600;margin:16px 0 12px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-secondary)">Concepts</h4>
       <div class="heatmap-grid" id="conceptHeatmap"></div>
@@ -903,11 +903,11 @@ body {
         <span class="strategy-tag" data-strategy="inflow" onclick="applyStrategy('inflow')">💰 资金流入</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px">
-        <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">Max P/E</label><input type="number" id="scrPE" placeholder="e.g. 30" style="width:100%;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
-        <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">Min P/E</label><input type="number" id="scrPEMin" placeholder="e.g. 0" style="width:100%;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
-        <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">Min Mkt Cap (B)</label><input type="number" id="scrMktCap" placeholder="e.g. 10" style="width:100%;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
+        <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">最大市盈率</label><input type="number" id="scrPE" placeholder="e.g. 30" style="width:100%;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
+        <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">最小市盈率</label><input type="number" id="scrPEMin" placeholder="e.g. 0" style="width:100%;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
+        <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">最小市值(亿)</label><input type="number" id="scrMktCap" placeholder="e.g. 10" style="width:100%;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
         <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">Min Chg %</label><input type="number" id="scrChgMin" placeholder="e.g. 0" step="any" style="width:100%;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
-        <div style="display:flex;align-items:end"><button onclick="runScreener()" style="padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-family:var(--font);font-size:12px">Run Screener</button></div>
+        <div style="display:flex;align-items:end"><button onclick="runScreener()" style="padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-family:var(--font);font-size:12px">开始筛选</button></div>
       </div>
       <div id="screenerResult"></div>
     </div>
@@ -1093,8 +1093,8 @@ body {
           <div class="flow-dot-indicator orange" id="flowDotOrange" style="display:none"></div>
           <div class="flow-dot-indicator" id="flowDotCross" style="display:none;width:2px;height:100%;top:0;border-radius:0;background:rgba(255,255,255,0.5);animation:dotBlink 0.6s ease-in-out infinite;box-shadow:0 0 6px rgba(255,255,255,0.3)"></div>
           <div style="display:flex;gap:16px;margin-top:4px;font-size:11px;color:var(--text-tertiary);justify-content:center">
-            <span><span style="display:inline-block;width:10px;height:10px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Institutional (Main Force)</span>
-            <span><span style="display:inline-block;width:10px;height:10px;background:#f97316;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Retail Investors</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px"></span>主力资金</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:#f97316;border-radius:2px;vertical-align:middle;margin-right:4px"></span>散户</span>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -1123,7 +1123,7 @@ body {
         <h3 id="analysisTitle">AI Analysis</h3>
         <div class="text" id="analysisText"></div>
         <div class="analysis-actions">
-          <button class="btn-sm btn-primary" id="pdfBtn" onclick="downloadPDF()" style="display:none">Download PDF Report</button>
+          <button class="btn-sm btn-primary" id="pdfBtn" onclick="downloadPDF()" style="display:none">下载PDF报告</button>
           <button class="btn-sm btn-secondary" id="saveHistoryBtn" onclick="saveToHistory()" style="display:none">Save to History</button>
         </div>
       </div>
@@ -1142,13 +1142,13 @@ body {
         <button class="btn-sm btn-secondary" style="width:100%;margin-top:8px" onclick="showAlertForm()">+ New Alert</button>
         <div class="alert-form" id="alertForm">
           <select id="alertCondition">
-            <option value="price_above">Price Above</option>
-            <option value="price_below">Price Below</option>
-            <option value="change_above">Change Above</option>
-            <option value="change_below">Change Below</option>
+            <option value="price_above">价格突破</option>
+            <option value="price_below">价格跌破</option>
+            <option value="change_above">涨幅突破</option>
+            <option value="change_below">跌幅突破</option>
           </select>
           <input type="number" id="alertThreshold" placeholder="Threshold (e.g. 100 or 5%)" step="any">
-          <button onclick="submitAlert()">Create Alert</button>
+          <button onclick="submitAlert()">创建提醒</button>
         </div>
       </div>
       <div class="sidebar-card" id="cardHistory">
@@ -1270,11 +1270,11 @@ function closeAuthModal() { document.getElementById('authModal').classList.remov
 let isReg = false;
 function switchAuthMode(f) {
   isReg = f !== undefined ? f : !isReg;
-  document.getElementById('authTitle').textContent = isReg ? 'Create Account' : 'Sign In';
+  document.getElementById('authTitle').textContent = isReg ? '创建账号' : '登录';
   document.getElementById('authEmail').style.display = isReg ? 'block' : 'none';
-  document.getElementById('authSubmit').textContent = isReg ? 'Create Account' : 'Sign In';
-  document.getElementById('authSwitchText').textContent = isReg ? 'Already have an account?' : "Don't have an account?";
-  document.getElementById('authSwitchText').nextElementSibling.textContent = isReg ? 'Sign In' : 'Sign Up';
+  document.getElementById('authSubmit').textContent = isReg ? '创建账号' : '登录';
+  document.getElementById('authSwitchText').textContent = isReg ? 'Already have an account?' : "还没有账号？";
+  document.getElementById('authSwitchText').nextElementSibling.textContent = isReg ? '登录' : '注册';
   document.getElementById('authError').classList.remove('show');
 }
 async function submitAuth() {
@@ -1779,7 +1779,7 @@ async function autoSearch() {
         list.appendChild(div);
       });
     } else {
-      list.innerHTML = '<div style="padding:12px;color:var(--text-tertiary);text-align:center">No results found</div>';
+      list.innerHTML = '<div style="padding:12px;color:var(--text-tertiary);text-align:center">未找到结果</div>';
     }
   } catch(e) {
     list.innerHTML = '<div style="padding:12px;color:#ef4444;text-align:center">Search error — try again</div>';
@@ -2424,7 +2424,7 @@ async function loadMoneyFlow() {
         if (cM) drawSingleFlowBar(cM, mVal, '#3b82f6', 'Main Force (snapshot)');
         if (cR) drawSingleFlowBar(cR, rVal, '#f97316', 'Retail (snapshot)');
       } else {
-        document.getElementById('flowSummary').innerHTML = '<p style="color:var(--text-tertiary);padding:20px;text-align:center">No money flow data available<br><small>Try searching an A-share stock (e.g. 600519)</small></p>';
+        document.getElementById('flowSummary').innerHTML = '<p style="color:var(--text-tertiary);padding:20px;text-align:center">暂无资金流向数据<br><small>Try searching an A-share stock (e.g. 600519)</small></p>';
       }
       return;
     }
@@ -2509,8 +2509,8 @@ async function loadMoneyFlow() {
     drawFlowCompare(d.flows);
     initFlowCompareHover(d.flows);
 
-    drawFlowBar('flowMainCanvas', 'main', '#3b82f6', 'Institutional (Main Force)');
-    drawFlowBar('flowRetailCanvas', 'retail', '#f97316', 'Retail Investors');
+    drawFlowBar('flowMainCanvas', 'main', '#3b82f6', '主力资金');
+    drawFlowBar('flowRetailCanvas', 'retail', '#f97316', '散户');
 
     // Summary
     var s = d.summary || {};
@@ -2666,7 +2666,7 @@ async function downloadPDF() {
     const a = document.createElement('a'); a.href = url; a.download = `report_${state.stock.code}.pdf`; a.click();
     URL.revokeObjectURL(url);
   } catch(e) { alert('Error: ' + e.message); }
-  finally { btn.textContent = 'Download PDF Report'; btn.disabled = false; }
+  finally { btn.textContent = '下载PDF报告'; btn.disabled = false; }
 }
 async function saveToHistory() { if (state.isLogin && state.analysis) { showToast('Analysis auto-saved to history', 'success'); loadHistory(); } }
 
@@ -2706,7 +2706,7 @@ async function fetchQuoteForWL(item) {
 async function loadAlerts() {
   if (!state.isLogin) return;
   try { const r = await fetch('/api/alerts'); const d = await r.json(); const list = document.getElementById('alertsList');
-    if (!d.items?.length) { list.innerHTML = '<div class="empty">No alerts set</div>'; return; }
+    if (!d.items?.length) { list.innerHTML = '<div class="empty">暂无提醒</div>'; return; }
     const lbs = { price_above: 'Price ≥', price_below: 'Price ≤', change_above: 'Change ≥', change_below: 'Change ≤' };
     list.innerHTML = d.items.map(a => `<div class="wl-item"><div class="wl-name">${a.name} (${a.code})</div><div class="wl-meta">${lbs[a.condition_type]||a.condition_type} ${a.threshold}${a.condition_type.includes('change')?'%':''} ${a.triggered?'✅':''}</div><span onclick="deleteAlert(${a.id},'${a.name}')" style="font-size:10px;color:var(--red);cursor:pointer;float:right">Delete</span></div>`).join('');
   } catch(e) {}
@@ -2748,7 +2748,7 @@ async function runCompare() {
 async function runScreener() {
   const params = { pe_max: parseFloat(document.getElementById('scrPE').value)||null, pe_min: parseFloat(document.getElementById('scrPEMin').value)||null, market_cap_min: parseFloat(document.getElementById('scrMktCap').value)||null, change_pct_min: parseFloat(document.getElementById('scrChgMin').value)??null };
   try { const r = await fetch('/api/stock/screener', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) }); const d = await r.json();
-    if (!d.stocks?.length) { document.getElementById('screenerResult').innerHTML = '<p style="color:var(--text-tertiary);padding:12px">No stocks match these criteria</p>'; return; }
+    if (!d.stocks?.length) { document.getElementById('screenerResult').innerHTML = '<p style="color:var(--text-tertiary);padding:12px">没有符合条件的股票</p>'; return; }
     document.getElementById('screenerResult').innerHTML = `<p style="font-size:12px;color:var(--text-tertiary);margin:8px 0">${d.total} stocks found</p><table class="movers-table"><thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th>P/E</th><th>Mkt Cap</th></tr></thead><tbody>${d.stocks.map(s=>`<tr><td><span class="mover-symbol" onclick="quickSearch('${s.code}','cn')">${s.name}</span><br><span style="font-size:10px;color:var(--text-tertiary)">${s.code}</span></td><td>${s.price.toFixed(2)}</td><td class="${s.change_pct>=0?'text-green':'text-red'}">${s.change_pct>=0?'+':''}${s.change_pct.toFixed(2)}%</td><td>${s.pe?.toFixed(2)||'--'}</td><td>${fmt(s.market_cap)}</td></tr>`).join('')}</tbody></table>`;
   } catch(e) {}
 }
