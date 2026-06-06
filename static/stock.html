@@ -820,9 +820,9 @@ body {
       <input type="text" id="stockSearch" placeholder="输入代码或名称搜索 — 例如：600519 茅台、AAPL 苹果、00700 腾讯" autocomplete="off" list="stockDatalist">
       <datalist id="stockDatalist"></datalist>
       <select id="marketSelect">
-        <option value="cn">🇨🇳 A-Share</option>
-        <option value="hk">🇭🇰 HK</option>
-        <option value="us">🇺🇸 US</option>
+        <option value="cn">🇨🇳 A股</option>
+        <option value="hk">🇭🇰 港股</option>
+        <option value="us">🇺🇸 美股</option>
       </select>
       <button id="searchBtn" onclick="searchStock()">Search</button>
     </div>
@@ -918,9 +918,9 @@ body {
     <div class="glass" style="padding:16px">
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center" id="compareInputs">
         <input type="text" class="cmp-code" placeholder="Symbol" data-idx="0" style="width:120px;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)">
-        <select class="cmp-mkt" data-idx="0" style="padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"><option value="cn">A-Share</option><option value="hk">HK</option><option value="us">US</option></select>
+        <select class="cmp-mkt" data-idx="0" style="padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"><option value="cn">A股</option><option value="hk">港股</option><option value="us">美股</option></select>
         <input type="text" class="cmp-code" placeholder="Symbol" data-idx="1" style="width:120px;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)">
-        <select class="cmp-mkt" data-idx="1" style="padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"><option value="cn">A-Share</option><option value="hk">HK</option><option value="us">US</option></select>
+        <select class="cmp-mkt" data-idx="1" style="padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"><option value="cn">A股</option><option value="hk">港股</option><option value="us">美股</option></select>
         <button onclick="addCompareSlot()" style="padding:8px 12px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-default);border-radius:6px;cursor:pointer;font-family:var(--font);font-size:12px">+ Add</button>
         <button onclick="runCompare()" style="padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-family:var(--font);font-size:12px">Compare</button>
       </div>
@@ -2732,7 +2732,7 @@ async function loadHistory() {
 // COMPARE & SCREENER
 // ============================================================
 let cmpCount = 2;
-function addCompareSlot() { if (cmpCount >= 5) return; const d = document.createElement('span'); d.innerHTML = `<input type="text" class="cmp-code" placeholder="Symbol" data-idx="${cmpCount}" style="width:120px;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"> <select class="cmp-mkt" data-idx="${cmpCount}" style="padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"><option value="cn">A-Share</option><option value="hk">HK</option><option value="us">US</option></select>`; document.getElementById('compareInputs').insertBefore(d, document.getElementById('compareInputs').lastElementChild.previousElementSibling); cmpCount++; }
+function addCompareSlot() { if (cmpCount >= 5) return; const d = document.createElement('span'); d.innerHTML = `<input type="text" class="cmp-code" placeholder="Symbol" data-idx="${cmpCount}" style="width:120px;padding:8px 10px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"> <select class="cmp-mkt" data-idx="${cmpCount}" style="padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"><option value="cn">A股</option><option value="hk">港股</option><option value="us">美股</option></select>`; document.getElementById('compareInputs').insertBefore(d, document.getElementById('compareInputs').lastElementChild.previousElementSibling); cmpCount++; }
 
 async function runCompare() {
   const codes = document.querySelectorAll('.cmp-code'), mkts = document.querySelectorAll('.cmp-mkt');
@@ -2746,11 +2746,11 @@ async function runCompare() {
 }
 
 async function runScreener() {
-  const params = { pe_max: parseFloat(document.getElementById('scrPE').value)||null, pe_min: parseFloat(document.getElementById('scrPEMin').value)||null, market_cap_min: parseFloat(document.getElementById('scrMktCap').value)||null, change_pct_min: parseFloat(document.getElementById('scrChgMin').value)??null };
-  try { const r = await fetch('/api/stock/screener', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) }); const d = await r.json();
-    if (!d.stocks?.length) { document.getElementById('screenerResult').innerHTML = '<p style="color:var(--text-tertiary);padding:12px">没有符合条件的股票</p>'; return; }
-    document.getElementById('screenerResult').innerHTML = `<p style="font-size:12px;color:var(--text-tertiary);margin:8px 0">${d.total} stocks found</p><table class="movers-table"><thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th>P/E</th><th>Mkt Cap</th></tr></thead><tbody>${d.stocks.map(s=>`<tr><td><span class="mover-symbol" onclick="quickSearch('${s.code}','cn')">${s.name}</span><br><span style="font-size:10px;color:var(--text-tertiary)">${s.code}</span></td><td>${s.price.toFixed(2)}</td><td class="${s.change_pct>=0?'text-green':'text-red'}">${s.change_pct>=0?'+':''}${s.change_pct.toFixed(2)}%</td><td>${s.pe?.toFixed(2)||'--'}</td><td>${fmt(s.market_cap)}</td></tr>`).join('')}</tbody></table>`;
-  } catch(e) {}
+  var params = { pe_max: parseFloat(document.getElementById('scrPE').value)||null, pe_min: parseFloat(document.getElementById('scrPEMin').value)||null, market_cap_min: parseFloat(document.getElementById('scrMktCap').value)||null, change_pct_min: parseFloat(document.getElementById('scrChgMin').value)||null };
+  try { var r = await fetch('/api/stock/screener', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) }); var d = await r.json();
+    if (!d.stocks || !d.stocks.length) { document.getElementById('screenerResult').innerHTML = '<p style="color:var(--text-tertiary);padding:12px">没有符合条件的股票</p>'; return; }
+    document.getElementById('screenerResult').innerHTML = '<p style="font-size:12px;color:var(--text-tertiary);margin:8px 0">共 '+d.total+' 只股票</p><table class="movers-table"><thead><tr><th>代码</th><th>价格</th><th>涨跌</th><th>市盈率</th><th>市值</th></tr></thead><tbody>'+d.stocks.map(function(s){return '<tr><td><span class="mover-symbol" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span><br><span style="font-size:10px;color:var(--text-tertiary)">'+s.code+'</span></td><td>'+s.price.toFixed(2)+'</td><td class="'+(s.change_pct>=0?'text-green':'text-red')+'">'+(s.change_pct>=0?'+':'')+s.change_pct.toFixed(2)+'%</td><td>'+(s.pe?s.pe.toFixed(2):'--')+'</td><td>'+fmt(s.market_cap)+'</td></tr>';}).join('')+'</tbody></table>';
+  } catch(e) { console.error(e); }
 }
 
 // ============================================================
