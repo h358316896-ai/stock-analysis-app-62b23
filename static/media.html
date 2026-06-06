@@ -272,7 +272,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 
 <script>
 // State
-let engine = 'claude';
+let engine = 'deepseek';
 const history = JSON.parse(localStorage.getItem('mediaHistory') || '[]');
 
 // Init
@@ -307,9 +307,9 @@ async function callAI(systemPrompt, userPrompt) {
       body: JSON.stringify({ prompt: userPrompt, engine })
     });
     const d = await r.json();
-    if (d.error) { alert(d.error); return null; }
+    if (d.error) { alert('错误: ' + d.error); return null; }
     return d.result;
-  } catch(e) { alert('Network error: ' + e.message); return null; }
+  } catch(e) { alert('网络错误: ' + e.message); return null; }
 }
 
 function addToHistory(type, topic, result) {
@@ -319,7 +319,7 @@ function addToHistory(type, topic, result) {
 }
 
 function renderHistory() {
-  if (!history.length) { document.getElementById('historyList').innerHTML = '<p style="color:var(--text-tertiary);font-size:13px;text-align:center;padding:20px">No history yet. Start generating!</p>'; return; }
+  if (!history.length) { document.getElementById('historyList').innerHTML = '<p style="color:var(--text-tertiary);font-size:13px;text-align:center;padding:20px">暂无历史记录。<br>开始生成内容即可在此查看！</p>'; return; }
   document.getElementById('historyList').innerHTML = history.map(h => `
     <div class="history-item" onclick="document.getElementById('resultWriteContent').textContent=\`${h.full.replace(/`/g,'\\`')}\`;document.getElementById('resultWrite').classList.add('show')">
       <div class="hi-type">${h.type}</div>
@@ -331,7 +331,7 @@ function copyResult(id) {
   const text = document.getElementById(id).textContent;
   navigator.clipboard.writeText(text).then(() => {
     const btns = document.querySelectorAll('.btn-ghost');
-    btns.forEach(b => { if (b.textContent === 'Copy') { b.textContent = 'Copied!'; setTimeout(() => b.textContent = 'Copy', 2000); } });
+    btns.forEach(b => { if (b.textContent === '复制') { b.textContent = '已复制!'; setTimeout(() => b.textContent = '复制', 2000); } });
   });
 }
 
@@ -341,10 +341,10 @@ async function generateContent() {
   const style = document.getElementById('styleSelect').value;
   const platform = document.getElementById('platformSelect').value;
   const reqs = document.getElementById('reqInput').value.trim();
-  if (!topic) { alert('Please enter a topic'); return; }
+  if (!topic) { alert('请输入话题'); return; }
   toggleLoading('loadingWrite', true);
-  const prompt = `Write a ${style} content piece about: ${topic}. Platform: ${platform}. ${reqs ? 'Additional requirements: ' + reqs : ''} Write in Chinese if the topic is Chinese-focused, otherwise use English. Include an attention-grabbing hook, body content, and a call-to-action.`;
-  const result = await callAI('You are a professional content creator. Write engaging, platform-optimized content.', prompt);
+  const prompt = `请撰写一篇关于"${topic}"的${style}风格内容。发布平台：${platform}。${reqs ? '额外要求：' + reqs : ''} 请用中文撰写。包含：吸睛开头钩子、正文内容、结尾行动号召。`;
+  const result = await callAI('你是一位专业的中文内容创作者。请用中文撰写高质量、平台优化的内容。', prompt);
   toggleLoading('loadingWrite', false);
   if (result) {
     document.getElementById('resultWriteContent').textContent = result;
@@ -356,10 +356,10 @@ async function generateContent() {
 async function imitateContent() {
   const source = document.getElementById('imitateSource').value.trim();
   const topic = document.getElementById('imitateTopic').value.trim();
-  if (!source || !topic) { alert('Please provide both the source content and your topic'); return; }
+  if (!source || !topic) { alert('请提供参考内容和你的话题'); return; }
   toggleLoading('loadingImitate', true);
-  const prompt = `Analyze the following reference content's style, structure, hook technique, and tone. Then create a NEW piece on this topic: "${topic}" using the SAME style and techniques.\n\nReference content:\n${source}\n\nNew content about "${topic}":`;
-  const result = await callAI('You are a professional content strategist. Analyze and replicate successful content styles.', prompt);
+  const prompt = `分析以下参考内容的风格特点、结构技巧、开头钩子和语气语调。然后用相同的风格和技巧，为话题"${topic}"创作一篇全新的中文内容。\n\n参考内容：\n${source}\n\n关于"${topic}"的新内容：`;
+  const result = await callAI('你是一位专业的内容策略师。请分析并复刻成功内容的风格。用中文回复。', prompt);
   toggleLoading('loadingImitate', false);
   if (result) {
     document.getElementById('resultImitateContent').textContent = result;
@@ -373,10 +373,10 @@ async function generateScript() {
   const platform = document.getElementById('scriptPlatform').value;
   const topic = document.getElementById('scriptTopic').value.trim();
   const points = document.getElementById('scriptPoints').value.trim();
-  if (!topic) { alert('Please enter a topic'); return; }
+  if (!topic) { alert('请输入话题'); return; }
   toggleLoading('loadingScript', true);
-  const prompt = `Create a ${type} video script for ${platform} about: ${topic}. ${points ? 'Key points to cover:\n' + points : ''} Format with: [HOOK] opening, timestamps, visual descriptions in [brackets], narration text, and [CTA] ending. Write in Chinese.`;
-  const result = await callAI('You are a professional video script writer.', prompt);
+  const prompt = `为${platform}平台创作一个${type}视频脚本，主题：${topic}。${points ? '关键要点：\n' + points : ''} 格式要求：[HOOK]开头钩子、时间戳标注、[方括号]内写画面描述、旁白文字、[CTA]结尾行动号召。请用中文撰写。`;
+  const result = await callAI('你是一位专业的视频脚本编剧。请用中文撰写。', prompt);
   toggleLoading('loadingScript', false);
   if (result) {
     document.getElementById('resultScriptContent').textContent = result;
@@ -395,10 +395,10 @@ async function generateVoice() {
   const content = document.getElementById('voiceContent').value.trim();
   const tone = document.getElementById('voiceTone').value;
   const pacing = document.getElementById('voicePacing').value;
-  if (!content) { alert('Please paste your content'); return; }
+  if (!content) { alert('请粘贴你的内容'); return; }
   toggleLoading('loadingVoice', true);
-  const prompt = `Convert this content into a voice-over narration script. Tone: ${tone}. Pacing: ${pacing}. Add: [PAUSE] markers, emphasis on key words with *asterisks*, estimated duration per section, and pronunciation guides for technical terms. Keep the original meaning intact.\n\nContent:\n${content}`;
-  const result = await callAI('You are a professional voice-over script writer.', prompt);
+  const prompt = `将以下内容转换为配音旁白脚本。语调：${tone}。语速：${pacing}。要求：添加[暂停]标记、用*星号*标注需要强调的关键词、每段预估时长、专业术语注音。保持原意不变。请用中文输出。\n\n内容：\n${content}`;
+  const result = await callAI('你是一位专业的配音脚本撰写人。请用中文撰写。', prompt);
   toggleLoading('loadingVoice', false);
   if (result) {
     document.getElementById('resultVoiceContent').textContent = result;
@@ -424,14 +424,14 @@ async function loadHotTopics() {
 
 function useTemplate(type) {
   const presets = {
-    'tech-review': { topic: 'Review of [product name]: is it worth it?', style: 'professional', platform: 'general', reqs: 'Include: unboxing/first impressions, key features, pros & cons comparison table, who should buy, final verdict with rating' },
-    'how-to': { topic: 'How to [achieve specific result] in [timeframe]', style: 'tutorial', platform: 'general', reqs: 'Step-by-step numbered format. Each step with a bold heading. Include: prerequisites, estimated time per step, common mistakes to avoid' },
-    'list': { topic: 'Top 10 [tools/tips/resources] for [audience]', style: 'trending', platform: 'xiaohongshu', reqs: 'Numbered list with emojis. Each item: name + one-line description + why it matters. Strong closing statement at the end' },
-    'news': { topic: 'Breaking: [news event] — what it means for you', style: 'professional', platform: 'linkedin', reqs: 'Include: what happened, why it matters, expert perspective, actionable takeaways' },
-    'story': { topic: 'I tried [something] for [time period] and here is what happened', style: 'story', platform: 'general', reqs: 'Personal narrative. Include: why I started, the struggle/journey, key turning point, results, lessons learned' },
-    'comparison': { topic: '[Product A] vs [Product B]: which one wins?', style: 'professional', platform: 'general', reqs: 'Side-by-side comparison table. Categories: price, features, ease of use, performance, support. Clear winner for each use case' },
-    'tool-rec': { topic: '5 AI tools that will save you 10+ hours every week', style: 'casual', platform: 'twitter', reqs: 'Each tool: name, what it does, why it is great, who it is for. Include pricing info' },
-    'trend': { topic: '3 trends that will define [industry] in [year]', style: 'professional', platform: 'linkedin', reqs: 'Each trend: what it is, why it matters, data/evidence, how to prepare. Conclude with strategic recommendations' }
+    'tech-review': { topic: '[产品名] 深度测评：到底值不值得买？', style: 'professional', platform: 'general', reqs: '包含：开箱第一印象、核心功能体验、优缺点对比表、适合人群分析、最终评分和购买建议。请用中文撰写。' },
+    'how-to': { topic: '如何在[时间]内[达成某个目标]', style: 'tutorial', platform: 'general', reqs: '分步骤编号格式，每步有加粗小标题。包含：准备工作、每步预估时间、常见错误避坑指南。请用中文撰写。' },
+    'list': { topic: '[受众群体]必备的10个[工具/技巧/资源]', style: 'trending', platform: 'xiaohongshu', reqs: '带emoji的编号清单。每项：名称+一句话描述+为什么重要。结尾有强力金句总结。请用中文撰写。' },
+    'news': { topic: '深度解读：[热点事件]对你意味着什么', style: 'professional', platform: 'linkedin', reqs: '包含：事件背景、核心影响分析、专家视角、可执行的行动建议。请用中文撰写。' },
+    'story': { topic: '我坚持[某件事][时间段]，发生了这些变化', style: 'story', platform: 'general', reqs: '个人叙事风格。包含：开始的动机、过程中的挣扎、关键转折点、最终成果、经验总结。请用中文撰写。' },
+    'comparison': { topic: '[产品A] vs [产品B]：深度对比谁更强？', style: 'professional', platform: 'general', reqs: '并列对比表格。维度：价格、功能、易用性、性能、售后服务。每个使用场景给出明确推荐。请用中文撰写。' },
+    'tool-rec': { topic: '5款AI工具让你每周多出10小时', style: 'casual', platform: 'xiaohongshu', reqs: '每款工具：名称、核心功能、为什么好用、适合谁用。附上价格信息。请用中文撰写。' },
+    'trend': { topic: '[行业]2026年3大趋势预判', style: 'professional', platform: 'linkedin', reqs: '每个趋势：趋势解读、数据支撑、为什么重要、如何提前布局。结尾给出战略建议。请用中文撰写。' }
   };
   const p = presets[type];
   if (!p) return;
