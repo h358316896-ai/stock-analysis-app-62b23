@@ -1564,11 +1564,11 @@ def stock_screener():
         "roe_min": data.get("roe_min"),
     }
 
-    # Eastmoney stock list with filters
-    url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid=f3"
+    # Eastmoney stock list with cache fallback
+    url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f3"
            "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
            "&fields=f2,f3,f4,f9,f12,f14,f15,f16,f17,f18,f20,f21,f23,f173")
-    data = fetch_eastmoney(url)
+    data = _cached_eastmoney("screener_data", url, ttl=3600)
     stocks = []
     if data and data.get("data") and data["data"].get("diff"):
         for item in data["data"]["diff"]:
