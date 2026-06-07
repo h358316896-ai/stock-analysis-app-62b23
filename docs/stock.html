@@ -1307,10 +1307,9 @@ function onLoginChange() {
 var selectedTier = 'vip';
 function selectTier(t){selectedTier=t;document.getElementById('vipCard').style.borderColor=t==='vip'?'var(--accent)':'var(--border-strong)';document.getElementById('svipCard').style.borderColor=t==='svip'?'var(--gold)':'var(--border-strong)';updatePrice();}
 function updatePrice(){var m=parseInt(document.getElementById('upgradeMonths').value)||1;var p=selectedTier==='vip'?29:69;var disc=m>=12?0.7:m>=6?0.8:m>=3?0.9:1;document.getElementById('upgradePrice').textContent='¥'+(p*m*disc).toFixed(0);}
-function showUpgradeModal(){if(!state.isLogin){showAuthModal('login');return;}selectTier('vip');document.getElementById('upgradeModal').classList.add('show');}
+function showUpgradeModal(){if(!state.isLogin){showAuthModal('login');return;}selectTier('vip');document.getElementById('upgradeModal').classList.add('show');var el=document.getElementById('upgradeMonths');if(el)el.onchange=updatePrice;updatePrice();}
 async function loadMembership(){try{var r=await fetch('/api/auth/membership');var d=await r.json();var el=document.getElementById('membershipInfo');var tier=d.membership||'free';var tierLabel={free:'免费用户',vip:'VIP会员',svip:'SVIP会员'}[tier]||tier;var tierColor={free:'var(--text-tertiary)',vip:'var(--accent)',svip:'var(--gold)'}[tier];el.innerHTML='<div style="font-size:16px;font-weight:700;color:'+tierColor+'">'+tierLabel+'</div>'+(d.expires?'<div style="font-size:11px;color:var(--text-tertiary)">到期：'+d.expires+'</div>':'<div style="font-size:11px;color:var(--text-tertiary)">永久免费</div>');}catch(e){}}
 async function doUpgrade(){var m=parseInt(document.getElementById('upgradeMonths').value)||1;try{var r=await fetch('/api/auth/upgrade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:selectedTier,months:m})});var d=await r.json();if(d.success){showToast('升级成功！欢迎成为'+(selectedTier==='vip'?'VIP':'SVIP')+'会员','success');document.getElementById('upgradeModal').classList.remove('show');loadMembership();}}catch(e){showToast('升级失败，请重试','error');}}
-document.getElementById('upgradeMonths').onchange=updatePrice;
 
 function showAuthModal(m) { document.getElementById('authModal').classList.add('show'); if (m === 'register') switchAuthMode(true); }
 function closeAuthModal() { document.getElementById('authModal').classList.remove('show'); }
