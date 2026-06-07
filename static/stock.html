@@ -1925,7 +1925,7 @@ async function searchStock() {
     panel.style.opacity = '0'; panel.style.transform = 'translateY(10px)';
     requestAnimationFrame(() => { panel.style.transition = 'all .3s ease-out'; panel.style.opacity = '1'; panel.style.transform = ''; });
 
-    const items = [['Open', q.open?.toFixed(2)], ['High', q.high?.toFixed(2)], ['Low', q.low?.toFixed(2)], ['Volume', fmt(q.volume)], ['Turnover', fmt(q.amount)], ['Market Cap', fmt(q.market_cap)], ['P/E Ratio', q.pe || 'N/A']];
+    const items = [['开盘', q.open?.toFixed(2)], ['最高', q.high?.toFixed(2)], ['最低', q.low?.toFixed(2)], ['成交量', fmt(q.volume)], ['成交额', fmt(q.amount)], ['总市值', fmt(q.market_cap)], ['市盈率', q.pe || 'N/A']];
     document.getElementById('quoteGrid').innerHTML = items.map(([l, v]) => `<div class="quote-item"><div class="ql">${l}</div><div class="qv">${v}</div></div>`).join('');
 
     // Charts + Analysis
