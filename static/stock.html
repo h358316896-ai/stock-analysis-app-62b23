@@ -2172,13 +2172,13 @@ async function loadIndicatorsChart(code, mkt) {
       var dt = (d.dates[idx]||''), o = d.klines[idx].open, h = d.klines[idx].high, l = d.klines[idx].low, c = d.klines[idx].close, v = d.klines[idx].volume;
       var up = c >= o, clr = up ? 'tt-up' : 'tt-down';
       var html = '<div class="tt-date">'+dt+'</div>';
-      html += '<div class="tt-row"><span class="tt-label">Open</span><span>'+o.toFixed(2)+'</span></div>';
-      html += '<div class="tt-row"><span class="tt-label">High</span><span class="tt-up">'+h.toFixed(2)+'</span></div>';
-      html += '<div class="tt-row"><span class="tt-label">Low</span><span class="tt-down">'+l.toFixed(2)+'</span></div>';
-      html += '<div class="tt-row"><span class="tt-label">Close</span><span class="'+clr+'">'+c.toFixed(2)+'</span></div>';
-      html += '<div class="tt-row"><span class="tt-label">Vol</span><span>'+fmt(v)+'</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">开盘</span><span>'+o.toFixed(2)+'</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">最高</span><span class="tt-up">'+h.toFixed(2)+'</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">最低</span><span class="tt-down">'+l.toFixed(2)+'</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">收盘</span><span class="'+clr+'">'+c.toFixed(2)+'</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">成交量</span><span>'+fmt(v)+'</span></div>';
       var chg = ((c-o)/(o||1)*100).toFixed(2);
-      html += '<div class="tt-row"><span class="tt-label">Chg</span><span class="'+clr+'">'+(up?'+':'')+chg+'%</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">涨跌</span><span class="'+clr+'">'+(up?'+':'')+chg+'%</span></div>';
       return html;
     });
   } catch(e) {}
