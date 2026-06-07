@@ -1745,16 +1745,16 @@ async function searchEarnings() {
     var s = d.reports[0];
     document.getElementById('earningsList').innerHTML =
       '<div style="margin-bottom:8px;padding:8px;background:rgba(34,197,94,0.08);border-radius:6px"><b style="color:var(--accent);font-size:13px">'+s.name+' ('+s.code+')</b></div>'+
-      '<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse;table-layout:fixed"><thead><tr style="color:var(--text-tertiary);border-bottom:1px solid var(--border-subtle)"><th style="text-align:left;padding:4px 6px;width:14%">报告期</th><th style="padding:4px 6px;width:13%">营收(亿)</th><th style="padding:4px 6px;width:13%">利润(亿)</th><th style="padding:4px 6px;width:15%">营收增长</th><th style="padding:4px 6px;width:15%">利润增长</th><th style="padding:4px 6px;width:15%">EPS</th><th style="padding:4px 6px;width:15%">ROE</th></tr></thead><tbody>'+
+      '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="min-width:600px;width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--text-tertiary);border-bottom:1px solid var(--border-subtle)"><th style="text-align:left;padding:5px 8px;white-space:nowrap">报告期</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">营收(亿)</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">利润(亿)</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">营收增长</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">利润增长</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">EPS</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">ROE</th></tr></thead><tbody>'+
       d.reports.map(function(rp){
         var rg=rp.revenue_growth||0,pg=rp.profit_growth||0;
-        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.02)"><td style="padding:4px 6px;color:var(--text-tertiary)">'+rp.period+'</td>'+
-          '<td style="padding:4px 6px;text-align:right">'+((rp.revenue||0)/1e8).toFixed(1)+'</td>'+
-          '<td style="padding:4px 6px;text-align:right">'+((rp.profit||0)/1e8).toFixed(1)+'</td>'+
-          '<td style="padding:4px 6px;text-align:right;color:'+(rg>=0?'#ef4444':'#22c55e')+'">'+(rg>=0?'+':'')+rg.toFixed(1)+'%</td>'+
-          '<td style="padding:4px 6px;text-align:right;color:'+(pg>=0?'#ef4444':'#22c55e')+'">'+(pg>=0?'+':'')+pg.toFixed(1)+'%</td>'+
-          '<td style="padding:4px 6px;text-align:right">'+(rp.eps||0).toFixed(2)+'</td>'+
-          '<td style="padding:4px 6px;text-align:right">'+(rp.roe||0).toFixed(1)+'%</td></tr>';
+        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.02)"><td style="padding:5px 8px;color:var(--text-tertiary)">'+rp.period+'</td>'+
+          '<td style="padding:5px 8px;text-align:right">'+((rp.revenue||0)/1e8).toFixed(1)+'</td>'+
+          '<td style="padding:5px 8px;text-align:right">'+((rp.profit||0)/1e8).toFixed(1)+'</td>'+
+          '<td style="padding:5px 8px;text-align:right;color:'+(rg>=0?'#ef4444':'#22c55e')+'">'+(rg>=0?'+':'')+rg.toFixed(1)+'%</td>'+
+          '<td style="padding:5px 8px;text-align:right;color:'+(pg>=0?'#ef4444':'#22c55e')+'">'+(pg>=0?'+':'')+pg.toFixed(1)+'%</td>'+
+          '<td style="padding:5px 8px;text-align:right">'+(rp.eps||0).toFixed(2)+'</td>'+
+          '<td style="padding:5px 8px;text-align:right">'+(rp.roe||0).toFixed(1)+'%</td></tr>';
       }).join('')+'</tbody></table></div>';
   } catch(e) {}
 }
@@ -1764,18 +1764,18 @@ async function loadEarnings() {
     var r = await fetch('/api/market/earnings'); var d = await r.json();
     var el = document.getElementById('earningsList');
     if (!d.reports || !d.reports.length) { el.innerHTML='<span style="color:var(--text-tertiary)">暂无业绩数据</span>'; return; }
-    el.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse;table-layout:fixed"><thead><tr style="color:var(--text-tertiary);border-bottom:1px solid var(--border-subtle)"><th style="text-align:left;padding:4px 6px;width:14%">股票</th><th style="padding:4px 6px;width:12%">报告期</th><th style="padding:4px 6px;width:12%">营收(亿)</th><th style="padding:4px 6px;width:12%">利润(亿)</th><th style="padding:4px 6px;width:13%">营收增长</th><th style="padding:4px 6px;width:13%">利润增长</th><th style="padding:4px 6px;width:12%">EPS</th><th style="padding:4px 6px;width:12%">ROE</th></tr></thead><tbody>'+
+    el.innerHTML = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="min-width:700px;width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--text-tertiary);border-bottom:1px solid var(--border-subtle)"><th style="text-align:left;padding:5px 8px;white-space:nowrap">股票</th><th style="padding:5px 8px;white-space:nowrap">报告期</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">营收(亿)</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">利润(亿)</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">营收增长</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">利润增长</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">EPS</th><th style="padding:5px 8px;white-space:nowrap;text-align:right">ROE</th></tr></thead><tbody>'+
     d.reports.map(function(s){
       var rg=s.revenue_growth||0,pg=s.profit_growth||0;
       return '<tr style="border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+
-        '<td style="padding:4px 6px"><b style="color:var(--accent)">'+s.name+'</b></td>'+
-        '<td style="padding:4px 6px;color:var(--text-tertiary)">'+s.period+'</td>'+
-        '<td style="padding:4px 6px;text-align:right">'+((s.revenue||0)/1e8).toFixed(1)+'</td>'+
-        '<td style="padding:4px 6px;text-align:right">'+((s.profit||0)/1e8).toFixed(1)+'</td>'+
-        '<td style="padding:4px 6px;text-align:right;color:'+(rg>=0?'#ef4444':'#22c55e')+'">'+(rg>=0?'+':'')+rg.toFixed(1)+'%</td>'+
-        '<td style="padding:4px 6px;text-align:right;color:'+(pg>=0?'#ef4444':'#22c55e')+'">'+(pg>=0?'+':'')+pg.toFixed(1)+'%</td>'+
-        '<td style="padding:4px 6px;text-align:right">'+(s.eps||0).toFixed(2)+'</td>'+
-        '<td style="padding:4px 6px;text-align:right">'+(s.roe||0).toFixed(1)+'%</td></tr>';
+        '<td style="padding:5px 8px"><b style="color:var(--accent)">'+s.name+'</b></td>'+
+        '<td style="padding:5px 8px;color:var(--text-tertiary)">'+s.period+'</td>'+
+        '<td style="padding:5px 8px;text-align:right">'+((s.revenue||0)/1e8).toFixed(1)+'</td>'+
+        '<td style="padding:5px 8px;text-align:right">'+((s.profit||0)/1e8).toFixed(1)+'</td>'+
+        '<td style="padding:5px 8px;text-align:right;color:'+(rg>=0?'#ef4444':'#22c55e')+'">'+(rg>=0?'+':'')+rg.toFixed(1)+'%</td>'+
+        '<td style="padding:5px 8px;text-align:right;color:'+(pg>=0?'#ef4444':'#22c55e')+'">'+(pg>=0?'+':'')+pg.toFixed(1)+'%</td>'+
+        '<td style="padding:5px 8px;text-align:right">'+(s.eps||0).toFixed(2)+'</td>'+
+        '<td style="padding:5px 8px;text-align:right">'+(s.roe||0).toFixed(1)+'%</td></tr>';
     }).join('')+'</tbody></table></div>';
   } catch(e) {}
 }
