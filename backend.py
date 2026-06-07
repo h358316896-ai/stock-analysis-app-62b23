@@ -1909,6 +1909,30 @@ def earnings_report():
             })
     return jsonify({"reports": items})
 
+@app.route("/api/stock/earnings")
+def stock_earnings():
+    """查询个股业绩报"""
+    code = request.args.get("code","").strip()
+    if not code: return jsonify({"reports": []})
+    url = f"https://datacenter.eastmoney.com/api/data/v1/get?reportName=RPT_LICO_FN_CPD&columns=SECURITY_CODE,SECURITY_NAME_ABBR,NOTICE_DATE,REPORT_DATE_NAME,BASIC_EPS,WEIGHTAVG_ROE,TOTAL_OPERATE_INCOME,PARENT_NETPROFIT,SJLTZ,SJLHZ&filter=(SECURITY_CODE=%22{code}%22)&pageNumber=1&pageSize=10&sortTypes=-1&sortColumns=NOTICE_DATE"
+    data = _cached_eastmoney("earnings_"+code, url, ttl=86400)
+    items = []
+    if data and data.get("result") and data["result"].get("data"):
+        for item in data["result"]["data"]:
+            items.append({
+                "code": item.get("SECURITY_CODE",""),
+                "name": item.get("SECURITY_NAME_ABBR",""),
+                "date": str(item.get("NOTICE_DATE",""))[:10],
+                "period": item.get("REPORT_DATE_NAME",""),
+                "eps": item.get("BASIC_EPS", 0),
+                "roe": item.get("WEIGHTAVG_ROE", 0),
+                "revenue": item.get("TOTAL_OPERATE_INCOME", 0),
+                "profit": item.get("PARENT_NETPROFIT", 0),
+                "revenue_growth": item.get("SJLTZ", 0),
+                "profit_growth": item.get("SJLHZ", 0),
+            })
+    return jsonify({"reports": items, "code": code})
+
 def _guess_limit_reason(name):
     """Guess limit-up reason based on stock name keywords"""
     reasons = {
