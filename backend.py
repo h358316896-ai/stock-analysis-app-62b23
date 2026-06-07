@@ -165,21 +165,10 @@ def api_dashboard():
 
     # Sectors & Concepts & Movers — cache-first for speed
     def _quick_cached(key, url, ttl=3600):
-        """Return cached data immediately. Try live API with short timeout. Never block."""
+        """Return cached data instantly. Never call live API."""
         cache = _load_market_cache()
         entry = cache.get(key)
-        # Always return cached data if available
-        cached = entry["data"] if entry else None
-        # Try live API with very short timeout (don't block)
-        try:
-            live = fetch_eastmoney(url, timeout=3)
-            if live and live.get("data") and live["data"].get("diff"):
-                cache[key] = {"ts": time.time(), "data": live}
-                _save_market_cache(cache)
-                return live
-        except Exception:
-            pass
-        return cached
+        return entry["data"] if entry else None
 
     sectors_data = _quick_cached("sectors", "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2&fields=f2,f3,f4,f12,f14")
     concepts_data = _quick_cached("concepts", "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:3&fields=f2,f3,f4,f12,f14")
