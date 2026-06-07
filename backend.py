@@ -2390,6 +2390,36 @@ def auth_logout():
     return jsonify({"success": True})
 
 
+# ---- Membership APIs ----
+@app.route("/api/auth/membership")
+@login_required
+def get_my_membership():
+    uid = current_user_id()
+    info = auth_db.get_membership(uid)
+    user = auth_db.get_user_by_id(uid)
+    return jsonify({"membership": info["membership"], "expires": info["expires"], "username": user.get("username","") if user else ""})
+
+@app.route("/api/auth/upgrade", methods=["POST"])
+@login_required
+def upgrade_membership():
+    uid = current_user_id()
+    data = request.json or {}
+    tier = data.get("tier", "vip")
+    months = int(data.get("months", 1))
+    if tier not in ("vip", "svip"):
+        return jsonify({"error": "无效的会员等级"}), 400
+    prices = {"vip": 29, "svip": 69}
+    amount = prices.get(tier, 29) * months
+    # In production: redirect to PayJS/微信支付
+    # For now: directly upgrade (demo mode)
+    result = auth_db.upgrade_membership(uid, tier, months)
+    return jsonify({"success": True, "tier": tier, "expires": result["expires"], "amount": amount, "note": "演示模式-直接升级。上线请接入PayJS微信支付。"})
+
+@app.route("/api/member/count")
+def member_count():
+    return jsonify(auth_db.get_member_count())
+
+
 # ---- Watchlist APIs (login required) ----
 @app.route("/api/watchlist")
 @login_required

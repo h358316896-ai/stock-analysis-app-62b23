@@ -47,9 +47,16 @@ def init_db():
         email TEXT UNIQUE,
         pwd_hash TEXT NOT NULL,
         salt TEXT NOT NULL,
+        membership TEXT DEFAULT 'free',
+        membership_expires TEXT DEFAULT '',
         created_at TEXT DEFAULT (datetime('now', 'localtime'))
     )
     """)
+    # Migration: add membership columns if missing (for existing DB)
+    try: cur.execute("ALTER TABLE users ADD COLUMN membership TEXT DEFAULT 'free'")
+    except: pass
+    try: cur.execute("ALTER TABLE users ADD COLUMN membership_expires TEXT DEFAULT ''")
+    except: pass
     # 自选股表
     cur.execute("""
     CREATE TABLE IF NOT EXISTS watchlist (
@@ -287,6 +294,49 @@ def get_analysis_history(user_id: int, limit: int = 20):
     rows = cur.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+# ==========================================================
+# 会员管理
+# ==========================================================
+def get_membership(user_id):
+    """获取用户会员等级"""
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute("SELECT membership, membership_expires FROM users WHERE id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row: return {"membership": "free", "expires": ""}
+    return {"membership": row["membership"] or "free", "expires": row["membership_expires"] or ""}
+
+def upgrade_membership(user_id, tier, months=1):
+    """升级会员"""
+    from datetime import datetime, timedelta
+    current = get_membership(user_id)
+    if current["membership"] == tier and current["expires"]:
+        # Extend existing
+        old_exp = datetime.strptime(current["expires"], "%Y-%m-%d")
+        new_exp = old_exp + timedelta(days=30*months)
+    else:
+        new_exp = datetime.now() + timedelta(days=30*months)
+    expires_str = new_exp.strftime("%Y-%m-%d")
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET membership = ?, membership_expires = ? WHERE id = ?",
+                (tier, expires_str, user_id))
+    conn.commit(); conn.close()
+    return {"success": True, "membership": tier, "expires": expires_str}
+
+def get_member_count():
+    """统计各级会员数量"""
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("SELECT membership, COUNT(*) as cnt FROM users GROUP BY membership")
+    rows = cur.fetchall()
+    conn.close()
+    result = {"free": 0, "vip": 0, "svip": 0}
+    for tier, cnt in rows:
+        result[tier] = cnt
+    return result
 
 # 初始化
 init_db()
