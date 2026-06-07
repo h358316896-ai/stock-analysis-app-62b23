@@ -990,6 +990,11 @@ body {
   <div class="panel" id="panel-retail">
     <div class="glass" style="padding:14px;margin-bottom:12px">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
+        <!-- 业绩报 -->
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px;grid-column:1/-1">
+          <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--green)">📊 最新业绩报</h4>
+          <div id="earningsList" style="font-size:11px;max-height:300px;overflow-y:auto"></div>
+        </div>
         <!-- 涨停复盘 -->
         <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
           <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:#ef4444">🀄 涨停板复盘</h4>
@@ -1578,6 +1583,7 @@ async function loadRetailPanel() {
   loadIPO();
   loadTechScreen('golden_cross');
   if (state.stock) loadRetailStockData();
+  loadEarnings();
 }
 
 // 涨停复盘
@@ -1723,6 +1729,27 @@ async function loadCapitalGame(code) {
       '<div style="width:'+mainPct+'%;background:linear-gradient(90deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white">主力 '+(mainTotal>=0?'+':'')+mainTotal.toFixed(0)+'万</div>'+
       '<div style="width:'+(100-mainPct)+'%;background:linear-gradient(90deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white">散户 '+(retailTotal>=0?'+':'')+retailTotal.toFixed(0)+'万</div></div>'+
       '<div style="font-size:10px;color:var(--text-tertiary)">'+(mainTotal>retailTotal?'主力占优 — 偏多信号':'散户占优 — 偏空信号')+'</div>';
+  } catch(e) {}
+}
+
+async function loadEarnings() {
+  try {
+    var r = await fetch('/api/market/earnings'); var d = await r.json();
+    var el = document.getElementById('earningsList');
+    if (!d.reports || !d.reports.length) { el.innerHTML='<span style="color:var(--text-tertiary)">暂无业绩数据</span>'; return; }
+    el.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse"><thead><tr style="color:var(--text-tertiary);border-bottom:1px solid var(--border-subtle)"><th style="text-align:left;padding:4px 8px">股票</th><th style="padding:4px 8px">报告期</th><th style="padding:4px 8px">营收(亿)</th><th style="padding:4px 8px">利润(亿)</th><th style="padding:4px 8px">营收增长</th><th style="padding:4px 8px">利润增长</th><th style="padding:4px 8px">EPS</th><th style="padding:4px 8px">ROE</th></tr></thead><tbody>'+
+    d.reports.map(function(s){
+      var rg=s.revenue_growth||0,pg=s.profit_growth||0;
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+
+        '<td style="padding:4px 8px"><b style="color:var(--accent)">'+s.name+'</b></td>'+
+        '<td style="padding:4px 8px;color:var(--text-tertiary)">'+s.period+'</td>'+
+        '<td style="padding:4px 8px">'+((s.revenue||0)/1e8).toFixed(1)+'</td>'+
+        '<td style="padding:4px 8px">'+((s.profit||0)/1e8).toFixed(1)+'</td>'+
+        '<td style="padding:4px 8px;color:'+(rg>=0?'#ef4444':'#22c55e')+'">'+(rg>=0?'+':'')+rg.toFixed(1)+'%</td>'+
+        '<td style="padding:4px 8px;color:'+(pg>=0?'#ef4444':'#22c55e')+'">'+(pg>=0?'+':'')+pg.toFixed(1)+'%</td>'+
+        '<td style="padding:4px 8px">'+(s.eps||0).toFixed(2)+'</td>'+
+        '<td style="padding:4px 8px">'+(s.roe||0).toFixed(1)+'%</td></tr>';
+    }).join('')+'</tbody></table></div>';
   } catch(e) {}
 }
 
