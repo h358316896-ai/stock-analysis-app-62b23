@@ -435,8 +435,8 @@ body { font-family:var(--font); background:linear-gradient(180deg, #080818 0%, #
     const labels = { 'sh000001':'上证指数','sz399001':'深证成指','sz399006':'创业板指','hk800000':'恒生指数','us.INX':'标普500','us.IXIC':'纳斯达克','us.DJI':'道琼斯' };
     const all = [...d.indices, ...d.indices]; // duplicate for seamless loop
     document.getElementById('tickerEl').innerHTML = all.map(i => {
-      const up = i.change_pct >= 0, c = up ? '#22c55e' : '#ef4444', s = up ? '+' : '';
-      return `<span class="item"><span class="sym">${labels[i.code]||i.name}</span><span>${i.price.toFixed(2)}</span><span style="color:${c};font-size:12px">${s}${i.change_pct.toFixed(2)}%</span><span class="divider"></span></span>`;
+      const up = i.change_pct >= 0, c = up ? '#22c55e' : '#ef4444', a = up ? '↑ ' : '↓ ';
+      return `<span class="item"><span class="sym">${labels[i.code]||i.name}</span><span>${i.price.toFixed(2)}</span><span style="color:${c};font-size:12px">${a}${Math.abs(i.change_pct).toFixed(2)}%</span><span class="divider"></span></span>`;
     }).join('');
   } catch(e) {}
 })();
