@@ -152,6 +152,8 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
     <button data-panel="imitate">🔥 风格模仿</button>
     <button data-panel="script">🎬 视频脚本</button>
     <button data-panel="voice">🎙️ 智能配音</button>
+    <button data-panel="seo">🚀 SEO优化</button>
+    <button data-panel="titles">💥 爆款标题</button>
     <button data-panel="hot">📊 热点趋势</button>
     <button data-panel="templates">📋 模板库</button>
     <button data-panel="history">📜 历史记录</button>
@@ -256,6 +258,49 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
     </div>
   </div>
 
+  <!-- Panel: SEO -->
+  <div class="panel" id="panel-seo">
+    <div class="card">
+      <h3>SEO 优化引擎</h3>
+      <label>原标题或核心关键词</label>
+      <input type="text" id="seoInput" placeholder="例如：股票入门教程、AI编程工具推荐...">
+      <div class="row">
+        <div><label>目标平台</label><select id="seoPlatform"><option value="web">搜索引擎(百度/Google)</option><option value="wechat">微信搜一搜</option><option value="xiaohongshu">小红书搜索</option><option value="douyin">抖音搜索</option></select></div>
+        <div><label>关键词密度</label><select id="seoDensity"><option value="light">自然(1-2%)</option><option value="normal" selected>适中(2-3%)</option><option value="heavy">激进(3-5%)</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="generateSEO()">生成SEO内容 →</button>
+      <div class="result-box" id="resultSEO">
+        <div id="resultSEOContent"></div>
+        <div class="result-actions">
+          <button class="btn btn-sm btn-primary" onclick="copyResult('resultSEOContent')">📋 一键复制</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportTxt('resultSEOContent')">💾 导出</button>
+        </div>
+      </div>
+      <div class="spinner-wrap" id="loadingSEO"><div class="spinner"></div>正在优化...</div>
+    </div>
+  </div>
+
+  <!-- Panel: Titles -->
+  <div class="panel" id="panel-titles">
+    <div class="card">
+      <h3>爆款标题生成器</h3>
+      <label>内容话题</label>
+      <input type="text" id="titlesTopic" placeholder="例如：如何用AI提升工作效率">
+      <div class="row">
+        <div><label>标题风格</label><select id="titlesStyle"><option value="curiosity">好奇心(悬念)</option><option value="number">数字清单</option><option value="howto">实操教程</option><option value="contrast">反常识/对比</option><option value="emotional">情绪共鸣</option><option value="all" selected>全部风格(各2个)</option></select></div>
+        <div><label>平台</label><select id="titlesPlatform"><option value="wechat">微信公众号</option><option value="xiaohongshu" selected>小红书</option><option value="douyin">抖音</option><option value="toutiao">今日头条</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="generateTitles()">生成标题 →</button>
+      <div class="result-box" id="resultTitles">
+        <div id="resultTitlesContent"></div>
+        <div class="result-actions">
+          <button class="btn btn-sm btn-primary" onclick="copyResult('resultTitlesContent')">📋 一键复制</button>
+        </div>
+      </div>
+      <div class="spinner-wrap" id="loadingTitles"><div class="spinner"></div>正在生成标题...</div>
+    </div>
+  </div>
+
   <!-- Panel: Hot Topics -->
   <div class="panel" id="panel-hot">
     <div class="card">
@@ -310,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('panel-' + b.dataset.panel).classList.add('active');
       if (b.dataset.panel === 'hot') loadHotTopics();
       if (b.dataset.panel === 'history') renderHistory();
+      if (b.dataset.panel === 'seo') {}
     });
   });
 });
@@ -400,6 +446,42 @@ function showToast(msg) {
   }
   t.textContent = msg; t.style.opacity = '1'; t.style.bottom = '80px';
   setTimeout(() => { t.style.opacity = '0'; }, 2000);
+}
+
+// SEO Generation
+async function generateSEO() {
+  var topic = document.getElementById('seoInput').value.trim();
+  var platform = document.getElementById('seoPlatform').value;
+  var density = document.getElementById('seoDensity').value;
+  if (!topic) { alert('请输入关键词'); return; }
+  toggleLoading('loadingSEO', true);
+  var densityLabel = {light:'自然融入(1-2%)',normal:'适中优化(2-3%)',heavy:'深度优化(3-5%)'}[density]||density;
+  var prompt = '请针对关键词"'+topic+'"撰写一篇SEO优化的文章。目标平台：'+platform+'。关键词密度：'+densityLabel+'。要求：1) 标题包含核心关键词 2) 首段自然引入关键词 3) H2/H3小标题含长尾词 4) 文末有关键词总结 5) Meta描述(150字内) 6) 标签建议。请用中文撰写。';
+  var result = await callAI('你是一位专业的SEO内容优化师。擅长搜索引擎优化和内容策略。请用中文回复。', prompt);
+  toggleLoading('loadingSEO', false);
+  if (result) {
+    document.getElementById('resultSEOContent').textContent = result;
+    document.getElementById('resultSEO').classList.add('show');
+    addToHistory('SEO: '+topic.slice(0,30), topic, result);
+  }
+}
+
+// Titles Generation
+async function generateTitles() {
+  var topic = document.getElementById('titlesTopic').value.trim();
+  var style = document.getElementById('titlesStyle').value;
+  var platform = document.getElementById('titlesPlatform').value;
+  if (!topic) { alert('请输入话题'); return; }
+  toggleLoading('loadingTitles', true);
+  var styleLabel = {curiosity:'好奇心悬念类',number:'数字清单类',howto:'实操教程类',contrast:'反常识对比类',emotional:'情绪共鸣类',all:'全部类型'}[style]||style;
+  var prompt = '请为话题"'+topic+'"生成爆款标题。风格：'+styleLabel+'。目标平台：'+platform+'。要求：每个标题20-30字，包含emoji，有吸引点击的钩子，生成10-15个标题，按打开率从高到低排列。每个标题后标注使用的技巧(如：悬念/数字/对比/情绪等)。请用中文回复。';
+  var result = await callAI('你是一位顶级自媒体标题策划师。擅长创作高打开率的爆款标题。请用中文回复。', prompt);
+  toggleLoading('loadingTitles', false);
+  if (result) {
+    document.getElementById('resultTitlesContent').textContent = result;
+    document.getElementById('resultTitles').classList.add('show');
+    addToHistory('标题: '+topic.slice(0,30), topic, result);
+  }
 }
 
 // Content Generation
