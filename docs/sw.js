@@ -1,13 +1,12 @@
 // Service Worker — cache-first for instant repeat loads
-const CACHE = 'stockai-v2';
-const API_CACHE = 'stockai-api-v2';
+const CACHE = 'stockai-v3';
+const API_CACHE = 'stockai-api-v3';
 
 // Core files to cache immediately
 const PRECACHE = [
+  '/',
   '/stock',
-  '/static/stock.html',
-  '/static/index.html',
-  '/static/manifest.json'
+  '/manifest.json'
 ];
 
 // Install: precache core files

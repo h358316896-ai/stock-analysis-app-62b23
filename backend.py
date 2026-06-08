@@ -139,6 +139,15 @@ def home():
     return send_file(os.path.join(STATIC_DIR, "index.html"), mimetype="text/html; charset=utf-8")
 
 # -----------------------------------------------------------
+# Lightweight health/keepalive endpoint — used by GitHub Actions
+# and the frontend warm-up ping to keep the dyno awake. Returns a
+# tiny payload so it is cheap to hit every few minutes.
+# -----------------------------------------------------------
+@app.route("/health")
+def health():
+    return {"status": "ok"}, 200
+
+# -----------------------------------------------------------
 # Unified dashboard endpoint - combines indices + sectors + movers in ONE call
 # -----------------------------------------------------------
 @app.route("/api/dashboard")
