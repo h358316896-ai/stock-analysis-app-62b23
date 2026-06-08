@@ -23,3 +23,6 @@ backend.log
 .DS_Store
 Thumbs.db
 nul
+
+# Local Netlify folder
+.netlify

@@ -1,0 +1,26 @@
+name: Keep Railway backend awake
+
+# Pings the backend /health endpoint on a schedule so the Railway dyno
+# never goes to sleep — eliminating cold-start latency for visitors.
+on:
+  schedule:
+    # Every 5 minutes. GitHub may delay scheduled runs under load, so the
+    # frontend warm-up ping is the second line of defence.
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}   # allow manual trigger from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          URL="https://stock-analysis-app-production-da60.up.railway.app/health"
+          echo "Pinging $URL"
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$URL" || echo "000")
+          echo "HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "Warm-up ping did not return 200 (got $code) — retrying once"
+            sleep 5
+            curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$URL" || true
+          fi
