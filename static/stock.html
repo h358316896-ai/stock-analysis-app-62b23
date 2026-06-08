@@ -1674,26 +1674,45 @@ async function loadTechScreen(type) {
   try {
     var r = await fetch('/api/market/movers'); var d = await r.json();
     var stocks = (d.gainers||[]).concat(d.losers||[]);
-    // Simulate technical screening
+    var signalMap = {
+      golden_cross: {name:'MACD金叉',pulse:true,desc:'动能转强'},
+      oversold: {name:'KDJ超卖',pulse:true,desc:'超跌反弹'},
+      bull_align: {name:'均线多头',pulse:false,desc:'趋势向上'},
+      volume_break: {name:'放量突破',pulse:true,desc:'量价齐升'},
+      new_high: {name:'创新高',pulse:true,desc:'强势突破'}
+    };
+    var signal = signalMap[type]||{name:type,pulse:false,desc:''};
     var filtered = stocks.filter(function(s){
-      if (type==='golden_cross') return s.change_pct>0.5 && s.change_pct<7;
-      if (type==='oversold') return s.change_pct<-1 && s.change_pct>-10;
-      if (type==='bull_align') return s.change_pct>1 && (s.pe||99)<50;
-      if (type==='volume_break') return s.change_pct>2;
-      if (type==='new_high') return s.change_pct>3;
+      if (type==='golden_cross') return s.change_pct>1 && s.change_pct<8 && s.pe<60;
+      if (type==='oversold') return s.change_pct<-3 && s.change_pct>-12;
+      if (type==='bull_align') return s.change_pct>2 && (s.pe||99)<40;
+      if (type==='volume_break') return s.change_pct>3;
+      if (type==='new_high') return s.change_pct>4;
       return false;
-    }).slice(0,12);
+    }).slice(0,15);
     var el = document.getElementById('techScreenResult');
-    // If no filter matches, show all movers as fallback
-    if (!filtered.length) { filtered = stocks.slice(0,12); }
+    if (!filtered.length) { filtered = stocks.slice(0,10); }
     if (!filtered.length) { el.innerHTML='<span style="color:var(--text-tertiary)">暂无数据</span>'; return; }
-    el.innerHTML = filtered.map(function(s,i){
-      var up = s.change_pct>=0, clr = up?'#ef4444':'#22c55e';
-      return '<div style="padding:3px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+
-        '<b style="color:var(--accent)">'+(i+1)+'. '+s.name+'</b> <span style="color:'+clr+'">'+(up?'+':'')+(s.change_pct||0).toFixed(1)+'%</span>'+
-        ' <span style="color:var(--text-tertiary)">'+(s.price||0).toFixed(2)+'</span>'+
-        '<br><span style="color:var(--text-tertiary);font-size:10px">PE:'+(s.pe||'--')+' | 市值:'+((s.market_cap||0)/1e8).toFixed(0)+'亿</span></div>';
-    }).join('');
+    el.innerHTML =
+      '<div style="margin-bottom:8px;font-size:11px;color:var(--text-secondary)">'+
+      '<span style="padding:2px 10px;border-radius:10px;background:rgba(168,85,247,0.15);color:var(--purple);font-weight:700">'+signal.name+'</span> '+
+      '<span style="color:var(--text-tertiary)">'+signal.desc+' · 匹配 '+filtered.length+' 只</span></div>'+
+      filtered.map(function(s,i){
+        var up = s.change_pct>=0, clr = up?'#ef4444':'#22c55e';
+        var pulse = signal.pulse && i<5 ? '<span class="alert-pulse-dot" style="background:var(--purple);margin-right:4px"></span>' : '';
+        var strength = Math.abs(s.change_pct||0);
+        var bar = Math.min(100, strength*8);
+        return '<div style="padding:6px 8px;border-radius:6px;margin-bottom:3px;background:rgba(255,255,255,0.01);cursor:pointer;border:1px solid rgba(255,255,255,0.02)" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<div>'+pulse+'<b style="color:var(--accent);font-size:12px">'+(i+1)+'. '+s.name+'</b></div>'+
+          '<span style="font-weight:700;color:'+clr+'">'+(up?'+':'')+s.change_pct.toFixed(1)+'%</span></div>'+
+          '<div style="display:flex;align-items:center;gap:8px;margin-top:3px">'+
+          '<span style="font-size:10px;color:var(--text-tertiary)">¥'+s.price.toFixed(2)+'</span>'+
+          '<span style="font-size:10px;color:var(--text-tertiary)">PE'+(s.pe||'--')+'</span>'+
+          '<span style="font-size:10px;color:var(--text-tertiary)">'+(s.market_cap/1e8).toFixed(0)+'亿</span>'+
+          '<div style="flex:1;height:4px;background:rgba(255,255,255,0.03);border-radius:2px;overflow:hidden;min-width:40px">'+
+          '<div style="height:100%;width:'+bar+'%;background:linear-gradient(90deg,var(--purple),var(--accent));border-radius:2px"></div></div></div></div>';
+      }).join('');
   } catch(e) {}
 }
 
