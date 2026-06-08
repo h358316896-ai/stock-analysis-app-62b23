@@ -1406,7 +1406,7 @@ function renderMoversTable(id, arr) {
   try {
     document.getElementById(id).innerHTML = (arr||[]).slice(0,12).map(function(s){
       var up = s.change_pct >= 0, c = up ? 'text-green' : 'text-red';
-      return '<tr><td><span class="mover-symbol" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span><br><span style="font-size:11px;color:var(--text-tertiary)">'+s.code+'</span></td><td>'+s.price.toFixed(2)+'</td><td class="'+c+'">'+(up?'↑ ':'↓ '')+Math.abs(s.change_pct).toFixed(2)+'%</td></tr>';
+      return '<tr><td><span class="mover-symbol" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span><br><span style="font-size:11px;color:var(--text-tertiary)">'+s.code+'</span></td><td>'+s.price.toFixed(2)+'</td><td class="'+c+'">'+(up?'↑ ':'↓ ')+Math.abs(s.change_pct).toFixed(2)+'%</td></tr>';
     }).join('');
   } catch(e) {}
 }
@@ -1446,7 +1446,7 @@ async function loadMovers() {
     const render = (arr, id) => {
       document.getElementById(id).innerHTML = (arr || []).slice(0, 12).map(s => {
         const up = s.change_pct >= 0, c = up ? 'text-green' : 'text-red';
-        return `<tr><td><span class="mover-symbol" onclick="quickSearch('${s.code}','cn')">${s.name}</span><br><span style="font-size:11px;color:var(--text-tertiary)">${s.code}</span></td><td>${s.price.toFixed(2)}</td><td class="${c}">${up?'↑ ':'↓ ''}${Math.abs(s.change_pct).toFixed(2)}%</td></tr>`;
+        return `<tr><td><span class="mover-symbol" onclick="quickSearch('${s.code}','cn')">${s.name}</span><br><span style="font-size:11px;color:var(--text-tertiary)">${s.code}</span></td><td>${s.price.toFixed(2)}</td><td class="${c}">${up?'↑ ':'↓ '}${Math.abs(s.change_pct).toFixed(2)}%</td></tr>`;
       }).join('');
     };
     render(d.gainers, 'gainersBody');
@@ -1497,7 +1497,7 @@ async function loadNorthBound() {
     var recent = d.flows.slice(-10);
     var total = recent.reduce(function(s,f){return s+f.net_flow;},0);
     el.innerHTML =
-      '<div style="font-size:20px;font-weight:700;color:'+(total>=0?'#ef4444':'#22c55e')+'">'+(total>=0?'↑ ':'↓ '')+Math.abs(total).toFixed(0)+'亿</div>'+
+      '<div style="font-size:20px;font-weight:700;color:'+(total>=0?'#ef4444':'#22c55e')+'">'+(total>=0?'↑ ':'↓ ')+Math.abs(total).toFixed(0)+'亿</div>'+
       '<div style="font-size:11px;color:var(--text-tertiary)">近10日累计净'+(total>=0?'买入':'卖出')+'</div>'+
       '<div style="margin-top:6px;font-size:11px;color:var(--text-tertiary)">更新: '+d.updated+'</div>';
   } catch(e) {}
@@ -1535,7 +1535,7 @@ async function loadSectorFlowRanking() {
     var r = await fetch('/api/market/sector-flow-ranking'); var d = await r.json();
     document.getElementById('sectorFlowList').innerHTML = (d.sectors||[]).slice(0,15).map(function(s,i){
       var clr = (s.main_net||0)>=0 ? '#ef4444' : '#22c55e';
-      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:11px"><span>'+(i+1)+'. '+s.name+'</span><span style="color:'+clr+'">'+(s.main_net>=0?'↑ ':'↓ '')+Math.abs(s.main_net/1e4).toFixed(1)+'亿</span></div>';
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:11px"><span>'+(i+1)+'. '+s.name+'</span><span style="color:'+clr+'">'+(s.main_net>=0?'↑ ':'↓ ')+Math.abs(s.main_net/1e4).toFixed(1)+'亿</span></div>';
     }).join('')||'<span style="color:var(--text-tertiary);font-size:11px">Loading...</span>';
   } catch(e) {}
 }
@@ -1568,7 +1568,7 @@ async function loadBlockTrades(code) {
     if (!d.trades||!d.trades.length) { el.innerHTML='<span style="color:var(--text-tertiary)">近期无大宗交易</span>'; return; }
     el.innerHTML = d.trades.slice(0,8).map(function(t){
       var p = t.premium||0, clr = p>0?'#ef4444':p<0?'#22c55e':'var(--text-tertiary)';
-      return '<div style="padding:2px 0;font-size:11px">'+t.date+' <b>'+t.price.toFixed(2)+'</b> <span style="color:'+clr+'">'+(p>0?'↑ ':'↓ '')+Math.abs(p).toFixed(1)+'%'</span><br><span style="color:var(--text-tertiary)">量:'+(t.volume/1e4).toFixed(0)+'万股</span></div>';
+      return '<div style="padding:2px 0;font-size:11px">'+t.date+' <b>'+t.price.toFixed(2)+'</b> <span style="color:'+clr+'">'+(p>0?'↑ ':'↓ ')+Math.abs(p).toFixed(1)+'%</span><br><span style="color:var(--text-tertiary)">量:'+(t.volume/1e4).toFixed(0)+'万股</span></div>';
     }).join('');
   } catch(e) {}
 }
@@ -1713,7 +1713,7 @@ async function loadTechScreen(type) {
         return '<div style="padding:6px 8px;border-radius:6px;margin-bottom:3px;background:rgba(255,255,255,0.01);cursor:pointer;border:1px solid rgba(255,255,255,0.02)" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+
           '<div style="display:flex;justify-content:space-between;align-items:center">'+
           '<div>'+pulse+'<b style="color:var(--accent);font-size:12px">'+(i+1)+'. '+s.name+'</b></div>'+
-          '<span style="font-weight:700;color:'+clr+'">'+(up?'↑ ':'↓ '')+Math.abs(s.change_pct).toFixed(1)+'%</span></div>'+
+          '<span style="font-weight:700;color:'+clr+'">'+(up?'↑ ':'↓ ')+Math.abs(s.change_pct).toFixed(1)+'%</span></div>'+
           '<div style="display:flex;align-items:center;gap:8px;margin-top:3px">'+
           '<span style="font-size:10px;color:var(--text-tertiary)">¥'+s.price.toFixed(2)+'</span>'+
           '<span style="font-size:10px;color:var(--text-tertiary)">PE'+(s.pe||'--')+'</span>'+
@@ -1757,8 +1757,8 @@ async function loadCapitalGame(code) {
     el.innerHTML =
       '<div style="margin-bottom:8px"><span style="font-size:11px;color:var(--text-tertiary)">近10日主力资金博弈</span></div>'+
       '<div style="display:flex;height:24px;border-radius:6px;overflow:hidden;margin-bottom:6px">'+
-      '<div style="width:'+mainPct+'%;background:linear-gradient(90deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white">主力 '+(mainTotal>=0?'↑ ':'↓ '')+Math.abs(mainTotal).toFixed(0)+'万</div>'+
-      '<div style="width:'+(100-mainPct)+'%;background:linear-gradient(90deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white">散户 '+(retailTotal>=0?'↑ ':'↓ '')+Math.abs(retailTotal).toFixed(0)+'万</div></div>'+
+      '<div style="width:'+mainPct+'%;background:linear-gradient(90deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white">主力 '+(mainTotal>=0?'↑ ':'↓ ')+Math.abs(mainTotal).toFixed(0)+'万</div>'+
+      '<div style="width:'+(100-mainPct)+'%;background:linear-gradient(90deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white">散户 '+(retailTotal>=0?'↑ ':'↓ ')+Math.abs(retailTotal).toFixed(0)+'万</div></div>'+
       '<div style="font-size:10px;color:var(--text-tertiary)">'+(mainTotal>retailTotal?'主力占优 — 偏多信号':'散户占优 — 偏空信号')+'</div>';
   } catch(e) {}
 }
@@ -1778,8 +1778,8 @@ async function searchEarnings() {
         return '<tr style="border-bottom:1px solid rgba(255,255,255,0.02)"><td style="padding:5px 8px;color:var(--text-tertiary)">'+rp.period+'</td>'+
           '<td style="padding:5px 8px;text-align:right">'+((rp.revenue||0)/1e8).toFixed(1)+'</td>'+
           '<td style="padding:5px 8px;text-align:right">'+((rp.profit||0)/1e8).toFixed(1)+'</td>'+
-          '<td style="padding:5px 8px;text-align:right;color:'+(rg>=0?'#ef4444':'#22c55e')+'">'+(rg>=0?'↑ ':'↓ '')+Math.abs(rg).toFixed(1)+'%</td>'+
-          '<td style="padding:5px 8px;text-align:right;color:'+(pg>=0?'#ef4444':'#22c55e')+'">'+(pg>=0?'↑ ':'↓ '')+Math.abs(pg).toFixed(1)+'%</td>'+
+          '<td style="padding:5px 8px;text-align:right;color:'+(rg>=0?'#ef4444':'#22c55e')+'">'+(rg>=0?'↑ ':'↓ ')+Math.abs(rg).toFixed(1)+'%</td>'+
+          '<td style="padding:5px 8px;text-align:right;color:'+(pg>=0?'#ef4444':'#22c55e')+'">'+(pg>=0?'↑ ':'↓ ')+Math.abs(pg).toFixed(1)+'%</td>'+
           '<td style="padding:5px 8px;text-align:right">'+(rp.eps||0).toFixed(2)+'</td>'+
           '<td style="padding:5px 8px;text-align:right">'+(rp.roe||0).toFixed(1)+'%</td></tr>';
       }).join('')+'</tbody></table></div>';
@@ -1799,8 +1799,8 @@ async function loadEarnings() {
         '<td style="padding:5px 8px;color:var(--text-tertiary)">'+s.period+'</td>'+
         '<td style="padding:5px 8px;text-align:right">'+((s.revenue||0)/1e8).toFixed(1)+'</td>'+
         '<td style="padding:5px 8px;text-align:right">'+((s.profit||0)/1e8).toFixed(1)+'</td>'+
-        '<td style="padding:5px 8px;text-align:right;color:'+(rg>=0?'#ef4444':'#22c55e')+'">'+(rg>=0?'↑ ':'↓ '')+Math.abs(rg).toFixed(1)+'%</td>'+
-        '<td style="padding:5px 8px;text-align:right;color:'+(pg>=0?'#ef4444':'#22c55e')+'">'+(pg>=0?'↑ ':'↓ '')+Math.abs(pg).toFixed(1)+'%</td>'+
+        '<td style="padding:5px 8px;text-align:right;color:'+(rg>=0?'#ef4444':'#22c55e')+'">'+(rg>=0?'↑ ':'↓ ')+Math.abs(rg).toFixed(1)+'%</td>'+
+        '<td style="padding:5px 8px;text-align:right;color:'+(pg>=0?'#ef4444':'#22c55e')+'">'+(pg>=0?'↑ ':'↓ ')+Math.abs(pg).toFixed(1)+'%</td>'+
         '<td style="padding:5px 8px;text-align:right">'+(s.eps||0).toFixed(2)+'</td>'+
         '<td style="padding:5px 8px;text-align:right">'+(s.roe||0).toFixed(1)+'%</td></tr>';
     }).join('')+'</tbody></table></div>';
@@ -1821,7 +1821,7 @@ async function loadChipConcentration(code) {
       '<div><span style="color:var(--text-tertiary)">最新股东</span><br><b>'+((latest.holders||0)/1e4).toFixed(1)+'万户</b></div>'+
       '<div><span style="color:var(--text-tertiary)">人均持股</span><br><b>'+((latest.avg_hold||0)/100).toFixed(0)+'手</b></div>'+
       '<div><span style="color:var(--text-tertiary)">变化趋势</span><br><b style="color:'+clr+'">筹码'+trend+'</b></div>'+
-      '<div><span style="color:var(--text-tertiary)">变动人数</span><br><b style="color:'+clr+'">'+(change>0?'↑ ':'↓ '')+Math.abs(change/1e4).toFixed(1)+'万户</b></div>'+
+      '<div><span style="color:var(--text-tertiary)">变动人数</span><br><b style="color:'+clr+'">'+(change>0?'↑ ':'↓ ')+Math.abs(change/1e4).toFixed(1)+'万户</b></div>'+
       '</div>';
   } catch(e) {}
 }
@@ -2177,7 +2177,7 @@ function drawCandlestick(canvas, data, hoverIdx) {
     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 10px Inter'; ctx.textAlign = 'center';
     var up2 = k.close >= k.open;
     ctx.fillStyle = up2 ? '#22c55e' : '#ef4444';
-    ctx.fillText((up2?'↑ ':'↓ '')+((k.close-k.open)/(k.open||1)*100).toFixed(2)+'%', cx, PAD.T+12);
+    ctx.fillText((up2?'↑ ':'↓ ')+((k.close-k.open)/(k.open||1)*100).toFixed(2)+'%', cx, PAD.T+12);
   }
 }
 
@@ -2258,7 +2258,7 @@ async function loadIndicatorsChart(code, mkt) {
       html += '<div class="tt-row"><span class="tt-label">收盘</span><span class="'+clr+'">'+c.toFixed(2)+'</span></div>';
       html += '<div class="tt-row"><span class="tt-label">成交量</span><span>'+fmt(v)+'</span></div>';
       var chg = ((c-o)/(o||1)*100).toFixed(2);
-      html += '<div class="tt-row"><span class="tt-label">涨跌</span><span class="'+clr+'">'+(up?'↑ ':'↓ '')+Math.abs(chg)+'%</span></div>';
+      html += '<div class="tt-row"><span class="tt-label">涨跌</span><span class="'+clr+'">'+(up?'↑ ':'↓ ')+Math.abs(chg)+'%</span></div>';
       return html;
     });
   } catch(e) {}
@@ -2447,8 +2447,8 @@ function drawFlowCompare(flows, hoverIdx) {
     ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.arc(hx, ys(retailVals[hoverIdx]), 3, 0, Math.PI*2); ctx.fill();
     // Value labels
     ctx.font = 'bold 10px Inter, sans-serif';
-    var mLabel = (mainVals[hoverIdx]>=0?'↑ ':'↓ '')+Math.abs(mainVals[hoverIdx]).toFixed(1)+'W';
-    var rLabel = (retailVals[hoverIdx]>=0?'↑ ':'↓ '')+Math.abs(retailVals[hoverIdx]).toFixed(1)+'W';
+    var mLabel = (mainVals[hoverIdx]>=0?'↑ ':'↓ ')+Math.abs(mainVals[hoverIdx]).toFixed(1)+'W';
+    var rLabel = (retailVals[hoverIdx]>=0?'↑ ':'↓ ')+Math.abs(retailVals[hoverIdx]).toFixed(1)+'W';
     ctx.textAlign = 'left';
     ctx.fillStyle = '#3b82f6'; ctx.fillText(mLabel, hx + 8, ys(mainVals[hoverIdx]) - 6);
     ctx.fillStyle = '#f97316'; ctx.fillText(rLabel, hx + 8, ys(retailVals[hoverIdx]) + 14);
@@ -2504,9 +2504,9 @@ function initFlowCompareHover(flows) {
     var mv = fd.mainVals[idx], rv = fd.retailVals[idx];
     var mUp = mv >= 0, rUp = rv >= 0;
     var html = '<div class="tt-date">'+dt+'</div>';
-    html += '<div class="tt-row"><span class="tt-label" style="color:#3b82f6">● Main Force</span><span class="'+(mUp?'tt-up':'tt-down')+'">'+(mUp?'↑ ':'↓ '')+Math.abs(mv).toFixed(2)+'W</span></div>';
-    html += '<div class="tt-row"><span class="tt-label" style="color:#f97316">● Retail</span><span class="'+(rUp?'tt-up':'tt-down')+'">'+(rUp?'↑ ':'↓ '')+Math.abs(rv).toFixed(2)+'W</span></div>';
-    html += '<div class="tt-row"><span class="tt-label">Net</span><span class="'+(mv+rv>=0?'tt-up':'tt-down')+'">'+(mv+rv>=0?'↑ ':'↓ '')+Math.abs(mv+rv).toFixed(2)+'W</span></div>';
+    html += '<div class="tt-row"><span class="tt-label" style="color:#3b82f6">● Main Force</span><span class="'+(mUp?'tt-up':'tt-down')+'">'+(mUp?'↑ ':'↓ ')+Math.abs(mv).toFixed(2)+'W</span></div>';
+    html += '<div class="tt-row"><span class="tt-label" style="color:#f97316">● Retail</span><span class="'+(rUp?'tt-up':'tt-down')+'">'+(rUp?'↑ ':'↓ ')+Math.abs(rv).toFixed(2)+'W</span></div>';
+    html += '<div class="tt-row"><span class="tt-label">Net</span><span class="'+(mv+rv>=0?'tt-up':'tt-down')+'">'+(mv+rv>=0?'↑ ':'↓ ')+Math.abs(mv+rv).toFixed(2)+'W</span></div>';
     var tt = getTooltipEl(); if (tt) tt.classList.add('pulse');
     showTooltip(ev, html);
   };
@@ -2543,8 +2543,8 @@ async function loadMoneyFlow() {
           '<div style="grid-column:1/-1;text-align:center;padding:14px;background:rgba(255,255,255,0.02);border-radius:8px">'+
           '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">实时快照（历史K线暂不可用）</div>'+
           '<div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;font-size:13px">'+
-          '<div><span style="color:var(--text-tertiary)">Main Force:</span> <b style="color:'+(mVal>=0?'#22c55e':'#ef4444')+'">'+(mVal>=0?'↑ ':'↓ '')+Math.abs(mVal).toFixed(0)+'W</b></div>'+
-          '<div><span style="color:var(--text-tertiary)">Retail:</span> <b style="color:'+(rVal>=0?'#22c55e':'#ef4444')+'">'+(rVal>=0?'↑ ':'↓ '')+Math.abs(rVal).toFixed(0)+'W</b></div>'+
+          '<div><span style="color:var(--text-tertiary)">Main Force:</span> <b style="color:'+(mVal>=0?'#22c55e':'#ef4444')+'">'+(mVal>=0?'↑ ':'↓ ')+Math.abs(mVal).toFixed(0)+'W</b></div>'+
+          '<div><span style="color:var(--text-tertiary)">Retail:</span> <b style="color:'+(rVal>=0?'#22c55e':'#ef4444')+'">'+(rVal>=0?'↑ ':'↓ ')+Math.abs(rVal).toFixed(0)+'W</b></div>'+
           '<div><span style="color:var(--text-tertiary)">Signal:</span> <b>'+(sum.main_vs_retail||'')+' | '+(sum.strength||'')+'</b></div>'+
           '</div></div>';
         // Render single-point bar charts
@@ -2709,10 +2709,10 @@ function drawMainForceTracker(flows) {
     '</div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;font-size:12px">'+
     '<div><span style="color:var(--text-tertiary)">连续:</span> <b style="color:'+consColor+'">'+arrow+' '+(consUp||consDown)+'天</b></div>'+
-    '<div><span style="color:var(--text-tertiary)">近5日:</span> <b style="color:'+(cum5>=0?'#22c55e':'#ef4444')+'">'+(cum5>=0?'↑ ':'↓ '')+Math.abs(cum5).toFixed(0)+'万</b></div>'+
-    '<div><span style="color:var(--text-tertiary)">近10日:</span> <b style="color:'+(cum10>=0?'#22c55e':'#ef4444')+'">'+(cum10>=0?'↑ ':'↓ '')+Math.abs(cum10).toFixed(0)+'万</b></div>'+
-    '<div><span style="color:var(--text-tertiary)">近30日:</span> <b style="color:'+(cum30>=0?'#22c55e':'#ef4444')+'">'+(cum30>=0?'↑ ':'↓ '')+Math.abs(cum30).toFixed(0)+'万</b></div>'+
-    '<div><span style="color:var(--text-tertiary)">累计:</span> <b style="color:'+(cumAll>=0?'#22c55e':'#ef4444')+'">'+(cumAll>=0?'↑ ':'↓ '')+Math.abs(cumAll).toFixed(0)+'万</b></div>'+
+    '<div><span style="color:var(--text-tertiary)">近5日:</span> <b style="color:'+(cum5>=0?'#22c55e':'#ef4444')+'">'+(cum5>=0?'↑ ':'↓ ')+Math.abs(cum5).toFixed(0)+'万</b></div>'+
+    '<div><span style="color:var(--text-tertiary)">近10日:</span> <b style="color:'+(cum10>=0?'#22c55e':'#ef4444')+'">'+(cum10>=0?'↑ ':'↓ ')+Math.abs(cum10).toFixed(0)+'万</b></div>'+
+    '<div><span style="color:var(--text-tertiary)">近30日:</span> <b style="color:'+(cum30>=0?'#22c55e':'#ef4444')+'">'+(cum30>=0?'↑ ':'↓ ')+Math.abs(cum30).toFixed(0)+'万</b></div>'+
+    '<div><span style="color:var(--text-tertiary)">累计:</span> <b style="color:'+(cumAll>=0?'#22c55e':'#ef4444')+'">'+(cumAll>=0?'↑ ':'↓ ')+Math.abs(cumAll).toFixed(0)+'万</b></div>'+
     '</div>';
 }
 
@@ -2868,7 +2868,7 @@ async function runCompare() {
   if (stocks.length < 2) { alert('Enter at least 2 stocks'); return; }
   try { const r = await fetch('/api/stock/compare', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stocks }) }); const d = await r.json();
     if (!d.comparison?.length) return;
-    const headers = ['Metric', ...d.comparison.map(s => s.name)], rows = [['Price', ...d.comparison.map(s => s.price.toFixed(2))], ['Change', ...d.comparison.map(s => `${s.change_pct>=0?'↑ ':'↓ ''}${Math.abs(s.change_pct).toFixed(2)}%`)], ['P/E', ...d.comparison.map(s => s.pe||'N/A')], ['Mkt Cap', ...d.comparison.map(s => fmt(s.market_cap))]];
+    const headers = ['Metric', ...d.comparison.map(s => s.name)], rows = [['Price', ...d.comparison.map(s => s.price.toFixed(2))], ['Change', ...d.comparison.map(s => `${s.change_pct>=0?'↑ ':'↓ '}${Math.abs(s.change_pct).toFixed(2)}%`)], ['P/E', ...d.comparison.map(s => s.pe||'N/A')], ['Mkt Cap', ...d.comparison.map(s => fmt(s.market_cap))]];
     document.getElementById('compareResult').innerHTML = `<table class="movers-table" style="margin-top:10px"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>{const cls=i>0&&r[0]==='Change'?(parseFloat(c)>=0?'text-green':'text-red'):'';return`<td class="${cls}">${c}</td>`}).join('')}</tr>`).join('')}</tbody></table>`;
   } catch(e) { alert('Compare failed'); }
 }
@@ -2878,7 +2878,7 @@ async function runScreener() {
   var params = { market: market, pe_max: parseFloat(document.getElementById('scrPE').value)||null, pe_min: parseFloat(document.getElementById('scrPEMin').value)||null, market_cap_min: parseFloat(document.getElementById('scrMktCap').value)||null, change_pct_min: parseFloat(document.getElementById('scrChgMin').value)||null };
   try { var r = await fetch('/api/stock/screener', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) }); var d = await r.json();
     if (!d.stocks || !d.stocks.length) { document.getElementById('screenerResult').innerHTML = '<p style="color:var(--text-tertiary);padding:12px">没有符合条件的股票</p>'; return; }
-    document.getElementById('screenerResult').innerHTML = '<p style="font-size:12px;color:var(--text-tertiary);margin:8px 0">共 '+d.total+' 只股票</p><table class="movers-table"><thead><tr><th>代码</th><th>价格</th><th>涨跌</th><th>市盈率</th><th>市值</th></tr></thead><tbody>'+d.stocks.map(function(s){return '<tr><td><span class="mover-symbol" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span><br><span style="font-size:10px;color:var(--text-tertiary)">'+s.code+'</span></td><td>'+s.price.toFixed(2)+'</td><td class="'+(s.change_pct>=0?'text-green':'text-red')+'">'+(s.change_pct>=0?'↑ ':'↓ '')+Math.abs(s.change_pct).toFixed(2)+'%</td><td>'+(s.pe?s.pe.toFixed(2):'--')+'</td><td>'+fmt(s.market_cap)+'</td></tr>';}).join('')+'</tbody></table>';
+    document.getElementById('screenerResult').innerHTML = '<p style="font-size:12px;color:var(--text-tertiary);margin:8px 0">共 '+d.total+' 只股票</p><table class="movers-table"><thead><tr><th>代码</th><th>价格</th><th>涨跌</th><th>市盈率</th><th>市值</th></tr></thead><tbody>'+d.stocks.map(function(s){return '<tr><td><span class="mover-symbol" onclick="quickSearch(\''+s.code+'\',\'cn\')">'+s.name+'</span><br><span style="font-size:10px;color:var(--text-tertiary)">'+s.code+'</span></td><td>'+s.price.toFixed(2)+'</td><td class="'+(s.change_pct>=0?'text-green':'text-red')+'">'+(s.change_pct>=0?'↑ ':'↓ ')+Math.abs(s.change_pct).toFixed(2)+'%</td><td>'+(s.pe?s.pe.toFixed(2):'--')+'</td><td>'+fmt(s.market_cap)+'</td></tr>';}).join('')+'</tbody></table>';
   } catch(e) { console.error(e); }
 }
 
