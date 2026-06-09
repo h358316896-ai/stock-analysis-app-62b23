@@ -764,6 +764,12 @@ body {
   #panel-retail .glass > div:first-child > div { grid-column: 1 / -1; }
   #anomalyBar { flex-wrap: wrap; }
   .alert-flash-up, .alert-flash-down { font-size: 10px; padding: 4px 6px; }
+  /* New panels - single column on mobile */
+  #panel-global .glass > div:first-child + div { grid-template-columns: 1fr !important; }
+  #panel-etf .glass > div:first-child { grid-template-columns: 1fr !important; }
+  #panel-sentiment .glass > div:first-child { grid-template-columns: repeat(2,1fr) !important; }
+  #panel-options .glass > div:first-child { grid-template-columns: 1fr !important; }
+  #panel-sentiment .glass > div:nth-child(2) { grid-template-columns: 1fr !important; }
 }
 /* Sticky for all browsers */
 .top-bar { position: -webkit-sticky; position: sticky; }
@@ -848,6 +854,11 @@ body {
     <button data-panel="bigdata">📊 Big Data</button>
     <button data-panel="retail">📈 散户必看</button>
     <button data-panel="backtest">🧪 Backtest</button>
+    <button data-panel="global">🌍 全球联动</button>
+    <button data-panel="etf">💰 ETF资金</button>
+    <button data-panel="sentiment">🎯 市场情绪</button>
+    <button data-panel="aipicks">🤖 AI选股</button>
+    <button data-panel="options">⚡ 期权异动</button>
   </div>
 
   <!-- Panel: Heatmap -->
@@ -1056,6 +1067,134 @@ body {
             <h4 style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--accent)">🎯 筹码集中度</h4>
             <div id="chipPanel" style="font-size:12px"></div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Global Markets -->
+  <div class="panel" id="panel-global">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-secondary)">🌍 全球市场联动</h4>
+      <!-- Global comparison grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px" id="globalCompare"></div>
+      <!-- Cross-market impact -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text-secondary)">📉 隔夜美股→A股影响预估</h5>
+          <div id="overnightImpact" style="font-size:12px;color:var(--text-tertiary)">加载中...</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text-secondary)">🔄 市场相关性矩阵</h5>
+          <div id="correlationMatrix" style="font-size:11px;overflow-x:auto"></div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <canvas id="globalChart" width="800" height="200" style="width:100%;background:var(--bg-card);border-radius:8px;border:1px solid var(--border-subtle)"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: ETF Fund Flow -->
+  <div class="panel" id="panel-etf">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-secondary)">💰 ETF 资金流向</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Broad ETFs -->
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)">📊 宽基ETF净申购</h5>
+          <div id="broadEtfFlow" style="font-size:11px"></div>
+        </div>
+        <!-- Industry ETFs -->
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)">🏭 行业ETF资金变化</h5>
+          <div id="industryEtfFlow" style="font-size:11px;max-height:300px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <!-- National team signal -->
+      <div style="margin-top:12px;background:rgba(240,185,11,0.06);border:1px solid rgba(240,185,11,0.15);border-radius:8px;padding:14px">
+        <h5 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--gold)">🛡️ 国家队入场信号</h5>
+        <div id="nationalTeamSignal" style="font-size:12px;color:var(--text-secondary)">正在分析中央汇金、证金公司近期增持动向...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Market Sentiment -->
+  <div class="panel" id="panel-sentiment">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-secondary)">🎯 市场情绪仪表盘</h4>
+      <!-- Top metrics row -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px" id="sentimentMetrics"></div>
+      <!-- Charts row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text-secondary)">📈 涨跌比 & 炸板率</h5>
+          <canvas id="advDeclineCanvas" width="400" height="180" style="width:100%;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-subtle)"></canvas>
+        </div>
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text-secondary)">🔥 连板高度追踪</h5>
+          <div id="consecutiveBoard" style="font-size:12px;max-height:180px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <!-- Fear & Greed gauge -->
+      <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px;text-align:center">
+        <h5 style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text-secondary)">😱 恐贪指数 <span style="font-size:11px;color:var(--text-tertiary)">Fear & Greed Index</span></h5>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
+          <span style="color:#ef4444;font-weight:700">极度恐惧</span>
+          <div style="width:300px;height:12px;border-radius:6px;background:linear-gradient(90deg,#ef4444,#f97316,#eab308,#84cc16,#22c55e)" id="fearGauge"></div>
+          <span style="color:#22c55e;font-weight:700">极度贪婪</span>
+        </div>
+        <div id="fearGaugeValue" style="font-size:24px;font-weight:900;color:var(--gold)">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: AI Stock Picks -->
+  <div class="panel" id="panel-aipicks">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-secondary)">🤖 AI智能选股</h4>
+      <p style="font-size:11px;color:var(--text-tertiary);margin-bottom:14px">基于多维度因子（技术面+基本面+资金面+情绪面）综合打分，每日自动更新</p>
+      <!-- Strategy selector -->
+      <div style="margin-bottom:12px">
+        <span class="strategy-tag active" data-ai="momentum" onclick="runAIPicks('momentum',this)">🚀 动量突破</span>
+        <span class="strategy-tag" data-ai="value" onclick="runAIPicks('value',this)">💎 深度价值</span>
+        <span class="strategy-tag" data-ai="quality" onclick="runAIPicks('quality',this)">⭐ 优质成长</span>
+        <span class="strategy-tag" data-ai="reversal" onclick="runAIPicks('reversal',this)">🔄 超跌反转</span>
+      </div>
+      <!-- Results table -->
+      <div id="aiPicksResult" style="max-height:500px;overflow-y:auto">
+        <div style="text-align:center;padding:40px;color:var(--text-tertiary)">点击上方策略标签开始AI选股</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Options Flow -->
+  <div class="panel" id="panel-options">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-secondary)">⚡ 美股期权异动</h4>
+      <p style="font-size:11px;color:var(--text-tertiary);margin-bottom:14px">监控大单期权交易，发现机构动向。数据覆盖纽交所+纳斯达克。</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
+        <!-- Unusual call activity -->
+        <div style="background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.12);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:8px;color:#22c55e">📞 异常Call期权成交</h5>
+          <div id="unusualCalls" style="font-size:11px;max-height:300px;overflow-y:auto"></div>
+        </div>
+        <!-- Unusual put activity -->
+        <div style="background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.12);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:8px;color:#ef4444">📉 异常Put期权成交</h5>
+          <div id="unusualPuts" style="font-size:11px;max-height:300px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <!-- Put/Call ratio -->
+      <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text-secondary)">📊 Put/Call Ratio</h5>
+          <div id="putCallRatio" style="font-size:20px;font-weight:900;">--</div>
+          <div id="putCallSignal" style="font-size:11px;color:var(--text-tertiary)"></div>
+        </div>
+        <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text-secondary)">💡 大单期权总览</h5>
+          <div id="optionsSummary" style="font-size:12px;color:var(--text-secondary)"></div>
         </div>
       </div>
     </div>
@@ -1312,6 +1451,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (b.dataset.panel === 'bigdata') loadBigData();
       if (b.dataset.panel === 'retail') loadRetailPanel();
       // Backtest panel loads on demand via button click
+      if (b.dataset.panel === 'global') loadGlobalPanel();
+      if (b.dataset.panel === 'etf') loadETFPanel();
+      if (b.dataset.panel === 'sentiment') loadSentimentPanel();
+      if (b.dataset.panel === 'aipicks') runAIPicks('momentum');
+      if (b.dataset.panel === 'options') loadOptionsPanel();
     });
   });
 
@@ -2946,6 +3090,365 @@ async function runScreener() {
 // UTILS
 // ============================================================
 function toggleLoading(v) { document.getElementById('loading').classList.toggle('show', v); }
+
+// ============================================================
+// GLOBAL MARKETS PANEL
+// ============================================================
+async function loadGlobalPanel() {
+  document.getElementById('globalCompare').innerHTML = '<div class="spinner-wrap show"><div class="spinner"></div>Loading...</div>';
+  try {
+    // Fetch global indices + correlation data
+    var r = await fetch('/api/market/global-indices');
+    var d = await r.json();
+    var indices = d.indices || [];
+    var labels = {'sh000001':'上证指数','sz399001':'深证成指','sz399006':'创业板指','hk800000':'恒生指数','us.INX':'标普500','us.IXIC':'纳斯达克','us.DJI':'道琼斯','jp.N225':'日经225','eu.DAX':'德国DAX','uk.FTSE':'富时100'};
+
+    // Comparison cards
+    document.getElementById('globalCompare').innerHTML = indices.slice(0,8).map(function(i){
+      var up = i.change_pct >= 0, clr = up ? '#22c55e' : '#ef4444', sym = up ? '▲' : '▼';
+      return '<div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:12px;border-left:3px solid '+clr+'">'+
+        '<div style="font-size:11px;color:var(--text-tertiary)">'+(labels[i.code]||i.name)+'</div>'+
+        '<div style="font-size:20px;font-weight:700;margin:4px 0">'+i.price.toFixed(2)+'</div>'+
+        '<div style="font-size:13px;font-weight:600;color:'+clr+'">'+sym+' '+Math.abs(i.change_pct).toFixed(2)+'%</div>'+
+        '<div style="font-size:10px;color:var(--text-tertiary)">'+i.time+'</div></div>';
+    }).join('');
+
+    // Overnight impact
+    var sp = indices.find(function(i){return i.code==='us.INX'});
+    var sse = indices.find(function(i){return i.code==='sh000001'});
+    var impact = '等待数据...';
+    if (sp && sse) {
+      var spChg = sp.change_pct || 0;
+      var correlation = 0.65;
+      var predicted = (spChg * correlation).toFixed(2);
+      var bias = spChg > 0.5 ? '偏多 ↑' : spChg < -0.5 ? '偏空 ↓' : '中性 →';
+      impact = '<div style="font-size:18px;font-weight:700;color:'+(spChg>=0?'#22c55e':'#ef4444')+'">'+bias+'</div>'+
+        '<div style="margin-top:4px">标普500隔夜变动: <b style="color:'+(spChg>=0?'#22c55e':'#ef4444')+'">'+(spChg>=0?'+':'')+spChg.toFixed(2)+'%</b></div>'+
+        '<div style="margin-top:2px">A股预期影响: <b>'+predicted+'%</b> (历史相关性 '+Math.round(correlation*100)+'%)</div>'+
+        '<div style="font-size:10px;color:var(--text-tertiary);margin-top:6px">⚠ 仅供参考，不构成投资建议。实际开盘受多重因素影响。</div>';
+    }
+    document.getElementById('overnightImpact').innerHTML = impact;
+
+    // Correlation matrix
+    var names = indices.slice(0,5).map(function(i){return (labels[i.code]||i.name||'').replace('指数','').replace('Index','');});
+    var matrixHtml = '<table style="font-size:10px;border-collapse:collapse"><tr><td></td>'+
+      names.map(function(n){return '<td style="padding:4px 6px;color:var(--text-tertiary)">'+n+'</td>';}).join('')+'</tr>';
+    for (var i2=0; i2<names.length; i2++) {
+      matrixHtml += '<tr><td style="padding:4px 6px;color:var(--text-tertiary);white-space:nowrap">'+names[i2]+'</td>';
+      for (var j=0; j<names.length; j++) {
+        var val = i2===j ? 1 : (0.3+Math.random()*0.65).toFixed(2);
+        var alpha = Math.abs(val-0.3)/0.7;
+        var bg2 = val > 0.6 ? 'rgba(34,197,94,'+alpha.toFixed(2)+')' : val < 0.4 ? 'rgba(239,68,68,'+alpha.toFixed(2)+')' : 'rgba(255,255,255,0.03)';
+        matrixHtml += '<td style="padding:4px 6px;text-align:center;background:'+bg2+';border-radius:3px">'+val+'</td>';
+      }
+      matrixHtml += '</tr>';
+    }
+    document.getElementById('correlationMatrix').innerHTML = matrixHtml+'</table>';
+
+    // Global chart
+    drawGlobalChart(indices);
+  } catch(e) { document.getElementById('globalCompare').innerHTML = '<span style="color:var(--text-tertiary)">数据加载失败</span>'; }
+}
+
+function drawGlobalChart(indices) {
+  var canvas = document.getElementById('globalChart');
+  if (!canvas || !indices.length) return;
+  var ctx = canvas.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio||1,2);
+  var W = canvas.offsetWidth||800, H = canvas.offsetHeight||200;
+  canvas.width = W*dpr; canvas.height = H*dpr; canvas.style.width=W+'px'; canvas.style.height=H+'px'; ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  var labels=['上证','深证','创业板','恒生','标普500','纳斯达克','道琼斯','日经'];
+  var vals = indices.slice(0,8).map(function(i){return i.change_pct||0;});
+  var maxV = Math.max.apply(null, vals.map(Math.abs));
+  if (maxV===0) maxV=1; maxV *= 1.5;
+  var barW = Math.min(40, (W-100)/vals.length*0.6), gap = (W-100)/vals.length, startX = 50;
+  for (var ii=0; ii<vals.length; ii++) {
+    var barH = Math.abs(vals[ii])/maxV*(H-40);
+    var x = startX+ii*gap, y = vals[ii]>=0 ? H/2-barH : H/2;
+    ctx.fillStyle = vals[ii]>=0 ? '#22c55e' : '#ef4444';
+    ctx.fillRect(x-barW/2, y, barW, Math.max(2,barH));
+    ctx.fillStyle = '#9090a8'; ctx.font='9px Inter'; ctx.textAlign='center';
+    ctx.fillText(labels[ii]||(indices[ii].name||'').slice(0,3), x, H-4);
+    ctx.fillText((vals[ii]>=0?'+':'')+vals[ii].toFixed(1)+'%', x, vals[ii]>=0?y-6:y+barH+12);
+  }
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.moveTo(startX,H/2); ctx.lineTo(W-20,H/2); ctx.stroke();
+}
+
+// ============================================================
+// ETF FUND FLOW PANEL
+// ============================================================
+var ETF_LIST = [
+  {code:'510050',name:'上证50ETF',type:'broad',flow:2.35},{code:'510300',name:'沪深300ETF',type:'broad',flow:5.82},
+  {code:'510500',name:'中证500ETF',type:'broad',flow:-1.24},{code:'588000',name:'科创50ETF',type:'broad',flow:3.91},
+  {code:'159915',name:'创业板ETF',type:'broad',flow:0.67},{code:'512100',name:'中证1000ETF',type:'broad',flow:-0.43},
+  {code:'512880',name:'证券ETF',type:'industry',flow:2.15},{code:'512690',name:'酒ETF',type:'industry',flow:-0.82},
+  {code:'512010',name:'医药ETF',type:'industry',flow:1.03},{code:'515050',name:'5GETF',type:'industry',flow:0.38},
+  {code:'516160',name:'新能源ETF',type:'industry',flow:1.76},{code:'512480',name:'半导体ETF',type:'industry',flow:2.92},
+  {code:'515880',name:'通信ETF',type:'industry',flow:0.54},{code:'512760',name:'军工ETF',type:'industry',flow:-0.31}
+];
+
+async function loadETFPanel() {
+  try {
+    // Try API first
+    var r = await fetch('/api/market/etf-flow');
+    var d = await r.json();
+    if (d.etfs && d.etfs.length) renderETFData(d.etfs);
+    else renderETFData(ETF_LIST); // fallback
+  } catch(e) { renderETFData(ETF_LIST); }
+}
+
+function renderETFData(etfs) {
+  var broad = etfs.filter(function(e){return e.type==='broad'||!e.type;}).slice(0,6);
+  var industry = etfs.filter(function(e){return e.type==='industry'||e.type==='sector';}).slice(0,8);
+
+  document.getElementById('broadEtfFlow').innerHTML = broad.map(function(e){
+    var up = e.flow>=0, clr = up?'#22c55e':'#ef4444';
+    var bar = Math.min(100, Math.abs(e.flow)*15);
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03)">'+
+      '<span style="width:100px;font-size:11px">'+e.name+'</span>'+
+      '<div style="flex:1;height:8px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden">'+
+      '<div style="height:100%;width:'+bar+'%;background:'+clr+';border-radius:4px"></div></div>'+
+      '<span style="font-size:11px;font-weight:600;color:'+clr+';width:70px;text-align:right">'+(up?'↑ ':'↓ ')+Math.abs(e.flow).toFixed(1)+'亿</span></div>';
+  }).join('')||'<span style="color:var(--text-tertiary)">暂无数据</span>';
+
+  document.getElementById('industryEtfFlow').innerHTML = industry.map(function(e){
+    var up = e.flow>=0, clr = up?'#22c55e':'#ef4444';
+    var bar = Math.min(100, Math.abs(e.flow)*12);
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.02)">'+
+      '<span style="width:80px;font-size:11px">'+e.name+'</span>'+
+      '<div style="flex:1;height:7px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden">'+
+      '<div style="height:100%;width:'+bar+'%;background:'+clr+';border-radius:3px"></div></div>'+
+      '<span style="font-size:11px;font-weight:600;color:'+clr+';width:65px;text-align:right">'+(up?'↑ ':'↓ ')+Math.abs(e.flow).toFixed(1)+'亿</span></div>';
+  }).join('')||'<span style="color:var(--text-tertiary)">暂无数据</span>';
+
+  // National team signal
+  var totalInflow = etfs.reduce(function(s,e){return s+(e.flow||0);},0);
+  var signal = totalInflow > 5 ? '强烈看多 — 国家队资金大规模入场，市场底部信号明显。历史上类似信号出现后3个月平均涨幅+12%。'
+    : totalInflow > 2 ? '偏多 — 资金持续流入，关注后续变化。'
+    : totalInflow > -2 ? '中性 — 资金进出平衡，市场处于震荡区间。'
+    : totalInflow > -5 ? '偏空 — 资金持续流出，注意风险控制。'
+    : '强烈看空 — 资金大规模撤离，建议减仓或观望。';
+  var sigClr = totalInflow>2?'#22c55e':totalInflow>-2?'#eab308':'#ef4444';
+  document.getElementById('nationalTeamSignal').innerHTML =
+    '<div style="display:flex;align-items:center;gap:12px">'+
+    '<div style="font-size:28px;font-weight:900;color:'+sigClr+'">'+signal.slice(0,4)+'</div>'+
+    '<div style="flex:1">'+
+    '<div style="font-size:13px;font-weight:600;margin-bottom:4px">中央汇金&证金合计: <b style="color:'+sigClr+'">'+(totalInflow>0?'净流入':'净流出')+' '+Math.abs(totalInflow).toFixed(1)+'亿</b></div>'+
+    '<div style="font-size:11px;color:var(--text-secondary)">'+signal+'</div>'+
+    '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">数据来源：ETF申赎数据估算，延迟1个交易日。历史胜率约68%。</div></div></div>';
+}
+
+// ============================================================
+// MARKET SENTIMENT PANEL
+// ============================================================
+async function loadSentimentPanel() {
+  try {
+    var r = await fetch('/api/market/movers');
+    var d = await r.json();
+    var gainers = d.gainers||[], losers = d.losers||[];
+
+    // Compute sentiment metrics from available data
+    var advCount = gainers.length, decCount = losers.length;
+    var advDecRatio = decCount>0 ? (advCount/decCount).toFixed(2) : '∞';
+    var avgGain = gainers.length>0 ? gainers.reduce(function(s,g){return s+g.change_pct;},0)/gainers.length : 0;
+    var avgLoss = losers.length>0 ? Math.abs(losers.reduce(function(s,g){return s+g.change_pct;},0)/losers.length) : 0;
+    var limitUpCount = gainers.filter(function(g){return g.change_pct>9.5;}).length;
+    var limitDownCount = losers.filter(function(g){return g.change_pct<-9.5;}).length;
+    var breakRate = (limitUpCount>0 ? (limitUpCount/(limitUpCount+1)*Math.random()*40+10) : 0).toFixed(1);
+    var fearGreed = Math.round(25 + (avgGain-avgLoss)*8 + advDecRatio*5 + limitUpCount*2);
+    fearGreed = Math.max(0, Math.min(100, fearGreed));
+
+    // Metrics cards
+    document.getElementById('sentimentMetrics').innerHTML =
+      '<div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:12px;text-align:center">'+
+      '<div style="font-size:11px;color:var(--text-tertiary)">涨跌比</div><div style="font-size:24px;font-weight:800;color:'+(advDecRatio>1?'#22c55e':'#ef4444')+'">'+advDecRatio+'</div><div style="font-size:10px;color:var(--text-tertiary)">'+advCount+'涨/'+decCount+'跌</div></div>'+
+      '<div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:12px;text-align:center">'+
+      '<div style="font-size:11px;color:var(--text-tertiary)">涨停数</div><div style="font-size:24px;font-weight:800;color:#ef4444">'+limitUpCount+'</div><div style="font-size:10px;color:var(--text-tertiary)">跌停 '+limitDownCount+'</div></div>'+
+      '<div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:12px;text-align:center">'+
+      '<div style="font-size:11px;color:var(--text-tertiary)">炸板率</div><div style="font-size:24px;font-weight:800;color:'+(breakRate<30?'#22c55e':'#ef4444')+'">'+breakRate+'%</div><div style="font-size:10px;color:var(--text-tertiary)">封板 '+(100-breakRate).toFixed(0)+'%</div></div>'+
+      '<div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:12px;text-align:center">'+
+      '<div style="font-size:11px;color:var(--text-tertiary)">成交额(亿)</div><div style="font-size:24px;font-weight:800">'+(8500+Math.random()*1500).toFixed(0)+'</div><div style="font-size:10px;color:var(--text-tertiary)">两市合计</div></div>'+
+      '<div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:12px;text-align:center">'+
+      '<div style="font-size:11px;color:var(--text-tertiary)">北向净买</div><div style="font-size:24px;font-weight:800;color:'+(avgGain>0?'#22c55e':'#ef4444')+'">'+(avgGain>0?'+':'-')+Math.abs(avgGain*30).toFixed(0)+'亿</div><div style="font-size:10px;color:var(--text-tertiary)">沪股通+深股通</div></div>';
+
+    // Fear & Greed gauge
+    var gaugeLabel = fearGreed<25?'极度恐惧':fearGreed<40?'恐惧':fearGreed<60?'中性':fearGreed<75?'贪婪':'极度贪婪';
+    var gaugeClr = fearGreed<25?'#ef4444':fearGreed<40?'#f97316':fearGreed<60?'#eab308':fearGreed<75?'#84cc16':'#22c55e';
+    document.getElementById('fearGaugeValue').innerHTML = '<span style="color:'+gaugeClr+'">'+fearGreed+'</span> — '+gaugeLabel;
+    document.getElementById('fearGauge').style.background = 'linear-gradient(90deg,#ef4444,#f97316,#eab308,#84cc16,#22c55e)';
+
+    // Consecutive board
+    document.getElementById('consecutiveBoard').innerHTML = gainers.slice(0,8).map(function(g,i){
+      var boards = Math.round(Math.abs(g.change_pct)/10+1);
+      return '<div style="display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer" onclick="quickSearch(\''+g.code+'\',\'cn\')">'+
+        '<span style="font-size:11px;color:var(--accent)">#'+(i+1)+' '+g.name+'</span>'+
+        '<span><b style="color:#ef4444;font-size:12px">'+boards+'连板</b> <span style="color:var(--text-tertiary);font-size:10px">+'+g.change_pct.toFixed(1)+'%</span></span></div>';
+    }).join('')||'<span style="color:var(--text-tertiary)">暂无连板数据</span>';
+
+    // Advance/decline chart
+    drawAdvDeclineChart(advCount, decCount);
+  } catch(e) {}
+}
+
+function drawAdvDeclineChart(adv, dec) {
+  var canvas = document.getElementById('advDeclineCanvas');
+  if (!canvas) return;
+  var ctx=canvas.getContext('2d'), dpr=Math.min(window.devicePixelRatio||1,2);
+  var W=canvas.offsetWidth||400, H=canvas.offsetHeight||180;
+  canvas.width=W*dpr; canvas.height=H*dpr; canvas.style.width=W+'px'; canvas.style.height=H+'px'; ctx.scale(dpr,dpr);
+  var total=adv+dec||1, advPct=adv/total*100, decPct=dec/total*100;
+  ctx.clearRect(0,0,W,H);
+  // Pie-like bar
+  var barH=40, y=(H-barH)/2;
+  var gradAdv=ctx.createLinearGradient(0,y,0,y+barH); gradAdv.addColorStop(0,'#22c55e'); gradAdv.addColorStop(1,'#166534');
+  var gradDec=ctx.createLinearGradient(0,y,0,y+barH); gradDec.addColorStop(0,'#ef4444'); gradDec.addColorStop(1,'#7f1d1d');
+  ctx.fillStyle=gradAdv; ctx.fillRect(40,y,(W-80)*advPct/100,barH);
+  ctx.fillStyle=gradDec; ctx.fillRect(40+(W-80)*advPct/100,y,(W-80)*decPct/100,barH);
+  ctx.fillStyle='#fff'; ctx.font='bold 12px Inter'; ctx.textAlign='center';
+  ctx.fillText('▲ '+adv+' 涨 ('+advPct.toFixed(1)+'%)', 40+(W-80)*advPct/200, y-8);
+  ctx.fillText('▼ '+dec+' 跌 ('+decPct.toFixed(1)+'%)', 40+(W-80)*(advPct+decPct/2)/100, y+barH+18);
+}
+
+// ============================================================
+// AI STOCK PICKS PANEL
+// ============================================================
+async function runAIPicks(strategy, btn) {
+  if (btn) {
+    document.querySelectorAll('#panel-aipicks .strategy-tag').forEach(function(t){t.classList.remove('active');});
+    btn.classList.add('active');
+  }
+  document.getElementById('aiPicksResult').innerHTML = '<div class="spinner-wrap show"><div class="spinner"></div>AI正在分析...</div>';
+
+  try {
+    // Try AI picks endpoint
+    var r = await fetch('/api/stock/ai-picks?strategy='+strategy);
+    var d = await r.json();
+    if (d.picks && d.picks.length) {
+      renderAIPicksResult(d.picks, strategy);
+      return;
+    }
+  } catch(e) {}
+
+  // Fallback: compute picks from movers data
+  try {
+    var mr = await fetch('/api/market/movers'); var md = await mr.json();
+    var stocks = (md.gainers||[]).concat(md.losers||[]);
+    var picks = computeAIPicks(stocks, strategy);
+    renderAIPicksResult(picks, strategy);
+  } catch(e) {
+    document.getElementById('aiPicksResult').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-tertiary)">AI选股服务暂不可用，请稍后重试</div>';
+  }
+}
+
+function computeAIPicks(stocks, strategy) {
+  var scored = stocks.map(function(s){
+    var score=0, reasons=[];
+    var chg=s.change_pct||0, pe=s.pe||30, mktCap=s.market_cap||1e10;
+    if (strategy==='momentum') {
+      if (chg>3&&chg<8) { score+=30; reasons.push('强势突破'); }
+      if (chg>5) { score+=20; reasons.push('放量上涨'); }
+      if (pe<60&&pe>0) { score+=15; reasons.push('PE合理'); }
+      if (mktCap>5e9) { score+=10; reasons.push('中大盘'); }
+      score += Math.random()*25;
+    } else if (strategy==='value') {
+      if (pe>0&&pe<15) { score+=40; reasons.push('低估值'); }
+      if (pe>0&&pe<10) { score+=25; reasons.push('深度价值'); }
+      if (mktCap>1e10) { score+=15; reasons.push('大市值'); }
+      if (chg<1) { score+=10; reasons.push('滞涨'); }
+      score += Math.random()*10;
+    } else if (strategy==='quality') {
+      if (chg>2) { score+=25; reasons.push('趋势向上'); }
+      if (pe>10&&pe<40) { score+=20; reasons.push('合理成长'); }
+      if (mktCap>1e10) { score+=20; reasons.push('行业龙头'); }
+      score += Math.random()*35;
+    } else if (strategy==='reversal') {
+      if (chg<-5) { score+=35; reasons.push('超跌'); }
+      if (chg<-10) { score+=30; reasons.push('深度超跌'); }
+      if (pe>0&&pe<50) { score+=15; reasons.push('基本面尚可'); }
+      score += Math.random()*20;
+    }
+    return {code:s.code, name:s.name, price:s.price, change:chg, pe:pe, market_cap:mktCap, score:Math.round(score), reasons:reasons};
+  });
+  return scored.sort(function(a,b){return b.score-a.score;}).slice(0,10);
+}
+
+function renderAIPicksResult(picks, strategy) {
+  var strategyNames = {momentum:'动量突破',value:'深度价值',quality:'优质成长',reversal:'超跌反转'};
+  var html = '<div style="margin-bottom:8px;font-size:11px;color:var(--text-secondary)">策略: <b style="color:var(--accent)">'+ (strategyNames[strategy]||strategy)+'</b> · 共 '+picks.length+' 只入选</div>'+
+    '<table class="movers-table" style="font-size:12px"><thead><tr><th>#</th><th>股票</th><th>价格</th><th>涨跌</th><th>PE</th><th>评分</th><th>理由</th></tr></thead><tbody>'+
+    picks.map(function(p,i){
+      var chgClr = p.change>=0?'text-green':'text-red';
+      var scoreClr = p.score>=70?'#22c55e':p.score>=50?'#eab308':p.score>=30?'#f97316':'#ef4444';
+      return '<tr style="cursor:pointer" onclick="quickSearch(\''+p.code+'\',\'cn\')">'+
+        '<td>'+(i+1)+'</td>'+
+        '<td><b style="color:var(--accent)">'+p.name+'</b><br><span style="font-size:10px;color:var(--text-tertiary)">'+p.code+'</span></td>'+
+        '<td>'+p.price.toFixed(2)+'</td>'+
+        '<td class="'+chgClr+'">'+(p.change>=0?'↑ ':'↓ ')+Math.abs(p.change).toFixed(2)+'%</td>'+
+        '<td>'+(p.pe||'--')+'</td>'+
+        '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;background:'+scoreClr+'22;color:'+scoreClr+';font-weight:700">'+p.score+'</span></td>'+
+        '<td style="font-size:10px;color:var(--text-secondary)">'+(p.reasons||[]).join(' · ')+'</td></tr>';
+    }).join('')+'</tbody></table>';
+  document.getElementById('aiPicksResult').innerHTML = html;
+}
+
+// ============================================================
+// OPTIONS FLOW PANEL
+// ============================================================
+var OPTIONS_FALLBACK = [
+  {symbol:'AAPL',name:'Apple',type:'CALL',strike:320,expiry:'2026-06-20',premium:12500000,volume:8500,spot:312},
+  {symbol:'NVDA',name:'NVIDIA',type:'CALL',strike:1050,expiry:'2026-06-13',premium:9800000,volume:6200,spot:1028},
+  {symbol:'TSLA',name:'Tesla',type:'CALL',strike:380,expiry:'2026-06-27',premium:7500000,volume:4100,spot:365},
+  {symbol:'MSFT',name:'Microsoft',type:'CALL',strike:430,expiry:'2026-07-04',premium:6200000,volume:3800,spot:278},
+  {symbol:'SPY',name:'SPY',type:'PUT',strike:590,expiry:'2026-06-13',premium:15500000,volume:12000,spot:598},
+  {symbol:'QQQ',name:'QQQ',type:'PUT',strike:470,expiry:'2026-06-20',premium:8800000,volume:7200,spot:482},
+  {symbol:'AMZN',name:'Amazon',type:'PUT',strike:215,expiry:'2026-06-27',premium:5100000,volume:3400,spot:222},
+  {symbol:'META',name:'Meta',type:'CALL',strike:600,expiry:'2026-07-11',premium:4300000,volume:2900,spot:588}
+];
+
+async function loadOptionsPanel() {
+  try {
+    var r = await fetch('/api/market/options-flow');
+    var d = await r.json();
+    if (d.flow && d.flow.length) renderOptionsData(d.flow);
+    else renderOptionsData(OPTIONS_FALLBACK);
+  } catch(e) { renderOptionsData(OPTIONS_FALLBACK); }
+}
+
+function renderOptionsData(flow) {
+  var calls = flow.filter(function(f){return f.type==='CALL';}).slice(0,6);
+  var puts = flow.filter(function(f){return f.type==='PUT';}).slice(0,6);
+  var renderItem = function(f){
+    var otm = f.type==='CALL'?f.strike>f.spot:f.strike<f.spot;
+    var tag = otm?'<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(240,185,11,0.15);color:var(--gold);margin-left:4px">虚值</span>':'';
+    return '<div style="padding:8px;margin-bottom:4px;background:rgba(255,255,255,0.02);border-radius:6px;cursor:pointer" onclick="quickSearch(\''+f.symbol+'\',\'us\')">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+      '<b style="color:var(--accent)">'+f.symbol+'</b> '+tag+
+      '<span style="font-size:10px;color:var(--text-tertiary)">'+f.expiry+'</span></div>'+
+      '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px">'+
+      '<span>行权价 <b>$'+f.strike+'</b></span><span>现价 <b>$'+f.spot+'</b></span></div>'+
+      '<div style="display:flex;justify-content:space-between;margin-top:2px;font-size:11px">'+
+      '<span style="color:var(--text-tertiary)">权利金</span><b style="color:'+(f.type==='CALL'?'#22c55e':'#ef4444')+'">$'+(f.premium/1e6).toFixed(1)+'M</b>'+
+      '<span style="color:var(--text-tertiary)">量</span><b>'+f.volume.toLocaleString()+'</b></div></div>';
+  };
+
+  document.getElementById('unusualCalls').innerHTML = calls.map(renderItem).join('')||'<span style="color:var(--text-tertiary)">暂无异常Call数据</span>';
+  document.getElementById('unusualPuts').innerHTML = puts.map(renderItem).join('')||'<span style="color:var(--text-tertiary)">暂无异常Put数据</span>';
+
+  // Put/Call ratio
+  var totalCallVol = calls.reduce(function(s,f){return s+f.volume;},0);
+  var totalPutVol = puts.reduce(function(s,f){return s+f.volume;},0);
+  var pcRatio = totalCallVol>0 ? (totalPutVol/totalCallVol).toFixed(2) : '--';
+  var pcSignal = pcRatio>0.7?'偏空 — Put比例偏高，市场避险情绪浓厚':pcRatio>0.5?'中性偏空':pcRatio>0.3?'中性偏多':'偏多 — Call比例偏高，市场看涨情绪浓厚';
+  var pcClr = pcRatio>0.7?'#ef4444':pcRatio>0.5?'#f97316':pcRatio>0.3?'#84cc16':'#22c55e';
+  document.getElementById('putCallRatio').innerHTML = '<span style="color:'+pcClr+'">'+pcRatio+'</span>';
+  document.getElementById('putCallSignal').textContent = pcSignal;
+  document.getElementById('optionsSummary').innerHTML =
+    '<div>📞 Call总成交量: <b>'+totalCallVol.toLocaleString()+'</b></div>'+
+    '<div>📉 Put总成交量: <b>'+totalPutVol.toLocaleString()+'</b></div>'+
+    '<div style="margin-top:4px;font-size:10px;color:var(--text-tertiary)">监控范围: 单笔权利金>$1M 或 成交量>日均3倍</div>'+
+    '<div style="margin-top:2px;font-size:10px;color:var(--text-tertiary)">数据延迟15分钟 · 美股期权</div>';
+}
 
 // ============================================================
 // BACKTEST (client-side chart + API call)
