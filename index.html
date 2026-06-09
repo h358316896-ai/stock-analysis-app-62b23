@@ -2,11 +2,53 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#060608">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<!-- Open Graph / Twitter -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="StockAI — 专业A股智能分析平台 | 实时行情·主力追踪·AI选股">
+<meta property="og:description" content="StockAI 提供A股实时行情、资金流向、主力追踪、龙虎榜、涨停复盘、智能选股等专业投资工具。覆盖沪深港美股，AI驱动深度分析。">
+<meta property="og:url" content="https://kunhuang.top/">
+<meta property="og:image" content="https://kunhuang.top/assets/og-stock.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="StockAI — 专业A股智能分析平台">
+<meta name="twitter:description" content="A股实时行情、资金流向、主力追踪、龙虎榜、涨停复盘、智能选股。">
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "StockAI",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Web",
+  "description": "专业A股智能分析平台，提供实时行情、AI驱动深度分析、主力追踪、龙虎榜、涨停复盘。",
+  "url": "https://kunhuang.top/",
+  "offers": {
+    "@type": "Offer",
+    "price": "39",
+    "priceCurrency": "CNY"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "url": "https://kunhuang.top/",
+  "name": "StockAI",
+  "description": "AI 驱动的专业市场分析平台，实时行情与深度报告。",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://kunhuang.top/stock?query={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
 <script>
 // API proxy: route /api/* to the Railway backend on any static host (incl. kunhuang.top).
 (function(){
@@ -32,7 +74,7 @@
   --border-default: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.12);
   --text-primary: #f2f2f8; --text-secondary: #9d9db8; --text-tertiary: #606080;
   --accent: #4f8cff; --accent-glow: rgba(79,140,255,0.2);
-  --gold: #f0b90b; --green: #22c55e; --red: #ef4444; --orange: #f97316; --purple: #a855f7;
+  --gold: #f0b90b; --yellow: #eab308; --green: #22c55e; --red: #ef4444; --orange: #f97316; --purple: #a855f7;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
   --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --radius-sm: 8px; --radius-md: 12px; --radius-lg: 20px; --radius-xl: 28px;
@@ -184,11 +226,11 @@ body { font-family:var(--font); background:linear-gradient(180deg, #080818 0%, #
 <!-- NAV -->
 <div class="top-bar">
   <div class="logo-area">
-    <div class="logo-icon">S</div>
+    <div class="logo-icon" aria-label="StockAI 标志" role="img">S</div>
     <div class="logo-text">Stock<span>AI</span></div>
   </div>
   <div class="top-nav">
-    <a href="/" class="active">首页</a>
+    <a href="/" class="active" aria-current="page">首页</a>
     <a href="/stock">行情</a>
     <a href="/media">自媒体</a>
     <a href="/services">定制服务</a>
@@ -209,7 +251,7 @@ body { font-family:var(--font); background:linear-gradient(180deg, #080818 0%, #
 
 <!-- TICKER STRIP -->
 <div class="ticker-strip">
-  <div class="scroll" id="tickerEl">
+  <div class="scroll" id="tickerEl" aria-live="polite">
     <span style="padding:0 20px;color:var(--text-tertiary)">正在加载实时行情...</span>
   </div>
 </div>
@@ -367,21 +409,21 @@ body { font-family:var(--font); background:linear-gradient(180deg, #080818 0%, #
     <div class="section-h2">Frequently asked questions</div>
   </div>
   <div class="faq-grid">
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">StockAI 覆盖哪些市场？ <span>+</span></div>
-      <div class="faq-a">沪深A股、港股（港交所）、美股（纽交所+纳斯达克）。同时覆盖日本、韩国、印度、欧洲等全球主要指数，以及商品期货和加密货币行情。</div>
+    <div class="faq-item" tabindex="0" role="button" aria-expanded="false" onclick="this.classList.toggle('open');this.setAttribute('aria-expanded',this.classList.contains('open'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.classList.toggle('open');this.setAttribute('aria-expanded',this.classList.contains('open'))}">
+      <div class="faq-q">StockAI 覆盖哪些市场？ <span aria-hidden="true">+</span></div>
+      <div class="faq-a" role="region">沪深A股、港股（港交所）、美股（纽交所+纳斯达克）。同时覆盖日本、韩国、印度、欧洲等全球主要指数，以及商品期货和加密货币行情。</div>
     </div>
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">AI分析是如何工作的？ <span>+</span></div>
-      <div class="faq-a">系统获取实时行情和近期K线数据，通过多引擎AI架构（DeepSeek V4 + Claude Opus 4.8 + GPT-4o）进行多维度深度分析。7个分析视角包括：综合评估、技术面分析（MACD/RSI/KDJ）、基本面分析（PE/PB/ROE）、估值对比、新闻事件驱动、行业赛道对比、风险评估。所有AI模型并行工作、交叉验证，确保分析结果的专业性和准确性。</div>
+    <div class="faq-item" tabindex="0" role="button" aria-expanded="false" onclick="this.classList.toggle('open');this.setAttribute('aria-expanded',this.classList.contains('open'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.classList.toggle('open');this.setAttribute('aria-expanded',this.classList.contains('open'))}">
+      <div class="faq-q">AI分析是如何工作的？ <span aria-hidden="true">+</span></div>
+      <div class="faq-a" role="region">系统获取实时行情和近期K线数据，通过多引擎AI架构（DeepSeek V4 + Claude Opus 4.8 + GPT-4o）进行多维度深度分析。7个分析视角包括：综合评估、技术面分析（MACD/RSI/KDJ）、基本面分析（PE/PB/ROE）、估值对比、新闻事件驱动、行业赛道对比、风险评估。所有AI模型并行工作、交叉验证，确保分析结果的专业性和准确性。</div>
     </div>
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">数据是实时的吗？ <span>+</span></div>
-      <div class="faq-a">是的。系统接入全球主流交易所权威数据源，A股、港股、美股、欧亚指数实时同步更新，刷新频率达30秒/次。美股数据遵循交易所合规要求（标准延迟）。所有数据经过多源交叉校验，确保准确性和稳定性。全球7大指数+商品期货+加密货币一站式覆盖。</div>
+    <div class="faq-item" tabindex="0" role="button" aria-expanded="false" onclick="this.classList.toggle('open');this.setAttribute('aria-expanded',this.classList.contains('open'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.classList.toggle('open');this.setAttribute('aria-expanded',this.classList.contains('open'))}">
+      <div class="faq-q">数据是实时的吗？ <span aria-hidden="true">+</span></div>
+      <div class="faq-a" role="region">是的。系统接入全球主流交易所权威数据源，A股、港股、美股、欧亚指数实时同步更新，刷新频率达30秒/次。美股数据遵循交易所合规要求（标准延迟）。所有数据经过多源交叉校验，确保准确性和稳定性。全球7大指数+商品期货+加密货币一站式覆盖。</div>
     </div>
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">可以保存分析和追踪股票吗？ <span>+</span></div>
-      <div class="faq-a">完全可以。注册免费账户即可享受：① 自选股管理（免费10只/VIP50只/SVIP200只）；② 智能价格提醒（突破价/跌破价/涨跌幅触发/主力资金异动）；③ AI分析历史云端保存+一键导出PDF报告；④ 资金流向追踪记录自动累积；⑤ 多设备数据同步。所有分析记录永久保存，随时复盘回顾。</div>
+    <div class="faq-item" tabindex="0" role="button" aria-expanded="false" onclick="this.classList.toggle('open');this.setAttribute('aria-expanded',this.classList.contains('open'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.classList.toggle('open');this.setAttribute('aria-expanded',this.classList.contains('open'))}">
+      <div class="faq-q">可以保存分析和追踪股票吗？ <span aria-hidden="true">+</span></div>
+      <div class="faq-a" role="region">完全可以。注册免费账户即可享受：① 自选股管理（免费10只/VIP50只/SVIP200只）；② 智能价格提醒（突破价/跌破价/涨跌幅触发/主力资金异动）；③ AI分析历史云端保存+一键导出PDF报告；④ 资金流向追踪记录自动累积；⑤ 多设备数据同步。所有分析记录永久保存，随时复盘回顾。</div>
     </div>
   </div>
 </div>

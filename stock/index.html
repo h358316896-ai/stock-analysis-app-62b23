@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -27,6 +27,7 @@
   --text-tertiary: #585870;
   --accent: #3b82f6;
   --accent-glow: rgba(59,130,246,0.15);
+  --gold: #f0b90b;
   --green: #22c55e;
   --green-bg: rgba(34,197,94,0.1);
   --red: #ef4444;
@@ -1253,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Defer non-critical panels to speed up first paint
   setTimeout(() => {
     loadSectors();
-    setInterval(loadAllMarketData, 30000);
+    window._dataRefreshInterval = setInterval(loadAllMarketData, 30000);
   }, 2000);  // auto-refresh every 30s for live data
 
   document.getElementById('stockSearch').addEventListener('keydown', e => { if (e.key === 'Enter') searchStock(); });
@@ -1354,7 +1355,7 @@ async function submitAuth() {
     const d = await r.json();
     if (d.error) return showErr(d.error);
     state.isLogin = true; state.user = { username: u, id: d.user_id || null };
-    closeAuthModal(); onLoginChange(); checkLogin();
+    closeAuthModal(); onLoginChange(); loadWatchlist(); loadAlerts(); loadHistory();
   } catch(x) { showErr('Network error'); }
 }
 function showErr(m) { const el = document.getElementById('authError'); el.textContent = m; el.classList.add('show'); }
@@ -1368,7 +1369,7 @@ async function loadAllMarketData() {
   try {
     var r = await fetch('/api/dashboard'); var d = await r.json();
     state.indices = d.indices || [];
-    state.globalData = null;
+    // (global indices refreshed via setTimeout below; don't null here to avoid 5s data gap)
 
     // Market strip
     var labels = { 'sh000001': 'SSE Composite', 'sz399001': 'SZSE Component', 'sz399006': 'ChiNext', 'hk800000': 'Hang Seng', 'us.INX': 'S&P 500', 'us.IXIC': 'NASDAQ', 'us.DJI': 'DJIA' };
@@ -2105,7 +2106,7 @@ function initChartHover(canvas, data, getTooltipHTMLFn) {
     hideTooltip();
   };
   // Touch support
-  canvas.addEventListener('touchmove', function(ev) {
+  canvas.ontouchmove = function(ev) {
     if (ev.touches.length === 1) {
       var rect = canvas.getBoundingClientRect();
       var mx = ev.touches[0].clientX - rect.left;
@@ -2116,8 +2117,8 @@ function initChartHover(canvas, data, getTooltipHTMLFn) {
       idx = Math.max(0, Math.min(n - 1, idx));
       redrawAllCharts(idx);
     }
-  }, {passive: true});
-  canvas.addEventListener('touchend', function() {
+  };
+  canvas.ontouchend = function() {
     redrawAllCharts(-1);
     hideTooltip();
   });
@@ -2125,8 +2126,15 @@ function initChartHover(canvas, data, getTooltipHTMLFn) {
 
 function drawCandlestick(canvas, data, hoverIdx) {
   if (hoverIdx === undefined) hoverIdx = -1;
-  const ctx = canvas.getContext('2d'), W = canvas.width = (canvas.offsetWidth || 600), H = canvas.height = (canvas.offsetHeight || 360);
-  if (W < 10 || H < 10) return;
+  if (!data || !data.klines || !data.dates) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const rectW = (canvas.offsetWidth || 600), rectH = (canvas.offsetHeight || 360);
+  if (rectW < 10 || rectH < 10) return;
+  canvas.width = rectW * dpr; canvas.height = rectH * dpr;
+  canvas.style.width = rectW + 'px'; canvas.style.height = rectH + 'px';
+  ctx.scale(dpr, dpr);
+  const W = rectW, H = rectH;
   const kl = data.klines, n = kl.length;
   if (n < 2) return;
   const PAD = { T: 30, R: 60, B: 30, L: 60 }, cw = W - PAD.L - PAD.R, ch = H - PAD.T - PAD.B;
@@ -2183,9 +2191,15 @@ function drawCandlestick(canvas, data, hoverIdx) {
 
 function drawMACD(canvas, data, hoverIdx) {
   if (hoverIdx === undefined) hoverIdx = -1;
-  const ctx = canvas.getContext('2d'), W = canvas.width = (canvas.offsetWidth || 600), H = canvas.height = (canvas.offsetHeight || 160);
-  if (W < 10 || H < 10) return;
-  if (!data.macd?.dif) return;
+  if (!data || !data.macd || !data.macd.dif) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const rectW = (canvas.offsetWidth || 600), rectH = (canvas.offsetHeight || 160);
+  if (rectW < 10 || rectH < 10) return;
+  canvas.width = rectW * dpr; canvas.height = rectH * dpr;
+  canvas.style.width = rectW + 'px'; canvas.style.height = rectH + 'px';
+  ctx.scale(dpr, dpr);
+  const W = rectW, H = rectH;
   const PAD = { T: 8, R: 50, B: 18, L: 50 }, cw = W - PAD.L - PAD.R, ch = H - PAD.T - PAD.B, n = data.dates.length;
   const all = [...data.macd.dif.filter(v=>v!=null), ...data.macd.dea.filter(v=>v!=null), ...data.macd.histogram.filter(v=>v!=null)];
   let mn = Math.min(...all), mx = Math.max(...all), pd = Math.max(0.1, (mx-mn)*0.1);
@@ -2212,9 +2226,15 @@ function drawMACD(canvas, data, hoverIdx) {
 
 function drawRSI(canvas, data, hoverIdx) {
   if (hoverIdx === undefined) hoverIdx = -1;
-  const ctx = canvas.getContext('2d'), W = canvas.width = (canvas.offsetWidth || 600), H = canvas.height = (canvas.offsetHeight || 160);
-  if (W < 10 || H < 10) return;
-  if (!data.rsi) return;
+  if (!data || !data.rsi) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const rectW = (canvas.offsetWidth || 600), rectH = (canvas.offsetHeight || 160);
+  if (rectW < 10 || rectH < 10) return;
+  canvas.width = rectW * dpr; canvas.height = rectH * dpr;
+  canvas.style.width = rectW + 'px'; canvas.style.height = rectH + 'px';
+  ctx.scale(dpr, dpr);
+  const W = rectW, H = rectH;
   const PAD = { T: 8, R: 30, B: 18, L: 40 }, cw = W - PAD.L - PAD.R, ch = H - PAD.T - PAD.B, n = data.dates.length;
   const xs = v => PAD.L + (v/(n-1))*cw, ys = v => PAD.T + (1-v/100)*ch;
 
@@ -2248,8 +2268,9 @@ async function loadIndicatorsChart(code, mkt) {
     drawRSI(document.getElementById('rsiCanvas'), data);
     // Crosshair + tooltip
     initChartHover(kCanvas, data, function(idx) {
-      var d = window._chartData; if (!d || idx < 0) return '';
-      var dt = (d.dates[idx]||''), o = d.klines[idx].open, h = d.klines[idx].high, l = d.klines[idx].low, c = d.klines[idx].close, v = d.klines[idx].volume;
+      var d = window._chartData; if (!d || !d.klines || idx < 0 || idx >= d.klines.length) return '';
+      var k = d.klines[idx]; if (!k) return '';
+      var dt = (d.dates[idx]||''), o = k.open, h = k.high, l = k.low, c = k.close, v = k.volume;
       var up = c >= o, clr = up ? 'tt-up' : 'tt-down';
       var html = '<div class="tt-date">'+dt+'</div>';
       html += '<div class="tt-row"><span class="tt-label">开盘</span><span>'+o.toFixed(2)+'</span></div>';
@@ -2330,7 +2351,7 @@ async function loadIntraday() {
       showTooltip(ev, html);
     };
     canvas.onmouseleave = function() { drawIntradayChart(-1); hideTooltip(); };
-    canvas.addEventListener('touchmove', function(ev) {
+    canvas.ontouchmove = function(ev) {
       if (ev.touches.length === 1) {
         var rect = canvas.getBoundingClientRect();
         var mx3 = ev.touches[0].clientX - rect.left;
@@ -2338,8 +2359,8 @@ async function loadIntraday() {
         idx2 = Math.max(0, Math.min(n - 1, idx2));
         drawIntradayChart(idx2);
       }
-    }, {passive: true});
-    canvas.addEventListener('touchend', function() { drawIntradayChart(-1); hideTooltip(); });
+    };
+    canvas.ontouchend = function() { drawIntradayChart(-1); hideTooltip(); };
   } catch(e) {}
 }
 
@@ -2511,7 +2532,7 @@ function initFlowCompareHover(flows) {
     showTooltip(ev, html);
   };
   canvas.onmouseleave = function() { drawFlowCompare(flows, -1); hideTooltip(); hideDots(); };
-  canvas.addEventListener('touchmove', function(ev) {
+  canvas.ontouchmove = function(ev) {
     if (ev.touches.length === 1) {
       var fd = canvas._flowData; if (!fd) return;
       var rect = canvas.getBoundingClientRect();
@@ -2524,8 +2545,8 @@ function initFlowCompareHover(flows) {
       if (dotOrange) { dotOrange.style.display='block'; dotOrange.style.left=cy+'px'; dotOrange.style.top=ry2+'px'; }
       if (dotCross) { dotCross.style.display='block'; dotCross.style.left=cy+'px'; }
     }
-  }, {passive: true});
-  canvas.addEventListener('touchend', function() { drawFlowCompare(flows, -1); hideTooltip(); hideDots(); });
+  };
+  canvas.ontouchend = function() { drawFlowCompare(flows, -1); hideTooltip(); hideDots(); });
 }
 
 async function loadMoneyFlow() {
@@ -2753,7 +2774,7 @@ async function runAnalysis(aspect) {
       body: JSON.stringify({ code: state.stock.code, name: state.stock.name, market: state.stock.market, aspect })
     });
     const d = await r.json();
-    if (d.error) { alert(d.error); return; }
+    if (d.error) { showToast(d.error, 'error'); return; }
     state.analysis = d.analysis;
     const titles = { comprehensive: 'Comprehensive Analysis', technical: 'Technical Analysis', fundamental: 'Fundamental Analysis', news: 'News & Events', valuation: 'Valuation Analysis', sector: 'Sector Comparison', risk: 'Risk Assessment' };
     document.getElementById('analysisTitle').textContent = titles[aspect] || 'AI Analysis';
@@ -2776,7 +2797,7 @@ async function runAnalysis(aspect) {
     if (state.isLogin) document.getElementById('saveHistoryBtn').style.display = 'inline-block';
     // Scroll analysis into view
     document.getElementById('analysisBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  } catch(e) { alert('Error: ' + e.message); }
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
   finally { toggleLoading(false); }
 }
 
@@ -2792,8 +2813,8 @@ async function downloadPDF() {
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `report_${state.stock.code}.pdf`; a.click();
-    URL.revokeObjectURL(url);
-  } catch(e) { alert('Error: ' + e.message); }
+    setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
   finally { btn.textContent = '下载PDF报告'; btn.disabled = false; }
 }
 async function saveToHistory() { if (state.isLogin && state.analysis) { showToast('Analysis auto-saved to history', 'success'); loadHistory(); } }
@@ -2816,7 +2837,7 @@ async function toggleWatchlist() {
     });
     const d = await r.json();
     if (d.success || r.ok) { checkWatchlistStatus(code, market); loadWatchlist(); }
-  } catch(e) { alert('Failed: ' + e.message); }
+  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
 }
 async function loadWatchlist() {
   if (!state.isLogin) return;
@@ -2839,12 +2860,12 @@ async function loadAlerts() {
     list.innerHTML = d.items.map(a => `<div class="wl-item"><div class="wl-name">${a.name} (${a.code})</div><div class="wl-meta">${lbs[a.condition_type]||a.condition_type} ${a.threshold}${a.condition_type.includes('change')?'%':''} ${a.triggered?'✅':''}</div><span onclick="deleteAlert(${a.id},'${a.name}')" style="font-size:10px;color:var(--red);cursor:pointer;float:right">Delete</span></div>`).join('');
   } catch(e) {}
 }
-function showAlertForm() { if (!state.isLogin) { showAuthModal('login'); return; } if (!state.stock) { alert('Search a stock first'); return; } document.getElementById('alertForm').classList.toggle('show'); }
+function showAlertForm() { if (!state.isLogin) { showAuthModal('login'); return; } if (!state.stock) { showToast('Search a stock first', 'error'); return; } document.getElementById('alertForm').classList.toggle('show'); }
 async function submitAlert() {
   if (!state.isLogin || !state.stock) return;
   const ct = document.getElementById('alertCondition').value, th = parseFloat(document.getElementById('alertThreshold').value);
-  if (isNaN(th)) { alert('Enter valid threshold'); return; }
-  try { const r = await fetch('/api/alerts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: state.stock.code, name: state.stock.name, market: state.stock.market, condition_type: ct, threshold: th }) }); const d = await r.json(); if (d.success) { document.getElementById('alertForm').classList.remove('show'); loadAlerts(); } } catch(e) { alert('Failed'); }
+  if (isNaN(th)) { showToast('Enter valid threshold', 'error'); return; }
+  try { const r = await fetch('/api/alerts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: state.stock.code, name: state.stock.name, market: state.stock.market, condition_type: ct, threshold: th }) }); const d = await r.json(); if (d.success) { document.getElementById('alertForm').classList.remove('show'); loadAlerts(); } } catch(e) { showToast('操作失败，请重试', 'error'); }
 }
 async function deleteAlert(id, name) { if (!confirm(`Delete alert for ${name}?`)) return; await fetch(`/api/alerts/${id}`, { method: 'DELETE' }); loadAlerts(); }
 async function loadHistory() {
@@ -2865,12 +2886,12 @@ function addCompareSlot() { if (cmpCount >= 5) return; const d = document.create
 async function runCompare() {
   const codes = document.querySelectorAll('.cmp-code'), mkts = document.querySelectorAll('.cmp-mkt');
   const stocks = []; codes.forEach((el, i) => { const c = el.value.trim(); if (c) stocks.push({ code: c, market: mkts[i].value }); });
-  if (stocks.length < 2) { alert('Enter at least 2 stocks'); return; }
+  if (stocks.length < 2) { showToast('请至少输入2只股票进行对比', 'error'); return; }
   try { const r = await fetch('/api/stock/compare', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stocks }) }); const d = await r.json();
     if (!d.comparison?.length) return;
     const headers = ['Metric', ...d.comparison.map(s => s.name)], rows = [['Price', ...d.comparison.map(s => s.price.toFixed(2))], ['Change', ...d.comparison.map(s => `${s.change_pct>=0?'↑ ':'↓ '}${Math.abs(s.change_pct).toFixed(2)}%`)], ['P/E', ...d.comparison.map(s => s.pe||'N/A')], ['Mkt Cap', ...d.comparison.map(s => fmt(s.market_cap))]];
     document.getElementById('compareResult').innerHTML = `<table class="movers-table" style="margin-top:10px"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>{const cls=i>0&&r[0]==='Change'?(parseFloat(c)>=0?'text-green':'text-red'):'';return`<td class="${cls}">${c}</td>`}).join('')}</tr>`).join('')}</tbody></table>`;
-  } catch(e) { alert('Compare failed'); }
+  } catch(e) { showToast('对比查询失败，请重试', 'error'); }
 }
 
 async function runScreener() {
