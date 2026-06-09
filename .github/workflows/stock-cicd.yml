@@ -1,15 +1,28 @@
-name: StockAI Prototype CI
+name: StockAI CI/CD
 
 on:
   push:
+    branches: [main, master]
     paths:
-      - 'prototype/stock/**'
+      - '**.html'
+      - '**.css'
+      - '**.js'
+      - '**.py'
+      - '**.json'
+      - '**.yml'
+      - '**.yaml'
   pull_request:
+    branches: [main, master]
     paths:
-      - 'prototype/stock/**'
+      - '**.html'
+      - '**.css'
+      - '**.js'
+      - '**.py'
+      - '**.json'
 
 jobs:
-  build:
+  # ── Validate static assets ──
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,38 +30,141 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
-      - name: Install Node dependencies
-        working-directory: prototype/stock/node_proxy
-        run: npm install
-
-      - name: Build Node proxy image
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build proxy Docker image
+      - name: Verify all HTML files
         run: |
-          docker build -t stock-proxy prototype/stock/node_proxy
+          echo "=== Homepage ==="
+          test -f index.html && echo "✓ index.html" || (echo "✗ Missing index.html" && exit 1)
+          echo "=== Stock Terminal ==="
+          test -f stock/index.html && echo "✓ stock/index.html" || (echo "✗ Missing stock/index.html" && exit 1)
+          echo "=== PWA Manifest ==="
+          test -f manifest.json && echo "✓ manifest.json" || echo "⚠ Missing manifest.json"
 
-      - name: Verify static site files exist
+      - name: Validate JSON files
         run: |
-          test -f prototype/stock/index.html
-          test -f prototype/stock/styles.css
-          test -f prototype/stock/app.js
+          for f in manifest.json; do
+            if [ -f "$f" ]; then
+              node -e "JSON.parse(require('fs').readFileSync('$f','utf8')); console.log('✓ $f valid JSON')"
+            fi
+          done
 
-      - name: Show summary
+      - name: Basic HTML structure check
         run: |
-          echo "StockAI prototype CI completed."
+          for f in index.html stock/index.html prototype/stock/index.html; do
+            if [ -f "$f" ]; then
+              if grep -q '<!DOCTYPE html>' "$f" && grep -q '</html>' "$f"; then
+                echo "✓ $f valid HTML structure"
+              else
+                echo "⚠ $f may be malformed"
+              fi
+            fi
+          done
 
-  deploy:
+      - name: Check for common issues
+        run: |
+          echo "=== Checking for leftover alert() in production ==="
+          if grep -rn 'alert(' stock/index.html | grep -v 'showToast'; then
+            echo "⚠ Warning: alert() calls found (should use showToast())"
+          else
+            echo "✓ No bare alert() calls"
+          fi
+          echo "=== Checking for missing CSS vars ==="
+          for var in gold yellow; do
+            if grep -q "\-\-$var:" stock/index.html; then
+              echo "✓ --$var defined"
+            else
+              echo "⚠ --$var not found"
+            fi
+          done
+
+  # ── Python backtest validation ──
+  backtest-check:
     runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy stock prototype to GitHub Pages
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backtest dependencies
+        run: |
+          pip install -r prototype/stock/backtest/requirements.txt
+          pip install flask flask-cors
+
+      - name: Verify backtest module imports
+        run: |
+          python -c "import sys; sys.path.insert(0,'prototype/stock/backtest'); from engine import Backtester; print('✓ engine.py imports OK')"
+          python -c "import sys; sys.path.insert(0,'prototype/stock/backtest'); from grid import run_grid; print('✓ grid.py imports OK')"
+
+      - name: Verify backtest API syntax
+        run: |
+          python -c "
+          import ast
+          with open('backtest_api.py') as f:
+              ast.parse(f.read())
+          print('✓ backtest_api.py syntax OK')
+          "
+
+  # ── Docker build ──
+  docker:
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Node proxy image
+        run: docker build -t stock-proxy prototype/stock/node_proxy
+
+      - name: Verify Dockerfile exists
+        run: test -f prototype/stock/node_proxy/Dockerfile && echo "✓ Dockerfile OK"
+
+  # ── Deploy to GitHub Pages ──
+  deploy-pages:
+    runs-on: ubuntu-latest
+    needs: [validate, docker]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare deploy directory
+        run: |
+          mkdir -p deploy/stock
+          cp index.html deploy/
+          cp stock/index.html deploy/stock/
+          cp manifest.json deploy/
+          cp -r prototype deploy/ 2>/dev/null || true
+          # Copy static assets if they exist
+          cp favicon.ico deploy/ 2>/dev/null || true
+          cp apple-touch-icon.png deploy/ 2>/dev/null || true
+          echo "✓ Deploy directory prepared"
+          echo "Deploy timestamp: $(date -u)" > deploy/DEPLOY.txt
+
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./prototype/stock
+          publish_dir: ./deploy
           publish_branch: gh-pages
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy: ${{ github.sha }}'
+
+      - name: Deployment summary
+        run: |
+          echo "============================================"
+          echo "  StockAI deployed to GitHub Pages"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Branch: gh-pages"
+          echo "============================================"
+          echo ""
+          echo "  Next steps for kunhuang.top:"
+          echo "  1. SSH into your server or use Railway CLI"
+          echo "  2. Pull the latest changes"
+          echo "  3. Restart the Flask backend:"
+          echo "     railway up --service stock-analysis-app"
+          echo "  4. Or use the Railway GitHub integration"
+          echo "     for automatic deploys on push"
+          echo "============================================"

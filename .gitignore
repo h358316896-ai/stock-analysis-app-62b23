@@ -26,3 +26,17 @@ docker-compose.override.yml
 # Ignore generated build artifacts
 /dist/
 /build/
+
+# Backtest generated files
+prototype/stock/backtest/grid_results/
+prototype/stock/backtest/equity_*.png
+prototype/stock/backtest/heatmap_*.png
+prototype/stock/backtest/report_*.md
+*.png
+
+# Environment
+.env
+.env.local
+
+# Deploy temp
+deploy/
