@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>StockAI — 实时行情原型</title>
+  <style>
+    /* Critical CSS (inlined to improve LCP) */
+    :root{--accent:#1368ff;--muted:#6b7280}
+    html,body{margin:0;font-family:Segoe UI,system-ui,Helvetica,Arial,'PingFang SC',sans-serif;color:#0f1724}
+    .container{max-width:1100px;margin:0 auto;padding:16px}
+    .site-header{background:#fff;border-bottom:1px solid #eee}
+    .site-header .container{display:flex;align-items:center;justify-content:space-between}
+    .brand{margin:10px 0;font-size:20px}
+    .hero{display:flex;gap:20px;padding:28px 16px;align-items:center}
+    .hero-left{flex:1}
+    .lead{color:var(--muted);margin:8px 0}
+    .primary{background:var(--accent);color:#fff;padding:8px 14px;border-radius:6px;text-decoration:none}
+    .terminal-grid{display:grid;grid-template-columns:1fr 280px;gap:12px}
+    .panel{background:#fff;padding:12px;border-radius:8px}
+    .chart{height:220px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#93c5fd}
+    @media (max-width:900px){.hero{flex-direction:column}.terminal-grid{grid-template-columns:1fr}}
+  </style>
+  <link rel="stylesheet" href="styles.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="styles.css"></noscript>
+  <meta name="description" content="StockAI 实时行情终型 — 轻量首屏、实时指数与快速筛选">
+  <link rel="canonical" href="https://kunhuang.top/stock">
+  <meta name="robots" content="index,follow" />
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google-analytics.com https://www.googletagmanager.com; connect-src 'self' http://localhost:5000 https://www.google-analytics.com; font-src 'self';">
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="StockAI — 实时行情 · AI 深度分析">
+  <meta property="og:description" content="覆盖 A 股/美股/港股，智能选股与 AI 报告生成。">
+  <meta property="og:url" content="https://kunhuang.top/stock">
+  <meta property="og:image" content="https://kunhuang.top/assets/og-stock.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Structured data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": "https://kunhuang.top/",
+    "name": "StockAI",
+    "description": "AI 驱动的专业市场分析平台，实时行情与深度报告。",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://kunhuang.top/stock?query={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <!-- Google Analytics 4 (replace G-XXXXXXX with your ID) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments)}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXX', { 'anonymize_ip': true });
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <h1 class="brand">StockAI</h1>
+      <nav class="nav">
+        <a href="#terminal">行情终端</a>
+        <a href="#templates">自媒体</a>
+        <a href="#services">定制服务</a>
+        <a id="freeStartBtn" class="cta" href="/stock">免费开始</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 首次使用引导模态 -->
+  <div id="onboardModal" class="onboard-modal" aria-hidden="true">
+    <div class="onboard-dialog" role="dialog" aria-modal="true" aria-labelledby="onboardTitle">
+      <h2 id="onboardTitle">欢迎使用 StockAI</h2>
+      <p>快速上手：</p>
+      <ol>
+        <li>在上方输入股票代码并点击“查询”。</li>
+        <li>查看 K 线与主力资金流向。</li>
+        <li>点击“试用 7 天”体验高级分析功能。</li>
+      </ol>
+      <div class="onboard-actions">
+        <button id="onboardStart" class="primary">开始使用</button>
+        <button id="onboardDismiss" class="secondary">不再显示</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <section class="hero container">
+      <div class="hero-left">
+        <h2>实时全球行情 · AI 驱动深度分析</h2>
+        <p class="lead">覆盖 A 股/美股/港股，智能选股、主力追踪与一键生成分析报告。</p>
+        <div class="hero-actions">
+          <a id="enterBtn" class="primary" href="/stock">进入实时行情</a>
+          <a id="trialBtn" class="secondary" href="/stock#try">试用 7 天</a>
+        </div>
+      </div>
+      <div class="hero-right" aria-hidden="true">
+        <div class="indices">
+          <div class="index-card up">
+            <div class="label">上证指数</div>
+            <div class="value" id="sh">3959.34</div>
+            <div class="delta">+0.8%</div>
+          </div>
+          <div class="index-card down">
+            <div class="label">深证成指</div>
+            <div class="value" id="sz">14821.19</div>
+            <div class="delta">-3.22%</div>
+          </div>
+        </div>
+        <div class="mini-chart">图表占位（延迟加载）</div>
+      </div>
+    </section>
+
+    <section id="terminal" class="container terminal">
+      <h3>快速筛选</h3>
+      <div class="filter-row">
+        <input id="symbol" placeholder="输入股票代码，例如 600519" />
+        <button id="searchBtn">查询</button>
+        <select id="market">
+          <option value="cn">A股</option>
+          <option value="hk">港股</option>
+          <option value="us">美股</option>
+        </select>
+      </div>
+
+      <div class="terminal-grid">
+        <div class="panel panel-main">
+          <h4 id="stockTitle">—</h4>
+          <div id="stockPrice" class="price">—</div>
+          <div id="priceDelta" class="delta">—</div>
+          <div id="chart" class="chart">
+            <canvas id="chartCanvas" width="800" height="340" aria-label="K线图"></canvas>
+            <div id="chartPlaceholder" class="chart-placeholder">K线图占位（示意，正在延迟加载）</div>
+          </div>
+        </div>
+        <aside class="panel panel-side">
+          <h4>热力/异动</h4>
+          <ul id="hotList" class="compact-list">
+            <li>加载中…</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="templates" class="container cards">
+      <h3>自媒体助手示例</h3>
+      <div class="card-row">
+        <div class="card">视频脚本模板</div>
+        <div class="card">文章模版</div>
+        <div class="card">配音示例</div>
+      </div>
+    </section>
+
+    <section id="services" class="container">
+      <h3>定制开发</h3>
+      <p>MVP、数据采集、量化策略开发，起价 ¥500+/项目。</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">© 2026 StockAI. 版权所有.</div>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+%% 信息结构图 (Mermaid)
+flowchart TD
+  A[首页 Hero]
+  A --> B[核心 CTA: 进入实时行情]
+  A --> C[快捷索引: 指数卡片]
+  B --> D[/stock 终端]
+  D --> D1[快速筛选]
+  D --> D2[K线主视图]
+  D --> D3[热力/异动侧边栏]
+  D1 --> E[自定义看板]
+  D2 --> F[图表交互(延迟加载)]
+  C --> G[登录/订阅入口]
+  A --> H[社会证明/案例]
+  H --> I[用户数/客户 logo]
+  subgraph Media[/media]
+    M1[模板库]
+    M2[配音/视频输出]
+  end
+  subgraph Services[/services]
+    S1[定制开发包]
+    S2[报价与案例]
+  end

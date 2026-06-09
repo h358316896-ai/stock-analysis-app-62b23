@@ -1,0 +1,5 @@
+Contact: mailto:security@kunhuang.top
+Encryption: https://kunhuang.top/pgp-key.txt
+Preferred-Languages: zh-CN, en
+Expires: 2026-12-31T23:59:59Z
+# Policy: https://kunhuang.top/security-policy
