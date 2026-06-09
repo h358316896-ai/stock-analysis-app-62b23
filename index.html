@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- Performance: preconnect to API backend -->
+<link rel="preconnect" href="https://stock-analysis-app-production-da60.up.railway.app" crossorigin>
+<link rel="dns-prefetch" href="https://stock-analysis-app-production-da60.up.railway.app">
 <meta name="theme-color" content="#060608">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -114,7 +117,7 @@ body { font-family:var(--font); background:linear-gradient(180deg, #080818 0%, #
 .section-p { color:var(--text-secondary); font-size:17px; max-width:600px; line-height:1.7; }
 
 /* ========== HERO ========== */
-.hero { padding:80px 24px 60px; text-align:center; position:relative; overflow:hidden; }
+.hero { padding:80px 24px 60px; text-align:center; position:relative; overflow:hidden; content-visibility:auto; contain:layout style paint; }
 .hero::before { content:''; position:absolute; top:-250px; left:50%; transform:translateX(-50%); width:800px; height:800px; background:radial-gradient(ellipse, rgba(79,140,255,0.06) 0%, rgba(168,85,247,0.04) 40%, transparent 70%); pointer-events:none; }
 .hero::after { content:''; position:absolute; bottom:0; left:10%; right:10%; height:1px; background:linear-gradient(90deg, transparent, rgba(79,140,255,0.3), rgba(168,85,247,0.3), transparent); }
 .hero-badge { display:inline-block; padding:6px 18px; border-radius:20px; background:rgba(240,185,11,0.1); color:var(--gold); font-size:12px; font-weight:700; margin-bottom:28px; border:1px solid rgba(240,185,11,0.2); letter-spacing:0.02em; }
@@ -147,7 +150,7 @@ body { font-family:var(--font); background:linear-gradient(180deg, #080818 0%, #
 .stat-item .stat-label { font-size:12px; color:var(--text-tertiary); letter-spacing:0.08em; margin-top:6px; font-weight:500; }
 
 /* ========== PRODUCT CARDS ========== */
-.products { padding:80px 24px; }
+.products { padding:80px 24px; content-visibility:auto; contain:layout style paint; }
 .products-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:24px; max-width:1100px; margin:48px auto 0; }
 .prod-card {
   background:linear-gradient(180deg, rgba(15,15,34,0.9) 0%, rgba(10,10,26,0.95) 100%); border:1px solid var(--border-subtle); border-radius:var(--radius-xl);
@@ -173,7 +176,7 @@ body { font-family:var(--font); background:linear-gradient(180deg, #080818 0%, #
 .prod-card .pc-cta { font-size:13px; color:var(--accent); font-weight:600; }
 
 /* ========== FEATURE SHOWCASE ========== */
-.showcase { padding:80px 24px; }
+.showcase { padding:80px 24px; content-visibility:auto; contain:layout style paint; }
 .showcase-item { display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; max-width:1100px; margin:0 auto 80px; }
 .showcase-item:last-child { margin-bottom:0; }
 .showcase-item.reverse { direction:rtl; }
@@ -191,7 +194,7 @@ body { font-family:var(--font); background:linear-gradient(180deg, #080818 0%, #
 @media (max-width:768px) { .showcase-item { grid-template-columns:1fr; gap:30px; } }
 
 /* ========== FAQ ========== */
-.faq { padding:80px 24px; }
+.faq { padding:80px 24px; content-visibility:auto; contain:layout style paint; }
 .faq-grid { max-width:800px; margin:40px auto 0; display:flex; flex-direction:column; gap:12px; }
 .faq-item { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:20px 24px; cursor:pointer; transition:var(--transition); }
 .faq-item:hover { border-color:var(--border-default); }
