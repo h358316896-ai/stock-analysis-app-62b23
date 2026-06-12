@@ -26,3 +26,5 @@ nul
 
 # Local Netlify folder
 .netlify
+
+.vercel
