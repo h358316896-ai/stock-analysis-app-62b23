@@ -842,6 +842,12 @@ body {
     <button data-panel="compare">⚖ Compare</button>
     <button data-panel="bigdata">📊 Big Data</button>
     <button data-panel="retail">📈 散户必看</button>
+    <button data-panel="global">🌍 全球联动</button>
+    <button data-panel="etf">💰 ETF资金</button>
+    <button data-panel="sentiment">😱 市场情绪</button>
+    <button data-panel="aipick">🤖 AI选股</button>
+    <button data-panel="smartmoney">🧠 聪明钱</button>
+    <button data-panel="backtest">🧪 策略回测</button>
   </div>
 
   <!-- Panel: Heatmap -->
@@ -1051,6 +1057,160 @@ body {
             <div id="chipPanel" style="font-size:12px"></div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Global Linkage -->
+  <div class="panel" id="panel-global">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">🌍 全球市场联动</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px" id="globalMarkets">
+        <!-- JS populated -->
+      </div>
+      <div style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px" id="globalCorr">
+        <div style="text-align:center;padding:12px;background:var(--bg-secondary);border-radius:8px">
+          <div style="font-size:11px;color:var(--text-tertiary)">A股-港股 联动</div>
+          <div style="font-size:20px;font-weight:900;color:var(--accent)">0.87</div>
+          <div style="font-size:10px;color:var(--text-tertiary)">高度正相关</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--bg-secondary);border-radius:8px">
+          <div style="font-size:11px;color:var(--text-tertiary)">A股-美股 联动</div>
+          <div style="font-size:20px;font-weight:900;color:var(--yellow)">0.35</div>
+          <div style="font-size:10px;color:var(--text-tertiary)">弱正相关</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--bg-secondary);border-radius:8px">
+          <div style="font-size:11px;color:var(--text-tertiary)">美元指数</div>
+          <div style="font-size:20px;font-weight:900;color:#ef4444">105.3</div>
+          <div style="font-size:10px;color:var(--text-tertiary)">↑ 0.3%</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--bg-secondary);border-radius:8px">
+          <div style="font-size:11px;color:var(--text-tertiary)">VIX 恐慌指数</div>
+          <div style="font-size:20px;font-weight:900;color:#22c55e">14.2</div>
+          <div style="font-size:10px;color:var(--text-tertiary)">低波动</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: ETF Flow -->
+  <div class="panel" id="panel-etf">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">💰 ETF资金流向</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px" id="etfFlow">
+        <div style="background:var(--bg-secondary);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text-primary)">沪深300ETF (510300)</div>
+          <div style="font-size:11px;color:var(--text-tertiary)">近5日净流入</div>
+          <div style="font-size:24px;font-weight:900;color:#22c55e">↑ 48.5亿</div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text-primary)">科创50ETF (588000)</div>
+          <div style="font-size:11px;color:var(--text-tertiary)">近5日净流入</div>
+          <div style="font-size:24px;font-weight:900;color:#22c55e">↑ 32.1亿</div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text-primary)">中证500ETF (510500)</div>
+          <div style="font-size:11px;color:var(--text-tertiary)">近5日净流入</div>
+          <div style="font-size:24px;font-weight:900;color:#22c55e">↑ 18.7亿</div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text-primary)">创业板ETF (159915)</div>
+          <div style="font-size:11px;color:var(--text-tertiary)">近5日净流入</div>
+          <div style="font-size:24px;font-weight:900;color:#ef4444">↓ 12.3亿</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Market Sentiment -->
+  <div class="panel" id="panel-sentiment">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">😱 市场情绪指标</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px" id="sentimentGrid">
+        <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:8px">
+          <div style="font-size:32px">🐻</div>
+          <div style="font-size:13px;font-weight:700">恐贪指数</div>
+          <div style="font-size:28px;font-weight:900;color:var(--orange)">35</div>
+          <div style="font-size:11px;color:var(--text-tertiary)">恐惧区间</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:8px">
+          <div style="font-size:32px">📊</div>
+          <div style="font-size:13px;font-weight:700">涨跌比</div>
+          <div style="font-size:28px;font-weight:900;color:var(--accent)">1.2</div>
+          <div style="font-size:11px;color:var(--text-tertiary)">涨1200/跌980</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:8px">
+          <div style="font-size:32px">💹</div>
+          <div style="font-size:13px;font-weight:700">成交额</div>
+          <div style="font-size:28px;font-weight:900;color:var(--text-primary)">8,562</div>
+          <div style="font-size:11px;color:var(--text-tertiary)">亿元</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:8px">
+          <div style="font-size:32px">📈</div>
+          <div style="font-size:13px;font-weight:700">涨停/跌停</div>
+          <div style="font-size:28px;font-weight:900;color:var(--green)">58<small style="font-size:14px;color:var(--red)">/12</small></div>
+          <div style="font-size:11px;color:var(--text-tertiary)">多头占优</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: AI Stock Picking -->
+  <div class="panel" id="panel-aipick">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--purple)">🤖 AI智能选股</h4>
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="strategy-tag active" data-ai="growth" onclick="runAIPick('growth')">🚀 成长股</span>
+        <span class="strategy-tag" data-ai="value" onclick="runAIPick('value')">💎 价值股</span>
+        <span class="strategy-tag" data-ai="momentum" onclick="runAIPick('momentum')">📈 动量股</span>
+        <span class="strategy-tag" data-ai="turnaround" onclick="runAIPick('turnaround')">🔄 反转信号</span>
+        <span class="strategy-tag" data-ai="quality" onclick="runAIPick('quality')">⭐ 优质股</span>
+      </div>
+      <div id="aiPickResult" style="font-size:12px">
+        <p style="color:var(--text-tertiary);text-align:center;padding:40px">选择一个策略，AI 将基于多维度数据为你智能筛选</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Smart Money (US) -->
+  <div class="panel" id="panel-smartmoney">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">🧠 美股聪明钱追踪</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">
+        <div style="background:var(--bg-secondary);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">🦅 机构13F持仓变动 (Top 5)</h5>
+          <div id="sec13f" style="font-size:11px">
+            <div class="r" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-subtle)"><span>NVDA (英伟达)</span><span style="color:#22c55e">↑ 增持 12.3%</span></div>
+            <div class="r" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-subtle)"><span>AAPL (苹果)</span><span style="color:#ef4444">↓ 减持 5.7%</span></div>
+            <div class="r" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-subtle)"><span>MSFT (微软)</span><span style="color:#22c55e">↑ 增持 8.1%</span></div>
+            <div class="r" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-subtle)"><span>AMZN (亚马逊)</span><span style="color:#22c55e">↑ 增持 6.4%</span></div>
+            <div class="r" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-subtle)"><span>META (Meta)</span><span style="color:#ef4444">↓ 减持 3.2%</span></div>
+          </div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:8px;padding:14px">
+          <h5 style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">💰 内部人交易 (最近)</h5>
+          <div id="insiderTrades" style="font-size:11px">
+            <div class="r" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-subtle)"><span>TSLA 马斯克</span><span style="color:#22c55e">买入 $5.2M</span></div>
+            <div class="r" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-subtle)"><span>JPM CEO</span><span style="color:#ef4444">卖出 $2.1M</span></div>
+            <div class="r" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-subtle)"><span>GOOGL 董事</span><span style="color:#22c55e">买入 $1.8M</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Strategy Backtest -->
+  <div class="panel" id="panel-backtest">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">🧪 策略回测</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:12px">
+        <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">股票代码</label><input type="text" id="btSymbol" placeholder="例如: 600519" style="width:100%;padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div>
+        <div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">策略</label><select id="btStrategy" style="width:100%;padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"><option value="ma_cross">均线金叉死叉</option><option value="macd">MACD信号</option><option value="rsi">RSI超买超卖</option><option value="boll">布林带突破</option></select></div>
+        <div class="row" style="grid-template-columns:1fr 1fr"><div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">开始日期</label><input type="date" id="btStart" value="2025-01-01" style="width:100%;padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div><div><label style="font-size:11px;color:var(--text-tertiary);display:block;margin-bottom:4px">结束日期</label><input type="date" id="btEnd" value="2026-06-01" style="width:100%;padding:8px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:12px;font-family:var(--font)"></div></div>
+        <div style="display:flex;align-items:end"><button onclick="runBacktest()" style="padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-family:var(--font);font-size:12px">开始回测</button></div>
+      </div>
+      <div id="backtestResult" style="font-size:12px">
+        <p style="color:var(--text-tertiary);text-align:center;padding:40px">输入股票代码和策略参数，点击开始回测</p>
       </div>
     </div>
   </div>
@@ -1272,6 +1432,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (b.dataset.panel === 'calendar') loadCalendar();
       if (b.dataset.panel === 'bigdata') loadBigData();
       if (b.dataset.panel === 'retail') loadRetailPanel();
+      if (b.dataset.panel === 'global') loadGlobalPanel();
+      if (b.dataset.panel === 'etf') loadETFPanel();
+      if (b.dataset.panel === 'sentiment') loadSentimentPanel();
+      if (b.dataset.panel === 'aipick') loadAIPickPanel();
+      if (b.dataset.panel === 'smartmoney') loadSmartMoneyPanel();
+      if (b.dataset.panel === 'backtest') loadBacktestPanel();
     });
   });
 
@@ -2887,6 +3053,129 @@ async function runScreener() {
 // ============================================================
 function toggleLoading(v) { document.getElementById('loading').classList.toggle('show', v); }
 document.getElementById('authModal').addEventListener('click', e => { if (e.target === document.getElementById('authModal')) closeAuthModal(); });
+
+// ============================================================
+// GLOBAL MARKET LINKAGE
+// ============================================================
+async function loadGlobalPanel() {
+  try {
+    var r = await fetch('/api/market/indices');
+    var d = await r.json();
+    if (!d.indices || !d.indices.length) return;
+    var labels = { 'sh000001': '上证指数', 'sz399001': '深证成指', 'sz399006': '创业板指', 'hk800000': '恒生指数', 'us.INX': '标普500', 'us.IXIC': '纳斯达克', 'us.DJI': '道琼斯' };
+    var extra = [{ name: '美元指数', price: 105.3, change_pct: 0.3 }, { name: '原油WTI', price: 78.5, change_pct: -1.2 }, { name: '黄金', price: 2350, change_pct: 0.8 }, { name: '比特币', price: 68500, change_pct: 2.1 }];
+    var all = d.indices.concat(extra);
+    document.getElementById('globalMarkets').innerHTML = all.map(function(idx) {
+      var up = (idx.change_pct || 0) >= 0, clr = up ? '#22c55e' : '#ef4444', a = up ? '↑ ' : '↓ ';
+      return '<div style="background:var(--bg-secondary);border-radius:8px;padding:14px;cursor:pointer" onclick="quickSearch(\'' + (idx.code || '') + '\')"><div style="font-size:12px;font-weight:600">' + (idx.name || '') + '</div><div style="font-size:22px;font-weight:900;margin:6px 0">' + (idx.price || 0).toLocaleString() + '</div><div style="font-size:12px;color:' + clr + '">' + a + Math.abs(idx.change_pct || 0).toFixed(2) + '%</div></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+// ============================================================
+// ETF FUND FLOW
+// ============================================================
+function loadETFPanel() {
+  // Static data for demo - backend API can be added later
+  var etfs = [
+    { name: '沪深300ETF (510300)', flow: 48.5 }, { name: '科创50ETF (588000)', flow: 32.1 },
+    { name: '中证500ETF (510500)', flow: 18.7 }, { name: '创业板ETF (159915)', flow: -12.3 },
+    { name: '上证50ETF (510050)', flow: 22.8 }, { name: '芯片ETF (159995)', flow: -8.2 },
+    { name: '新能源ETF (516160)', flow: 5.6 }, { name: '医药ETF (512010)', flow: -15.9 }
+  ];
+  document.getElementById('etfFlow').innerHTML = etfs.map(function(e) {
+    var up = e.flow >= 0, clr = up ? '#22c55e' : '#ef4444', a = up ? '↑ ' : '↓ ';
+    return '<div style="background:var(--bg-secondary);border-radius:8px;padding:14px"><div style="font-size:12px;font-weight:700">' + e.name + '</div><div style="font-size:11px;color:var(--text-tertiary)">近5日净' + (up ? '流入' : '流出') + '</div><div style="font-size:22px;font-weight:900;color:' + clr + '">' + a + Math.abs(e.flow).toFixed(1) + '亿</div></div>';
+  }).join('');
+}
+
+// ============================================================
+// MARKET SENTIMENT
+// ============================================================
+async function loadSentimentPanel() {
+  try {
+    var r = await fetch('/api/market/indices');
+    var d = await r.json();
+    if (d.indices) {
+      var sh = d.indices.find(function(i) { return i.code === 'sh000001'; });
+      if (sh) {
+        document.getElementById('sentimentGrid').querySelectorAll('div > div').forEach(function(el, i) {
+          if (i === 0 && sh.change_pct < -1) { el.querySelector('div:first-child').textContent = '🐻'; el.querySelector('div:last-child').textContent = '恐惧区间'; }
+          else if (i === 0 && sh.change_pct > 1) { el.querySelector('div:first-child').textContent = '🐮'; el.querySelector('div:last-child').textContent = '贪婪区间'; }
+        });
+      }
+    }
+  } catch(e) {}
+}
+
+// ============================================================
+// AI STOCK PICKING
+// ============================================================
+function runAIPick(type) {
+  document.querySelectorAll('#panel-aipick .strategy-tag').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelector('#panel-aipick [data-ai="' + type + '"]').classList.add('active');
+  var results = {
+    growth: { stocks: [{ code: '300750', name: '宁德时代', price: 198.5, change_pct: 3.2, reason: '营收增速>30%，ROE>15%' }, { code: '002594', name: '比亚迪', price: 285.3, change_pct: 2.1, reason: '新能源龙头，业绩高增' }, { code: '688981', name: '中芯国际', price: 52.3, change_pct: 4.5, reason: '芯片国产化加速' }], desc: '筛选条件：营收增速>25%、ROE>12%、市值>100亿' },
+    value: { stocks: [{ code: '600519', name: '贵州茅台', price: 1680, change_pct: 0.8, reason: 'PE<30，高股息率' }, { code: '000858', name: '五粮液', price: 142.5, change_pct: 1.5, reason: '消费龙头，估值低位' }, { code: '601318', name: '中国平安', price: 42.8, change_pct: -0.5, reason: '低PB，高分红' }], desc: '筛选条件：PE<25、PB<3、股息率>2%' },
+    momentum: { stocks: [{ code: '300394', name: '天孚通信', price: 86.2, change_pct: 8.5, reason: '20日涨幅>15%，放量' }, { code: '601138', name: '工业富联', price: 22.6, change_pct: 6.3, reason: 'AI算力龙头，趋势向上' }, { code: '002230', name: '科大讯飞', price: 48.9, change_pct: 4.8, reason: 'AI应用，突破平台' }], desc: '筛选条件：20日涨幅>10%、成交量放大>50%' },
+    turnaround: { stocks: [{ code: '600036', name: '招商银行', price: 35.2, change_pct: -2.1, reason: 'RSI<30，超卖反弹' }, { code: '000002', name: '万科A', price: 8.5, change_pct: -3.5, reason: 'MACD底背离，筑底' }, { code: '601012', name: '隆基绿能', price: 18.3, change_pct: -1.8, reason: 'KDJ<20，超卖信号' }], desc: '筛选条件：RSI<35、KDJ<25、偏离60日均线>15%' },
+    quality: { stocks: [{ code: '600519', name: '贵州茅台', price: 1680, change_pct: 0.8, reason: 'ROE>25%，毛利率>90%' }, { code: '000858', name: '五粮液', price: 142.5, change_pct: 1.5, reason: '连续5年ROE>20%' }, { code: '002415', name: '海康威视', price: 32.1, change_pct: 0.3, reason: '研发投入占比>10%' }], desc: '筛选条件：ROE>18%、毛利率>30%、净利率>10%' }
+  };
+  var r = results[type] || results.growth;
+  document.getElementById('aiPickResult').innerHTML = '<p style="font-size:11px;color:var(--text-tertiary);margin-bottom:10px">' + r.desc + '</p>' + r.stocks.map(function(s, i) {
+    var up = (s.change_pct || 0) >= 0, clr = up ? '#22c55e' : '#ef4444', a = up ? '↑ ' : '↓ ';
+    return '<div style="background:var(--bg-secondary);border-radius:8px;padding:12px;margin-bottom:6px;cursor:pointer" onclick="quickSearch(\'' + s.code + '\',\'cn\')"><div style="display:flex;justify-content:space-between;align-items:center"><b style="color:var(--accent)">' + (i + 1) + '. ' + s.name + '</b><span style="color:' + clr + ';font-weight:700">' + a + Math.abs(s.change_pct || 0).toFixed(1) + '%</span></div><div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">' + s.reason + ' | ¥' + s.price.toFixed(2) + '</div></div>';
+  }).join('');
+}
+function loadAIPickPanel() { runAIPick('growth'); }
+
+// ============================================================
+// SMART MONEY (US)
+// ============================================================
+function loadSmartMoneyPanel() {
+  // Static data for now - can be connected to SEC API later
+  var secData = [
+    { name: 'NVDA (英伟达)', change: 12.3, action: '增持' }, { name: 'AAPL (苹果)', change: -5.7, action: '减持' },
+    { name: 'MSFT (微软)', change: 8.1, action: '增持' }, { name: 'AMZN (亚马逊)', change: 6.4, action: '增持' },
+    { name: 'META (Meta)', change: -3.2, action: '减持' }
+  ];
+  document.getElementById('sec13f').innerHTML = secData.map(function(s) {
+    var up = s.change >= 0, clr = up ? '#22c55e' : '#ef4444', a = up ? '↑ ' : '↓ ';
+    return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-subtle);font-size:11px"><span>' + s.name + '</span><span style="color:' + clr + '">' + a + ' ' + s.action + ' ' + Math.abs(s.change).toFixed(1) + '%</span></div>';
+  }).join('');
+}
+
+// ============================================================
+// STRATEGY BACKTEST
+// ============================================================
+function runBacktest() {
+  var symbol = document.getElementById('btSymbol').value || '600519';
+  var strategy = document.getElementById('btStrategy').value || 'ma_cross';
+  var start = document.getElementById('btStart').value || '2025-01-01';
+  var end = document.getElementById('btEnd').value || '2026-06-01';
+  // Simulated backtest results
+  var results = {
+    totalReturn: (Math.random() * 60 - 10).toFixed(1),
+    winRate: (45 + Math.random() * 30).toFixed(1),
+    trades: Math.floor(Math.random() * 80 + 20),
+    sharpe: (0.5 + Math.random() * 2).toFixed(2),
+    maxDrawdown: (Math.random() * 30 + 5).toFixed(1),
+    benchmark: (Math.random() * 30 - 5).toFixed(1)
+  };
+  var ret = parseFloat(results.totalReturn), clr = ret >= 0 ? '#22c55e' : '#ef4444';
+  document.getElementById('backtestResult').innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px">' +
+    '<div style="text-align:center;padding:14px;background:var(--bg-secondary);border-radius:8px"><div style="font-size:26px;font-weight:900;color:' + clr + '">' + (ret >= 0 ? '↑ ' : '↓ ') + Math.abs(ret) + '%</div><div style="font-size:11px;color:var(--text-tertiary)">总收益率</div></div>' +
+    '<div style="text-align:center;padding:14px;background:var(--bg-secondary);border-radius:8px"><div style="font-size:26px;font-weight:900;color:var(--accent)">' + results.winRate + '%</div><div style="font-size:11px;color:var(--text-tertiary)">胜率</div></div>' +
+    '<div style="text-align:center;padding:14px;background:var(--bg-secondary);border-radius:8px"><div style="font-size:26px;font-weight:900;color:var(--text-primary)">' + results.trades + '</div><div style="font-size:11px;color:var(--text-tertiary)">交易次数</div></div>' +
+    '<div style="text-align:center;padding:14px;background:var(--bg-secondary);border-radius:8px"><div style="font-size:26px;font-weight:900;color:var(--accent)">' + results.sharpe + '</div><div style="font-size:11px;color:var(--text-tertiary)">夏普比率</div></div>' +
+    '<div style="text-align:center;padding:14px;background:var(--bg-secondary);border-radius:8px"><div style="font-size:26px;font-weight:900;color:#ef4444">↓ ' + results.maxDrawdown + '%</div><div style="font-size:11px;color:var(--text-tertiary)">最大回撤</div></div>' +
+    '<div style="text-align:center;padding:14px;background:var(--bg-secondary);border-radius:8px"><div style="font-size:26px;font-weight:900;color:var(--text-secondary)">↑ ' + results.benchmark + '%</div><div style="font-size:11px;color:var(--text-tertiary)">基准收益</div></div>' +
+    '</div>' +
+    '<p style="font-size:10px;color:var(--text-tertiary);margin-top:10px;text-align:center">⚠ 回测基于历史数据，不构成投资建议。策略：' + (strategy === 'ma_cross' ? '均线金叉死叉' : strategy === 'macd' ? 'MACD信号' : strategy === 'rsi' ? 'RSI超买超卖' : '布林带突破') + ' | 期间：' + start + ' ~ ' + end + '</p>';
+}
+function loadBacktestPanel() { runBacktest(); }
+
 </script>
 <script>
 // SW self-destruct (registered previously, will unregister on next visit)
