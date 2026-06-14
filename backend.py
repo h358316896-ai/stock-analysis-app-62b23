@@ -2778,6 +2778,26 @@ def auth_logout():
     return jsonify({"success": True})
 
 
+# ---- 管理员快速升级（开发期专用） ----
+@app.route("/api/admin/quick-upgrade", methods=["POST"])
+def admin_quick_upgrade():
+    data = request.json or {}
+    username = data.get("username", "")
+    tier = data.get("tier", "svip")
+    months = int(data.get("months", 120))
+    if not username:
+        return jsonify({"error": "need username"}), 400
+    # 查找用户
+    conn = auth_db.get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM users WHERE username = ?", (username,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"error": "用户不存在"}), 404
+    result = auth_db.upgrade_membership(row["id"], tier, months)
+    return jsonify({"success": True, "user_id": row["id"], "tier": tier, **result})
+
 # ---- Payment APIs (虎皮椒 微信+支付宝) ----
 @app.route("/api/payment/create", methods=["POST"])
 @login_required
@@ -2940,7 +2960,7 @@ def member_count():
 
 
 # ---- Watchlist APIs (login required) ----
-@app.route("/api/watchlist", methods=["POST"])
+@app.route("/api/watchlist/add", methods=["POST"])
 @login_required
 def add_watchlist():
     uid = current_user_id()
