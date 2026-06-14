@@ -350,6 +350,10 @@ def api_dashboard():
 def stock_page():
     return send_file(os.path.join(STATIC_DIR, "stock.html"), mimetype="text/html")
 
+@app.route("/stock.html")
+def stock_html_page():
+    return send_file(os.path.join(STATIC_DIR, "stock.html"), mimetype="text/html")
+
 @app.route("/media")
 def media_page():
     return send_file(os.path.join(STATIC_DIR, "media.html"), mimetype="text/html")
@@ -1083,6 +1087,53 @@ def generate_report():
                            download_name=f"stock_report_{code}_{datetime.now().strftime('%Y%m%d')}.pdf")
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ---- AI 智能选股：四维策略打分 ----
+@app.route("/api/stock/ai-screener", methods=["POST"])
+def ai_screener():
+    """AI 四维打分选股"""
+    data = request.json or {}
+    sector = data.get("sector", "白酒")
+    strategy = data.get("strategy", "comprehensive")
+    count = min(int(data.get("count", 5)), 10)
+
+    pools = {
+        "白酒": [{"name":"贵州茅台","code":"600519"},{"name":"五粮液","code":"000858"},{"name":"泸州老窖","code":"000568"},{"name":"山西汾酒","code":"600809"},{"name":"洋河股份","code":"002304"},{"name":"古井贡酒","code":"000596"},{"name":"水井坊","code":"600779"},{"name":"舍得酒业","code":"600702"}],
+        "新能源": [{"name":"宁德时代","code":"300750"},{"name":"比亚迪","code":"002594"},{"name":"隆基绿能","code":"601012"},{"name":"阳光电源","code":"300274"},{"name":"通威股份","code":"600438"},{"name":"天齐锂业","code":"002466"},{"name":"赣锋锂业","code":"002460"},{"name":"亿纬锂能","code":"300014"}],
+        "半导体": [{"name":"中芯国际","code":"688981"},{"name":"韦尔股份","code":"603501"},{"name":"北方华创","code":"002371"},{"name":"中微公司","code":"688012"},{"name":"兆易创新","code":"603986"},{"name":"紫光国微","code":"002049"},{"name":"长电科技","code":"600584"},{"name":"卓胜微","code":"300782"}],
+        "医药": [{"name":"恒瑞医药","code":"600276"},{"name":"迈瑞医疗","code":"300760"},{"name":"药明康德","code":"603259"},{"name":"片仔癀","code":"600436"},{"name":"爱尔眼科","code":"300015"},{"name":"智飞生物","code":"300122"},{"name":"长春高新","code":"000661"},{"name":"康龙化成","code":"300759"}],
+        "银行": [{"name":"招商银行","code":"600036"},{"name":"工商银行","code":"601398"},{"name":"建设银行","code":"601939"},{"name":"兴业银行","code":"601166"},{"name":"平安银行","code":"000001"},{"name":"宁波银行","code":"002142"},{"name":"农业银行","code":"601288"},{"name":"邮储银行","code":"601658"}],
+        "AI": [{"name":"科大讯飞","code":"002230"},{"name":"寒武纪","code":"688256"},{"name":"海康威视","code":"002415"},{"name":"昆仑万维","code":"300418"},{"name":"拓尔思","code":"300229"},{"name":"汉王科技","code":"002362"},{"name":"云从科技","code":"688327"}],
+    }
+    stocks_data = pools.get(sector, pools["白酒"])[:count]
+
+    for s in stocks_data:
+        try:
+            q = fetch_json(f"https://qt.gtimg.cn/q={s['code']}", 3)
+            if isinstance(q, str) and "~" in q:
+                p = q.split("~")
+                if len(p) > 32:
+                    s["price"] = float(p[3]) if p[3] else 0
+                    s["change_pct"] = float(p[32]) if p[32] else 0
+        except:
+            s["price"] = 0; s["change_pct"] = 0
+
+    stock_list = "\n".join([f"{i+1}. {s['name']}({s['code']}) ¥{s.get('price',0)} {s.get('change_pct',0):+.2f}%" for i, s in enumerate(stocks_data)])
+
+    smap = {"comprehensive":"综合四维（技术30%+基本面25%+资金25%+情绪20%）","technical":"侧重技术趋势","value":"侧重价值低估","momentum":"侧重动量资金"}
+
+    try:
+        r = deepseek_chat([
+            {"role":"system","content":"你是A股量化分析师。严格按JSON格式返回。评分标准：90+强烈推荐/80-89推荐/70-79中性/60-69谨慎/<60回避。"},
+            {"role":"user","content": f"分析{sector}行业，{smap.get(strategy,smap['comprehensive'])}。\n{stock_list}\n返回JSON：{{\"stocks\":[{{\"code\":\"\",\"name\":\"\",\"score\":85,\"technical\":90,\"fundamental\":80,\"capital\":85,\"sentiment\":85,\"reason\":\"10字内\"}}],\"summary\":\"30字判断\",\"topPick\":\"首推股名\"}}。只返回前{count}只。"}
+        ], temperature=0.3, max_tokens=2000)
+        import re
+        j = re.search(r'\{[\s\S]*\}', r if isinstance(r, str) else str(r))
+        if j: return jsonify({"success": True, **(json.loads(j.group()))})
+    except:
+        pass
+    return jsonify({"success": True, "stocks": [{"code":s["code"],"name":s["name"],"score":0,"technical":0,"fundamental":0,"capital":0,"sentiment":0,"reason":"AI暂不可用"} for s in stocks_data], "summary": "AI引擎暂时不可用","topPick":""})
 
 
 # ==========================================================
@@ -2113,7 +2164,7 @@ def limit_up_review():
                     "pe": item.get("f9"),
                     "mkt_cap": item.get("f20",0),
                     "main_net": item.get("f62",0),
-                    "reason": _guess_limit_reason(name),
+                    "reason": "推测:" + _guess_limit_reason(name),
                 })
     # Sort by change_pct desc
     stocks.sort(key=lambda x: x["change_pct"], reverse=True)
