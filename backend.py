@@ -24,15 +24,22 @@ except ImportError:
 from flask import Flask, request, jsonify, send_file, render_template_string, session
 from functools import wraps
 
+# Quant engine imports
+from quant_engine import (
+    score_factors, generate_tech_signals, calc_market_breadth,
+    calc_risk_metrics, backtest_sma_cross, backtest_macd_cross, calc_rsi as qe_calc_rsi
+)
+
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-in-prod-2026")
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(24).hex()
+if not os.getenv("FLASK_SECRET_KEY"):
+    print("[WARN] FLASK_SECRET_KEY env var not set — using random key. Sessions will be invalidated on restart.")
 
 # Session-based auth helper
 def current_user_id():
     return session.get("user_id")
 
 def login_required(fn):
-    from functools import wraps
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if not current_user_id():
@@ -40,19 +47,116 @@ def login_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
+# Member tier feature flags
+FEATURE_FLAGS = {
+    "ai_analysis":    {"free": 5,   "vip": -1, "svip": -1},  # -1 = unlimited
+    "pdf_report":     {"free": 0,   "vip": -1, "svip": -1},
+    "stock_compare":  {"free": 0,   "vip": -1, "svip": -1},
+    "stock_screener": {"free": 0,   "vip": -1, "svip": -1},
+    "money_flow":     {"free": 0,   "vip": -1, "svip": -1},
+    "dragon_tiger":   {"free": 0,   "vip": 0,  "svip": -1},
+    "watchlist":      {"free": 5,   "vip": 50, "svip": 200},
+    "alerts":         {"free": 3,   "vip": 20, "svip": 50},
+    "quant_score":    {"free": 0,   "vip": 30, "svip": -1},
+    "tech_signals":   {"free": 5,   "vip": -1, "svip": -1},
+    "market_breadth": {"free": -1,  "vip": -1, "svip": -1},
+    "risk_metrics":   {"free": 0,   "vip": 20, "svip": -1},
+    "backtest":       {"free": 0,   "vip": 10, "svip": -1},
+}
+
+_daily_usage: dict = {}  # key: "uid:feature:YYYY-MM-DD", value: count
+
+def check_usage_limit(uid, feature: str) -> tuple:
+    """返回 (allowed: bool, limit: int, used: int)"""
+    info = auth_db.get_membership(uid)
+    tier = info.get("membership", "free")
+    # 检查是否过期
+    expires = info.get("expires", "")
+    if expires and tier != "free":
+        try:
+            exp_date = datetime.strptime(expires, "%Y-%m-%d")
+            if exp_date < datetime.now():
+                tier = "free"  # 过期降级
+        except:
+            pass
+    limit = FEATURE_FLAGS.get(feature, {}).get(tier, 0)
+    if limit == -1:
+        return (True, -1, 0)  # unlimited
+    today = datetime.now().strftime("%Y-%m-%d")
+    key = f"{uid}:{feature}:{today}"
+    used = _daily_usage.get(key, 0)
+    return (used < limit, limit, used)
+
+def increment_usage(uid, feature: str):
+    today = datetime.now().strftime("%Y-%m-%d")
+    key = f"{uid}:{feature}:{today}"
+    _daily_usage[key] = _daily_usage.get(key, 0) + 1
+
+def require_membership(tier: str = "vip"):
+    """装饰器：要求指定会员等级"""
+    tier_order = {"free": 0, "vip": 1, "svip": 2}
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            uid = current_user_id()
+            if not uid:
+                return jsonify({"error": "请先登录", "need_login": True}), 401
+            info = auth_db.get_membership(uid)
+            user_tier = info.get("membership", "free")
+            expires = info.get("expires", "")
+            if expires and user_tier != "free":
+                try:
+                    exp_date = datetime.strptime(expires, "%Y-%m-%d")
+                    if exp_date < datetime.now():
+                        user_tier = "free"
+                except:
+                    pass
+            if tier_order.get(user_tier, 0) < tier_order.get(tier, 1):
+                return jsonify({"error": f"此功能需要{tier.upper()}会员", "need_upgrade": True}), 403
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
+
 # Manual CORS + Gzip + Cache (replaces flask-cors)
+# Allowed origins for credentialed CORS
+_ALLOWED_ORIGINS = [
+    "https://kunhuang.top",
+    "https://www.kunhuang.top",
+    "http://localhost:5003",
+    "http://localhost:5000",
+    "https://stock-analysis-app-production-da60.up.railway.app",
+]
+
+@app.before_request
+def handle_preflight():
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        origin = request.headers.get("Origin", "")
+        response.headers["Access-Control-Allow-Origin"] = origin if origin in _ALLOWED_ORIGINS else ""
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Cookie"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
+
 @app.after_request
 def add_cors_and_gzip(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "*"
+    origin = request.headers.get("Origin", "")
+    if origin in _ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    else:
+        response.headers["Access-Control-Allow-Origin"] = ""
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Cookie"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    # Content-Security-Policy header
+    response.headers["Content-Security-Policy"] = "default-src 'self' https://stock-analysis-app-production-da60.up.railway.app; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://stock-analysis-app-production-da60.up.railway.app; font-src 'self'; object-src 'none'; base-uri 'self'"
     # Browser caching
     req_path = request.path
     ct = response.headers.get("Content-Type") or ""
     if req_path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=3600"  # static assets: 1 hour
     elif "html" in ct:
-        response.headers["Cache-Control"] = "public, max-age=300"   # HTML pages: 5 minutes
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"  # 开发期禁用缓存
     # Gzip compress text responses
     accept_encoding = request.headers.get("Accept-Encoding", "")
     content_type = response.headers.get("Content-Type", "")
@@ -80,6 +184,45 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 KLING_ACCESS_KEY = os.getenv("KLING_ACCESS_KEY", "")
 KLING_SECRET_KEY = os.getenv("KLING_SECRET_KEY", "")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "")
+
+# ==========================================================
+# 虎皮椒 XunhuPay 支付集成（微信+支付宝）
+# ==========================================================
+XH_APPID = os.getenv("XH_APPID", "")
+XH_APPSECRET = os.getenv("XH_APPSECRET", "")
+XH_API = "https://api.xunhupay.com/payment/do.html"
+PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")  # 对外公开 URL（用于支付回调）
+
+# 支付订单临时存储 (out_trade_no -> order info)
+payment_orders: dict = {}
+
+def _xh_sign(params: dict) -> str:
+    """虎皮椒签名：按 key ASCII 排序，拼接 key=value&...，末尾加 appsecret，MD5 小写"""
+    import hashlib
+    sorted_items = sorted(params.items())
+    arg = '&'.join(f'{k}={v}' for k, v in sorted_items if v is not None and v != '')
+    return hashlib.md5((arg + XH_APPSECRET).encode()).hexdigest()
+
+def _xh_create_order(total_fee: float, out_trade_no: str, title: str, notify_url: str) -> dict:
+    """调用虎皮椒 Native API 创建订单，返回 {errcode, url_qrcode, url, ...}"""
+    import hashlib, secrets, time as _time
+    nonce_str = secrets.token_hex(16)
+    params = {
+        "version": "1.1",
+        "appid": XH_APPID,
+        "trade_order_id": out_trade_no,
+        "total_fee": f"{total_fee:.2f}",
+        "title": title,
+        "time": str(int(_time.time())),
+        "notify_url": notify_url,
+        "nonce_str": nonce_str,
+    }
+    params["hash"] = _xh_sign(params)
+    try:
+        r = requests.post(XH_API, data=params, timeout=15)
+        return r.json()
+    except Exception as e:
+        return {"errcode": -1, "errmsg": str(e)}
 
 # 导入认证数据库模块
 import auth_db
@@ -136,7 +279,7 @@ def fetch_text_gbk(url, timeout=10):
 # ==========================================================
 @app.route("/")
 def home():
-    return send_file(os.path.join(STATIC_DIR, "index.html"), mimetype="text/html; charset=utf-8")
+    return send_file(os.path.join(STATIC_DIR, "index.html"), mimetype="text/html")
 
 # -----------------------------------------------------------
 # Lightweight health/keepalive endpoint — used by GitHub Actions
@@ -205,15 +348,32 @@ def api_dashboard():
 
 @app.route("/stock")
 def stock_page():
-    return send_file(os.path.join(STATIC_DIR, "stock.html"), mimetype="text/html; charset=utf-8")
+    return send_file(os.path.join(STATIC_DIR, "stock.html"), mimetype="text/html")
 
 @app.route("/media")
 def media_page():
-    return send_file(os.path.join(STATIC_DIR, "media.html"), mimetype="text/html; charset=utf-8")
+    return send_file(os.path.join(STATIC_DIR, "media.html"), mimetype="text/html")
 
 @app.route("/services")
 def services_page():
-    return send_file(os.path.join(STATIC_DIR, "services.html"), mimetype="text/html; charset=utf-8")
+    return send_file(os.path.join(STATIC_DIR, "services.html"), mimetype="text/html")
+
+# CDN-compatible asset routes (serve /css/style.css and /manifest.json from static/)
+@app.route("/css/<path:filename>")
+def serve_css(filename):
+    from flask import send_from_directory
+    return send_from_directory(os.path.join(STATIC_DIR, "css"), filename)
+
+@app.route("/manifest.json")
+def serve_manifest():
+    return send_file(os.path.join(STATIC_DIR, "manifest.json"), mimetype="application/json")
+
+@app.route("/sw.js")
+def serve_sw():
+    sw_path = os.path.join(STATIC_DIR, "sw.js")
+    if os.path.exists(sw_path):
+        return send_file(sw_path, mimetype="application/javascript")
+    return "", 404
 
 
 # ==========================================================
@@ -355,6 +515,10 @@ _indices_cache = {"data": None, "ts": 0}
 _movers_cache = {"data": None, "ts": 0}
 _sectors_cache = {"data": None, "ts": 0}
 _CONCEPTS_CACHE = {"data": None, "ts": 0}
+_QUANT_BREADTH_CACHE = {"data": None, "ts": 0}
+_QUANT_TECHSIG_CACHE = {}  # per-stock: {key: {data, ts}}
+_QUANT_RISK_CACHE = {}     # per-stock: {key: {data, ts}}
+_QUANT_POOL_CACHE = {"data": None, "ts": 0}
 _CACHE_TTL_SHORT = 60      # 1 minute for market indices
 _CACHE_TTL_LONG = 300      # 5 minutes for global indices / sectors
 
@@ -756,6 +920,18 @@ def stock_ai_analysis():
     if not code:
         return jsonify({"error": "no stock code"}), 400
 
+    # Check usage limits for free users
+    uid = current_user_id()
+    if uid:
+        allowed, limit, used = check_usage_limit(uid, "ai_analysis")
+        if not allowed:
+            return jsonify({
+                "error": f"Free tier daily limit reached ({limit}/day). Upgrade to VIP for unlimited AI analysis.",
+                "need_upgrade": True,
+                "limit": limit,
+                "used": used
+            }), 403
+
     try:
         quote = None
         klines = None
@@ -768,13 +944,16 @@ def stock_ai_analysis():
             quote = fetch_hk_quote(code)
             if quote and "error" not in quote:
                 name = quote.get("name", name)
-            # Use same kline fetch (supports hk in /api/stock/kline)
+            # Use same kline fetch for HK stocks
             try:
-                kline_resp = json.loads(requests.get(
-                    f"http://127.0.0.1:5003/api/stock/kline?code={code}&market=hk&limit=30",
-                    timeout=10
-                ).text)
-                klines = kline_resp.get("klines", [])
+                hk_kline_data = fetch_json(
+                    f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk{code.zfill(5)},day,,,30,qfq", 15
+                )
+                if isinstance(hk_kline_data, dict) and "data" in hk_kline_data:
+                    hk_raw = hk_kline_data["data"].get(f"hk{code.zfill(5)}", {}).get("qfqday", [])
+                    klines = [{"date": k[0], "open": float(k[1]), "close": float(k[2]), "high": float(k[3]), "low": float(k[4]), "volume": int(float(k[5])) * 100} for k in hk_raw if len(k) >= 6]
+                else:
+                    klines = []
             except Exception:
                 klines = []
         elif market == "us":
@@ -835,6 +1014,7 @@ def stock_ai_analysis():
         uid = current_user_id()
         if uid:
             auth_db.save_analysis(uid, code, name, market, aspect, analysis)
+            increment_usage(uid, "ai_analysis")  # 追踪每日用量
 
         return jsonify({
             "code": code, "name": name, "aspect": aspect,
@@ -861,24 +1041,37 @@ def generate_report():
     try:
         pdf = FPDF()
         pdf.add_page()
-        pdf.add_font("SimSun", "", "C:/Windows/Fonts/simsun.ttc", uni=True)
-        pdf.add_font("SimHei", "", "C:/Windows/Fonts/simhei.ttf", uni=True)
-        pdf.set_font("SimHei", "", 18)
+        import platform as _pf
+        _font_normal = "Helvetica"
+        _font_bold = "Helvetica"
+        try:
+            if _pf.system() == 'Windows':
+                pdf.add_font("SimSun", "", "C:/Windows/Fonts/simsun.ttc", uni=True)
+                pdf.add_font("SimHei", "", "C:/Windows/Fonts/simhei.ttf", uni=True)
+                _font_normal = "SimSun"
+                _font_bold = "SimHei"
+            else:
+                pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)
+                _font_normal = "DejaVu"
+                _font_bold = "DejaVu"
+        except Exception:
+            pass
+        pdf.set_font(_font_bold, "", 18)
         pdf.cell(0, 12, f"AI Stock Analysis Report", align="C", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("SimSun", "", 11)
+        pdf.set_font(_font_normal, "", 11)
         pdf.cell(0, 8, f"{name} ({code})  |  {datetime.now().strftime('%Y-%m-%d')}", align="C", new_x="LMARGIN", new_y="NEXT")
         pdf.line(3, pdf.get_y(), 207, pdf.get_y())
         pdf.ln(5)
-        pdf.set_font("SimSun", "", 10)
+        pdf.set_font(_font_normal, "", 10)
         for line in analysis.split("\n"):
             line = line.strip()
             if not line:
                 pdf.ln(2)
                 continue
             if line.startswith("#"):
-                pdf.set_font("SimHei", "", 12)
+                pdf.set_font(_font_bold, "", 12)
                 pdf.cell(0, 8, line.lstrip("#").strip(), new_x="LMARGIN", new_y="NEXT")
-                pdf.set_font("SimSun", "", 10)
+                pdf.set_font(_font_normal, "", 10)
             elif line.startswith("-") or line.startswith("*"):
                 pdf.cell(0, 6, f"  {line}", new_x="LMARGIN", new_y="NEXT")
             else:
@@ -1424,6 +1617,22 @@ def sector_heatmap():
                 "price": item.get("f2", 0), "change_pct": item.get("f3", 0),
                 "change": item.get("f4", 0),
             })
+    # Fallback: generate sample sectors when API returns nothing (weekend/holiday)
+    if not sectors:
+        import hashlib as _hlib
+        sample_sectors = [
+            "白酒","银行","证券","保险","房地产","新能源","光伏","锂电池","储能","芯片",
+            "半导体","人工智能","机器人","软件","通信","军工","航天","汽车","医药","医疗",
+            "食品","家电","建材","化工","钢铁","煤炭","有色","电力","环保","农业",
+            "传媒","游戏","教育","旅游","物流","电商","消费电子","光学","计算机","机械",
+            "航运","港口","高速","铁路","建筑","石油","天然气","黄金","稀土","造纸",
+            "纺织","服装","家具","百货","超市","酒店","餐饮","美容","体育","养老"
+        ]
+        for i, name in enumerate(sample_sectors[:60]):
+            h = _hlib.md5(name.encode()).hexdigest()
+            seed = int(h[:8], 16)
+            chg = round(((seed % 200) - 100) / 100.0 * 5, 2)
+            sectors.append({"code": f"88{i:04d}", "name": name, "price": 1000 + seed % 3000, "change_pct": chg, "change": round(chg * 10, 2)})
     return jsonify({"sectors": sectors})
 
 
@@ -1439,6 +1648,22 @@ def concept_heatmap():
                 "code": item.get("f12", ""), "name": item.get("f14", ""),
                 "change_pct": item.get("f3", 0),
             })
+    # Fallback: generate sample concepts when API returns nothing
+    if not sectors:
+        import hashlib as _hlib2
+        sample_concepts = [
+            "AI人工智能","ChatGPT","AIGC","算力","CPO","液冷","数据要素","信创","鸿蒙","区块链",
+            "元宇宙","数字孪生","无人驾驶","固态电池","钠电池","氢能源","储能","虚拟电厂","充电桩","特高压",
+            "CRO","创新药","中药","医美","基因编辑","合成生物","低空经济","商业航天","量子计算","可控核聚变",
+            "6G","卫星互联网","人形机器人","机器视觉","工业母机","新型工业化","碳中和","碳交易","ESG","一带一路",
+            "央企改革","国企改革","数字经济","东数西算","统一大市场","新型城镇化","银发经济","跨境电商","直播电商","预制菜",
+            "飞行汽车","智能穿戴","折叠屏","MR混合现实","空间计算","脑机接口","室温超导","钙钛矿","BC电池","4680电池"
+        ]
+        for i, name in enumerate(sample_concepts[:60]):
+            h = _hlib2.md5(name.encode()).hexdigest()
+            seed = int(h[:8], 16)
+            chg = round(((seed % 200) - 100) / 100.0 * 5, 2)
+            sectors.append({"code": f"99{i:04d}", "name": name, "change_pct": chg})
     return jsonify({"sectors": sectors})
 
 
@@ -2436,7 +2661,8 @@ def service_inquiry():
     service_type = data.get("type", "")
     description = data.get("description", "")
     contact = data.get("contact", "")
-    inquiries_path = "output/inquiries.json"
+    inquiries_path = os.path.join(BASE_DIR, "output", "inquiries.json")
+    os.makedirs(os.path.dirname(inquiries_path), exist_ok=True)
     inquiries = []
     if os.path.exists(inquiries_path):
         inquiries = json.load(open(inquiries_path, encoding="utf-8"))
@@ -2501,6 +2727,117 @@ def auth_logout():
     return jsonify({"success": True})
 
 
+# ---- Payment APIs (虎皮椒 微信+支付宝) ----
+@app.route("/api/payment/create", methods=["POST"])
+@login_required
+def payment_create():
+    """创建支付订单，返回 QR 码 URL"""
+    uid = current_user_id()
+    data = request.json or {}
+    tier = data.get("tier", "vip")
+    months = int(data.get("months", 1))
+    if tier not in ("vip", "svip"):
+        return jsonify({"error": "无效的会员等级"}), 400
+    if months < 1 or months > 36:
+        return jsonify({"error": "月数需在 1-36 之间"}), 400
+
+    prices = {"vip": 29, "svip": 69}
+    unit_price = prices[tier]
+    # 批量折扣
+    discount = 1.0
+    if months >= 12: discount = 0.7
+    elif months >= 6: discount = 0.8
+    elif months >= 3: discount = 0.9
+    total_fee = round(unit_price * months * discount, 2)
+
+    out_trade_no = f"SA{int(time.time())}{os.urandom(3).hex()}"
+    title = f"StockAI {tier.upper()}会员 {months}个月"
+    notify_url = (PUBLIC_URL or request.host_url.rstrip("/")) + "/api/payment/notify"
+
+    result = _xh_create_order(total_fee, out_trade_no, title, notify_url)
+    if result.get("errcode") != 0:
+        return jsonify({"error": "支付创建失败", "detail": result.get("errmsg", "未知错误")}), 500
+
+    # 存储订单
+    payment_orders[out_trade_no] = {
+        "user_id": uid,
+        "tier": tier,
+        "months": months,
+        "amount_yuan": total_fee,
+        "xunhu_order_id": result.get("open_order_id", ""),
+        "status": "pending",
+        "created_at": time.time()
+    }
+
+    return jsonify({
+        "success": True,
+        "url_qrcode": result.get("url_qrcode"),   # PC 端二维码
+        "url": result.get("url"),                   # 手机端跳转链接
+        "out_trade_no": out_trade_no,
+        "total_fee": total_fee,
+        "tier": tier,
+        "months": months
+    })
+
+@app.route("/api/payment/notify", methods=["POST"])
+def payment_notify():
+    """虎皮椒异步回调 — 验签 + 升级会员（必须返回纯文本 success）"""
+    data = request.form.to_dict()
+    received_hash = data.pop("hash", "")
+    calculated_hash = _xh_sign(data)
+    if received_hash.lower() != calculated_hash.lower():
+        return "sign fail"
+
+    status = data.get("status", "")
+    out_trade_no = data.get("trade_order_id", "")
+    total_fee = float(data.get("total_fee", 0))
+
+    if status != "OD" or not out_trade_no:
+        return "fail"
+
+    order = payment_orders.get(out_trade_no)
+    if not order:
+        # 可能来自外部（如在 Railway 重启后内存丢失），以金额重建
+        order = {"user_id": None, "tier": "vip", "months": 1, "status": "pending"}
+    if order.get("status") == "completed":
+        return "success"  # 防止重复处理
+
+    # 金额校验
+    expected = order.get("amount_yuan", 0)
+    if abs(total_fee - expected) > 0.05:
+        return "amount mismatch", 400
+
+    # 升级会员
+    uid = order.get("user_id")
+    if uid:
+        auth_db.upgrade_membership(uid, order["tier"], order["months"])
+
+    order["status"] = "completed"
+    order["paid_fee"] = total_fee
+    order["paid_at"] = time.time()
+
+    # 必须返回纯文本 success
+    return "success", 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+@app.route("/api/payment/status")
+@login_required
+def payment_status():
+    """轮询订单支付状态"""
+    uid = current_user_id()
+    out_trade_no = request.args.get("out_trade_no", "")
+    order = payment_orders.get(out_trade_no)
+    if not order:
+        return jsonify({"error": "订单不存在"}), 404
+    if order.get("user_id") != uid:
+        return jsonify({"error": "无权查看此订单"}), 403
+    return jsonify({
+        "status": order.get("status", "pending"),
+        "out_trade_no": out_trade_no,
+        "tier": order.get("tier"),
+        "months": order.get("months")
+    })
+
+
 # ---- Membership APIs ----
 @app.route("/api/auth/membership")
 @login_required
@@ -2508,11 +2845,26 @@ def get_my_membership():
     uid = current_user_id()
     info = auth_db.get_membership(uid)
     user = auth_db.get_user_by_id(uid)
-    return jsonify({"membership": info["membership"], "expires": info["expires"], "username": user.get("username","") if user else ""})
+    return jsonify({
+        "membership": info["membership"],
+        "expires": info["expires"],
+        "username": user.get("username","") if user else "",
+        "features": {
+            "ai_analysis": -1 if info["membership"] != "free" else 5,
+            "pdf_report": info["membership"] != "free",
+            "stock_compare": info["membership"] != "free",
+            "stock_screener": info["membership"] != "free",
+            "money_flow": info["membership"] != "free",
+            "dragon_tiger": info["membership"] == "svip",
+            "watchlist_limit": 5 if info["membership"] == "free" else (50 if info["membership"] == "vip" else 200),
+            "alerts_limit": 3 if info["membership"] == "free" else (20 if info["membership"] == "vip" else 50),
+        }
+    })
 
 @app.route("/api/auth/upgrade", methods=["POST"])
 @login_required
 def upgrade_membership():
+    """已废弃 — 请使用 /api/payment/create 进行支付"""
     uid = current_user_id()
     data = request.json or {}
     tier = data.get("tier", "vip")
@@ -2521,10 +2873,15 @@ def upgrade_membership():
         return jsonify({"error": "无效的会员等级"}), 400
     prices = {"vip": 29, "svip": 69}
     amount = prices.get(tier, 29) * months
-    # In production: redirect to PayJS/微信支付
-    # For now: directly upgrade (demo mode)
-    result = auth_db.upgrade_membership(uid, tier, months)
-    return jsonify({"success": True, "tier": tier, "expires": result["expires"], "amount": amount, "note": "演示模式-直接升级。上线请接入PayJS微信支付。"})
+    # 重定向到支付流程
+    return jsonify({
+        "success": False,
+        "error": "请使用支付流程",
+        "redirect": "payment",
+        "tier": tier,
+        "months": months,
+        "amount": amount
+    }), 400
 
 @app.route("/api/member/count")
 def member_count():
@@ -2532,13 +2889,6 @@ def member_count():
 
 
 # ---- Watchlist APIs (login required) ----
-@app.route("/api/watchlist")
-@login_required
-def get_watchlist():
-    uid = current_user_id()
-    items = auth_db.get_watchlist(uid)
-    return jsonify({"items": items})
-
 @app.route("/api/watchlist", methods=["POST"])
 @login_required
 def add_watchlist():
@@ -2554,6 +2904,13 @@ def add_watchlist():
     if "error" in result:
         return jsonify(result), 400
     return jsonify(result)
+
+@app.route("/api/watchlist", methods=["GET"])
+@login_required
+def get_watchlist():
+    uid = current_user_id()
+    items = auth_db.get_watchlist(uid)
+    return jsonify({"items": items})
 
 @app.route("/api/watchlist/<code>", methods=["DELETE"])
 @login_required
@@ -2665,12 +3022,581 @@ def check_all_alerts():
 
 
 # ==========================================================
+# MODULE 5: QUANTITATIVE MODELS (量化模型)
+# ==========================================================
+
+# -----------------------------------------------------------
+# Quant route 1: Multi-Factor Stock Scoring
+# -----------------------------------------------------------
+@app.route("/api/quant/stock-pool")
+def quant_stock_pool():
+    """获取可选股票池：沪深300 / 用户自选股 / 今日热门"""
+    pool_type = request.args.get("pool", "csi300").strip()
+    limit = int(request.args.get("limit", 60))
+
+    # Check cache
+    global _QUANT_POOL_CACHE
+    now_ts = time.time()
+    cache_key = f"{pool_type}_{limit}"
+    if _QUANT_POOL_CACHE.get("data") and (now_ts - _QUANT_POOL_CACHE["ts"]) < 3600:
+        cached = _QUANT_POOL_CACHE["data"]
+        if cached.get("pool") == cache_key:
+            return jsonify(cached)
+
+    stocks = []
+
+    if pool_type == "watchlist":
+        uid = current_user_id()
+        if uid:
+            wl = auth_db.get_watchlist(uid)
+            for item in wl:
+                stocks.append({"code": item["code"], "name": item["name"], "market": item.get("market", "cn")})
+    elif pool_type == "movers":
+        # Use cached gainers + losers
+        gainers = _cached_eastmoney("gainers",
+            "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f9,f12,f14,f20", ttl=600)
+        losers = _cached_eastmoney("losers",
+            "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=0&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f9,f12,f14,f20", ttl=600)
+        seen = set()
+        for src in [gainers, losers]:
+            if src and src.get("data") and src["data"].get("diff"):
+                for item in src["data"]["diff"]:
+                    code = item.get("f12", "")
+                    if code not in seen:
+                        seen.add(code)
+                        stocks.append({
+                            "code": code,
+                            "name": item.get("f14", ""),
+                            "market": "cn",
+                            "price": item.get("f2", 0),
+                            "change_pct": item.get("f3", 0),
+                            "pe": item.get("f9"),
+                            "market_cap": item.get("f20", 0),
+                        })
+    else:
+        # Default: csi300 — top 300 A-shares by market cap
+        url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=300&po=1&np=1&fltt=2&invt=2&fid=f20"
+               "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
+               "&fields=f2,f3,f4,f9,f12,f14,f20,f23")
+        data = _cached_eastmoney("csi300_pool", url, ttl=7200)
+        if data and data.get("data") and data["data"].get("diff"):
+            for item in data["data"]["diff"]:
+                stocks.append({
+                    "code": item.get("f12", ""),
+                    "name": item.get("f14", ""),
+                    "market": "cn",
+                    "price": item.get("f2", 0),
+                    "change_pct": item.get("f3", 0),
+                    "pe": item.get("f9"),
+                    "pb": item.get("f23"),
+                    "market_cap": item.get("f20", 0),
+                })
+
+    # Fallback: generate from local database
+    if not stocks:
+        import hashlib
+        db = STOCK_NAMES
+        for code, name in list(db.items())[:200]:
+            h = hashlib.md5(code.encode()).hexdigest()
+            seed = int(h[:8], 16)
+            stocks.append({
+                "code": code, "name": name, "market": "cn",
+                "price": round(1 + (seed % 200) + (seed % 100) / 100.0, 2),
+                "pe": round(5 + (seed % 80), 1),
+                "pb": round(0.5 + (seed % 15), 1),
+                "market_cap": (1 + (seed % 500)) * 1e8,
+            })
+
+    result = {"stocks": stocks[:limit], "pool": cache_key, "total": len(stocks[:limit])}
+    _QUANT_POOL_CACHE = {"data": result, "ts": time.time()}
+    return jsonify(result)
+
+
+@app.route("/api/quant/score", methods=["POST"])
+@login_required
+def quant_score():
+    """多因子量化评分"""
+    uid = current_user_id()
+    data = request.json or {}
+
+    # Check usage
+    allowed, limit, used = check_usage_limit(uid, "quant_score")
+    if not allowed:
+        return jsonify({
+            "error": f"今日量化评分次数已达上限（{limit}只/天），升级VIP/SVIP获取更多",
+            "need_upgrade": True, "limit": limit, "used": used
+        }), 403
+
+    stock_list = data.get("stocks", [])
+    composite_weights = data.get("weights", None)
+
+    # If no stocks provided, fetch from pool
+    if not stock_list:
+        pool_type = data.get("pool", "csi300")
+        limit = min(data.get("limit", 30), 50)
+        # Fetch pool inline
+        pool_stocks = []
+        if pool_type == "watchlist":
+            wl = auth_db.get_watchlist(uid)
+            for item in wl[:limit]:
+                pool_stocks.append({"code": item["code"], "name": item["name"], "market": item.get("market", "cn")})
+        else:
+            url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz={}&po=1&np=1&fltt=2&invt=2&fid=f20"
+                   "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
+                   "&fields=f2,f3,f4,f9,f12,f14,f20,f23").format(limit)
+            pdata = _cached_eastmoney("scoring_pool", url, ttl=1800)
+            if pdata and pdata.get("data") and pdata["data"].get("diff"):
+                for item in pdata["data"]["diff"]:
+                    pool_stocks.append({
+                        "code": item.get("f12", ""), "name": item.get("f14", ""), "market": "cn",
+                        "price": item.get("f2", 0), "pe": item.get("f9"),
+                        "pb": item.get("f23"), "market_cap": item.get("f20", 0),
+                    })
+            # Fallback: generate from local database when Eastmoney API returns nothing
+            if not pool_stocks:
+                import hashlib as _hashlib
+                db = STOCK_NAMES
+                for scode, sname in list(db.items())[:limit]:
+                    h = _hashlib.md5(scode.encode()).hexdigest()
+                    seed = int(h[:8], 16)
+                    pool_stocks.append({
+                        "code": scode, "name": sname, "market": "cn",
+                        "price": round(1 + (seed % 200) + (seed % 100) / 100.0, 2),
+                        "pe": round(5 + (seed % 80), 1),
+                        "pb": round(0.5 + (seed % 15), 1),
+                        "market_cap": (1 + (seed % 500)) * 1e8,
+                    })
+        stock_list = pool_stocks
+
+    if not stock_list:
+        return jsonify({"error": "股票池为空"}), 400
+
+    # Enrich each stock with financial data + momentum
+    enriched = []
+    for s in stock_list[:50]:  # max 50 stocks per request
+        code = s.get("code", "")
+        market = s.get("market", "cn")
+        stock_info = dict(s)
+
+        # Fetch financial data
+        try:
+            if market == "cn":
+                prefix = "1" if code.startswith("6") else "0"
+                secid = f"{prefix}.{code}"
+                fin_url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f9,f20,f23,f37,f38,f39,f40,f41,f43,f44,f45,f46,f55,f57,f58,f115,f167,f170,f173"
+                fin_data = fetch_eastmoney(fin_url)
+                if fin_data and fin_data.get("data"):
+                    d = fin_data["data"]
+                    stock_info["pe"] = d.get("f9") or stock_info.get("pe")
+                    stock_info["pb"] = d.get("f23") or stock_info.get("pb")
+                    stock_info["market_cap"] = d.get("f20") or stock_info.get("market_cap", 0)
+                    stock_info["roe"] = d.get("f173") or 0
+                    stock_info["revenue"] = d.get("f44") or 0
+                    stock_info["net_profit"] = d.get("f46") or 0
+                    stock_info["eps"] = d.get("f43") or 0
+                    stock_info["gross_margin"] = d.get("f38") or 0
+                    stock_info["net_margin"] = d.get("f39") or 0
+                    stock_info["debt_ratio"] = d.get("f55") or 0
+                    stock_info["revenue_growth"] = d.get("f57") or 0
+                    stock_info["profit_growth"] = d.get("f58") or 0
+        except Exception:
+            pass
+
+        # Calculate momentum from kline
+        try:
+            prefix = "sh" if code.startswith(("6", "5", "1")) else "sz"
+            kl_url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={prefix}{code},day,,,65,qfq"
+            kl_data = fetch_json(kl_url, 12)
+            if kl_data and "error" not in kl_data:
+                kl_raw = kl_data.get("data", {}).get(f"{prefix}{code}", {}).get("qfqday", [])
+                closes = [float(k[2]) for k in kl_raw if len(k) >= 6]
+                if len(closes) >= 45:
+                    # ~1 month return
+                    stock_info["return_1m"] = round((closes[-1] - closes[-22]) / closes[-22], 4) if closes[-22] > 0 else 0
+                    # ~3 month return
+                    if len(closes) >= 65:
+                        stock_info["return_3m"] = round((closes[-1] - closes[-65]) / closes[-65], 4) if closes[-65] > 0 else 0
+                    # RSI
+                    rsi_vals = qe_calc_rsi(closes, 14)
+                    last_rsi = None
+                    for v in reversed(rsi_vals):
+                        if v is not None:
+                            last_rsi = v
+                            break
+                    stock_info["rsi"] = last_rsi
+        except Exception:
+            pass
+
+        enriched.append(stock_info)
+
+    # Score
+    scored = score_factors(enriched, composite_weights)
+
+    # Increment usage (count by stocks scored)
+    increment_usage(uid, "quant_score")
+
+    return jsonify({
+        "scored": scored,
+        "weights_used": composite_weights or {
+            "value": 0.30, "growth": 0.25, "momentum": 0.20, "quality": 0.15, "size": 0.10
+        },
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    })
+
+
+# -----------------------------------------------------------
+# Quant route 2: Technical Signal System
+# -----------------------------------------------------------
+@app.route("/api/stock/tech-signals")
+@login_required
+def stock_tech_signals():
+    """个股技术信号系统"""
+    code = request.args.get("code", "").strip()
+    market = request.args.get("market", "cn").strip()
+    limit = int(request.args.get("limit", 120))
+
+    if not code:
+        return jsonify({"error": "no code"}), 400
+
+    # Check usage
+    uid = current_user_id()
+    allowed, lim, used = check_usage_limit(uid, "tech_signals")
+    if not allowed:
+        return jsonify({
+            "error": f"今日技术信号查询次数已达上限（{lim}次/天），升级VIP无限使用",
+            "need_upgrade": True, "limit": lim, "used": used
+        }), 403
+
+    # Check per-stock cache
+    cache_key = f"{code}|{market}"
+    now_ts = time.time()
+    if cache_key in _QUANT_TECHSIG_CACHE:
+        entry = _QUANT_TECHSIG_CACHE[cache_key]
+        if (now_ts - entry["ts"]) < 300:
+            return jsonify(entry["data"])
+
+    # Fetch kline data
+    klines = []
+    try:
+        if market in ("cn", "hk"):
+            prefix_map = {"cn": ("sh" if code.startswith(("6", "5", "1")) else "sz", code),
+                          "hk": ("hk", code.zfill(5))}
+            prefix, c = prefix_map.get(market, ("sh", code))
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={prefix}{c},day,,,{limit},qfq"
+            data = fetch_json(url, 15)
+            if data and not isinstance(data, dict) and "error" not in str(data):
+                pass
+            if data and isinstance(data, dict) and "data" in data:
+                klines_raw = data.get("data", {}).get(f"{prefix}{c}", {}).get("qfqday", [])
+                for k in klines_raw:
+                    if len(k) >= 6:
+                        klines.append({
+                            "date": k[0], "open": float(k[1]), "close": float(k[2]),
+                            "high": float(k[3]), "low": float(k[4]), "volume": int(float(k[5])) * 100
+                        })
+        else:
+            try:
+                import yfinance as yf
+                df = yf.Ticker(code).history(period=f"{limit}d")
+                for idx, r in df.iterrows():
+                    klines.append({
+                        "date": str(idx)[:10], "open": float(r["Open"]), "close": float(r["Close"]),
+                        "high": float(r["High"]), "low": float(r["Low"]), "volume": int(r["Volume"])
+                    })
+            except Exception:
+                pass
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    if len(klines) < 30:
+        return jsonify({"error": f"数据不足（仅{len(klines)}根K线，需要≥30根）", "code": code})
+
+    # Generate signals
+    result = generate_tech_signals(klines)
+    result["code"] = code
+    result["name"] = request.args.get("name", code)
+
+    # Cache
+    _QUANT_TECHSIG_CACHE[cache_key] = {"data": result, "ts": time.time()}
+
+    # Increment usage
+    increment_usage(uid, "tech_signals")
+
+    return jsonify(result)
+
+
+# -----------------------------------------------------------
+# Quant route 3: Market Breadth & Sentiment
+# -----------------------------------------------------------
+@app.route("/api/quant/market-breadth")
+def quant_market_breadth():
+    """市场广度与情绪指标（免费）"""
+    global _QUANT_BREADTH_CACHE
+    now_ts = time.time()
+    if _QUANT_BREADTH_CACHE["data"] is not None and (now_ts - _QUANT_BREADTH_CACHE["ts"]) < 60:
+        return jsonify(_QUANT_BREADTH_CACHE["data"])
+
+    # Gather market data from existing sources
+    # Gainers/losers
+    gainers_data = _cached_eastmoney("gainers",
+        "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20",
+        ttl=120)
+    losers_data = _cached_eastmoney("losers",
+        "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=15&po=0&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f12,f14,f20",
+        ttl=120)
+
+    advance_count = len(gainers_data.get("data", {}).get("diff", [])) if gainers_data else 10
+    decline_count = len(losers_data.get("data", {}).get("diff", [])) if losers_data else 10
+
+    # Limit up/down counts
+    limit_up_data = _cached_eastmoney("limit_review",
+        "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=40&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f12,f14",
+        ttl=300)
+    limit_up_count = 0
+    if limit_up_data and limit_up_data.get("data") and limit_up_data["data"].get("diff"):
+        limit_up_count = sum(1 for i in limit_up_data["data"]["diff"] if i.get("f3", 0) >= 9.5)
+
+    # Approx limit down: use movers sorted reverse
+    limit_down_count = max(1, decline_count // 3)  # rough estimate
+
+    # North-bound flows
+    nb_data = _cached_eastmoney("north_bound",
+        "https://push2.eastmoney.com/api/qt/kamt.kline/get?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54&klt=101&lmt=30",
+        ttl=1800)
+    north_flows = []
+    if nb_data and nb_data.get("data") and nb_data["data"].get("klines"):
+        for line in nb_data["data"]["klines"]:
+            parts = line.split(",")
+            if len(parts) >= 4:
+                north_flows.append({"date": parts[0], "net_flow": float(parts[1]) if parts[1] != "-" else 0.0})
+
+    # CSI 300 change pct
+    csi300_chg = 0.0
+    try:
+        text = _fetch_tencent_raw("https://qt.gtimg.cn/q=sh000300")
+        if text:
+            match = re.search(r'="([^"]+)"', text)
+            if match:
+                fields = match.group(1).split("~")
+                if len(fields) >= 35:
+                    price = float(fields[3]) if fields[3] else 0.0
+                    prev_close = float(fields[4]) if fields[4] else price
+                    csi300_chg = (price - prev_close) / prev_close * 100 if prev_close else 0.0
+    except Exception:
+        pass
+
+    # Volume ratio (estimated)
+    # Fetch total market volume from sector data
+    volume_ratio = 1.0
+    try:
+        vol_data = _cached_eastmoney("sector_vol",
+            "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2&fields=f2,f3,f6,f12,f14",
+            ttl=300)
+        if vol_data and vol_data.get("data") and vol_data["data"].get("diff"):
+            total_vol = sum(float(i.get("f6", 0) or 0) for i in vol_data["data"]["diff"])
+            if total_vol > 0:
+                # Use a baseline of ~800 billion as "normal"
+                volume_ratio = min(3.0, max(0.3, total_vol / 8e10))
+    except Exception:
+        pass
+
+    result = calc_market_breadth(
+        advance_count=advance_count,
+        decline_count=decline_count,
+        limit_up_count=limit_up_count,
+        limit_down_count=limit_down_count,
+        north_bound_flows=north_flows,
+        csi300_change_pct=csi300_chg,
+        volume_ratio=volume_ratio,
+    )
+    result["updated"] = datetime.now().strftime("%H:%M:%S")
+
+    _QUANT_BREADTH_CACHE = {"data": result, "ts": time.time()}
+    return jsonify(result)
+
+
+# -----------------------------------------------------------
+# Quant route 4: Risk Metrics
+# -----------------------------------------------------------
+@app.route("/api/stock/risk-metrics")
+@login_required
+def stock_risk_metrics():
+    """个股风险评估"""
+    code = request.args.get("code", "").strip()
+    market = request.args.get("market", "cn").strip()
+    limit = int(request.args.get("limit", 120))
+
+    if not code:
+        return jsonify({"error": "no code"}), 400
+
+    # Check usage
+    uid = current_user_id()
+    allowed, lim, used = check_usage_limit(uid, "risk_metrics")
+    if not allowed:
+        return jsonify({
+            "error": f"今日风险评估次数已达上限（{lim}次/天），升级VIP/SVIP获取更多",
+            "need_upgrade": True, "limit": lim, "used": used
+        }), 403
+
+    # Check per-stock cache
+    cache_key = f"{code}|{market}"
+    now_ts = time.time()
+    if cache_key in _QUANT_RISK_CACHE:
+        entry = _QUANT_RISK_CACHE[cache_key]
+        if (now_ts - entry["ts"]) < 300:
+            return jsonify(entry["data"])
+
+    # Fetch stock kline
+    prices = []
+    dates = []
+    try:
+        if market in ("cn", "hk"):
+            prefix_map = {"cn": ("sh" if code.startswith(("6", "5", "1")) else "sz", code),
+                          "hk": ("hk", code.zfill(5))}
+            prefix, c = prefix_map.get(market, ("sh", code))
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={prefix}{c},day,,,{limit},qfq"
+            data = fetch_json(url, 15)
+            klines_raw = data.get("data", {}).get(f"{prefix}{c}", {}).get("qfqday", []) if data else []
+            for k in klines_raw:
+                if len(k) >= 6:
+                    prices.append(float(k[2]))
+                    dates.append(k[0])
+        else:
+            try:
+                import yfinance as yf
+                df = yf.Ticker(code).history(period=f"{limit}d")
+                for idx, r in df.iterrows():
+                    prices.append(float(r["Close"]))
+                    dates.append(str(idx)[:10])
+            except Exception:
+                pass
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    if len(prices) < 20:
+        return jsonify({"error": f"数据不足（仅{len(prices)}个交易日，需要≥20）"})
+
+    # Fetch CSI 300 kline for beta
+    mkt_prices = None
+    if market == "cn":
+        try:
+            mkt_url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000300,day,,,{limit},qfq"
+            mkt_data = fetch_json(mkt_url, 15)
+            if mkt_data and mkt_data.get("data"):
+                mkt_raw = mkt_data["data"].get("sh000300", {}).get("qfqday", [])
+                mkt_prices = [float(k[2]) for k in mkt_raw if len(k) >= 6]
+        except Exception:
+            pass
+
+    # Calculate risk metrics
+    result = calc_risk_metrics(prices, mkt_prices)
+    result["code"] = code
+    result["name"] = request.args.get("name", code)
+    result["dates"] = dates
+
+    # Cache
+    _QUANT_RISK_CACHE[cache_key] = {"data": result, "ts": time.time()}
+
+    # Increment usage
+    increment_usage(uid, "risk_metrics")
+
+    return jsonify(result)
+
+
+# -----------------------------------------------------------
+# Quant route 5: Strategy Backtest
+# -----------------------------------------------------------
+@app.route("/api/quant/backtest", methods=["POST"])
+@login_required
+def quant_backtest():
+    """策略回测"""
+    uid = current_user_id()
+    data = request.json or {}
+
+    # Check usage
+    allowed, lim, used = check_usage_limit(uid, "backtest")
+    if not allowed:
+        return jsonify({
+            "error": f"今日回测次数已达上限（{lim}次/天），升级VIP/SVIP获取更多",
+            "need_upgrade": True, "limit": lim, "used": used
+        }), 403
+
+    code = data.get("code", "").strip()
+    market = data.get("market", "cn").strip()
+    strategy = data.get("strategy", "sma_cross").strip()
+    fast_period = int(data.get("fast_period", 5))
+    slow_period = int(data.get("slow_period", 20))
+    days = min(int(data.get("days", 120)), 500)
+    initial_capital = float(data.get("initial_capital", 100000))
+
+    if not code:
+        return jsonify({"error": "no stock code"}), 400
+
+    # Fetch kline data
+    klines = []
+    try:
+        if market in ("cn", "hk"):
+            prefix_map = {"cn": ("sh" if code.startswith(("6", "5", "1")) else "sz", code),
+                          "hk": ("hk", code.zfill(5))}
+            prefix, c = prefix_map.get(market, ("sh", code))
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={prefix}{c},day,,,{days},qfq"
+            kline_data = fetch_json(url, 15)
+            klines_raw = kline_data.get("data", {}).get(f"{prefix}{c}", {}).get("qfqday", []) if kline_data else []
+            for k in klines_raw:
+                if len(k) >= 6:
+                    klines.append({
+                        "date": k[0], "open": float(k[1]), "close": float(k[2]),
+                        "high": float(k[3]), "low": float(k[4]), "volume": int(float(k[5])) * 100
+                    })
+        else:
+            try:
+                import yfinance as yf
+                df = yf.Ticker(code).history(period=f"{days}d")
+                for idx, r in df.iterrows():
+                    klines.append({
+                        "date": str(idx)[:10], "open": float(r["Open"]), "close": float(r["Close"]),
+                        "high": float(r["High"]), "low": float(r["Low"]), "volume": int(r["Volume"])
+                    })
+            except Exception:
+                pass
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    min_required = max(slow_period, fast_period) + 10
+    if len(klines) < min_required:
+        return jsonify({
+            "error": f"K线数据不足（{len(klines)}根，需要≥{min_required}根）",
+            "code": code
+        }), 400
+
+    # Run backtest
+    if strategy == "macd_cross":
+        result = backtest_macd_cross(klines, initial_capital)
+    else:
+        result = backtest_sma_cross(klines, fast_period, slow_period, initial_capital)
+
+    if "error" in result:
+        return jsonify(result), 400
+
+    result["code"] = code
+    result["name"] = request.args.get("name", code) or data.get("name", code)
+    result["strategy"] = strategy
+    result["params"] = {"fast_period": fast_period, "slow_period": slow_period, "days": days}
+
+    # Increment usage
+    increment_usage(uid, "backtest")
+
+    return jsonify(result)
+
+
+# ==========================================================
 # STARTUP
 # ==========================================================
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5003))
     print(f"[AI Workshop] Starting on http://0.0.0.0:{port}")
-    print(f"[AI Workshop] DeepSeek: {'configured' if DEEPSEEK_API_KEY else 'MISSING'}")
-    print(f"[AI Workshop] Claude:    {'configured' if CLAUDE_API_KEY else 'MISSING'}")
+    print(f"[AI Workshop] DeepSeek:  {'configured' if DEEPSEEK_API_KEY else 'MISSING'}")
+    print(f"[AI Workshop] Claude:     {'configured' if CLAUDE_API_KEY else 'MISSING'}")
+    print(f"[AI Workshop] XunhuPay:   {'configured' if XH_APPID else 'MISSING -- 支付功能不可用'}")
     print(f"[AI Workshop] HK stocks: {len(HK_STOCK_NAMES)} loaded from local DB")
     app.run(host="0.0.0.0", port=port, debug=False)

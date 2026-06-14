@@ -38,6 +38,9 @@ def verify_password(pwd: str, stored_hash: str, salt: str) -> bool:
 # ==========================================================
 def init_db():
     conn = sqlite3.connect(DB_PATH)
+    conn.text_factory = str
+    conn.execute("PRAGMA encoding = 'UTF-8'")
+    conn.execute("PRAGMA foreign_keys = ON")
     cur = conn.cursor()
     # 用户表
     cur.execute("""
@@ -310,6 +313,8 @@ def get_membership(user_id):
 
 def upgrade_membership(user_id, tier, months=1):
     """升级会员"""
+    if tier not in ("vip", "svip"):
+        return {"error": "invalid tier"}
     from datetime import datetime, timedelta
     current = get_membership(user_id)
     if current["membership"] == tier and current["expires"]:
@@ -335,7 +340,8 @@ def get_member_count():
     conn.close()
     result = {"free": 0, "vip": 0, "svip": 0}
     for tier, cnt in rows:
-        result[tier] = cnt
+        if tier in result:
+            result[tier] = cnt
     return result
 
 # 初始化

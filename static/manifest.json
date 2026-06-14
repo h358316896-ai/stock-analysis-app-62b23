@@ -1,7 +1,7 @@
 {
-  "name": "StockAI - 专业A股智能分析",
+  "name": "StockAI - Market Intelligence",
   "short_name": "StockAI",
-  "description": "实时行情·主力追踪·AI选股·龙虎榜·涨停复盘",
+  "description": "Professional market intelligence platform with real-time global indices, AI analysis, and portfolio tools",
   "start_url": "/stock",
   "display": "standalone",
   "orientation": "any",
