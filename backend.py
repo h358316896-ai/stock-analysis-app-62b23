@@ -32,10 +32,19 @@ from quant_engine import (
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(24).hex()
-# Cross-site cookie: enable if env says we're behind HTTPS proxy (Railway/Render)
-if os.getenv("CROSS_SITE_COOKIES") == "1" or os.getenv("RENDER"):
-    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-    app.config['SESSION_COOKIE_SECURE'] = True
+# ProxyFix: trust X-Forwarded-Proto from Railway/Render reverse proxy
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+# Cross-site cookie for kunhuang.top → railway.app (different domains)
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+# Secure flag must be set dynamically: True for HTTPS (behind proxy), False for local HTTP
+# Use ProxyFix middleware to make request.is_secure work correctly
+@app.before_request
+def _set_secure_cookie():
+    """Dynamically set Secure flag based on the actual request scheme."""
+    # After ProxyFix, is_secure reflects the real client connection
+    app.config['SESSION_COOKIE_SECURE'] = request.is_secure
 if not os.getenv("FLASK_SECRET_KEY"):
     print("[WARN] FLASK_SECRET_KEY env var not set — using random key. Sessions will be invalidated on restart.")
 
