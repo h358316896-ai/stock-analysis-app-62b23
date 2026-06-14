@@ -147,6 +147,25 @@
     <button data-panel="compare">⚖ 对比</button>
     <button data-panel="bigdata">📊 大数据</button>
     <button data-panel="retail">📈 散户必看</button>
+    <button data-panel="aipick">🤖 AI选股</button>
+  </div>
+
+  <!-- Panel: AI智能选股 -->
+  <div class="panel" id="panel-aipick">
+    <div class="glass" style="padding:16px">
+      <h4 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--accent)">🤖 AI智能选股 — 四维策略打分</h4>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <select id="aiSector" style="padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:13px;font-family:var(--font);outline:none">
+          <option value="白酒">🍶 白酒</option><option value="新能源">⚡ 新能源</option><option value="半导体">💻 半导体</option><option value="医药">💊 医药</option><option value="银行">🏦 银行</option><option value="AI">🤖 AI科技</option>
+        </select>
+        <select id="aiStrategy" style="padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);font-size:13px;font-family:var(--font);outline:none">
+          <option value="comprehensive">🎯 综合评分</option><option value="technical">📈 技术面优先</option><option value="value">💎 价值低估</option><option value="momentum">🚀 动量强势</option>
+        </select>
+        <button onclick="runAIScreener()" style="padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-family:var(--font);font-size:13px">开始评分</button>
+      </div>
+      <div id="aiScreenerResult"></div>
+      <div class="spinner-wrap" id="loadingAI" style="display:none"><div class="spinner"></div>AI 正在分析...</div>
+    </div>
   </div>
 
   <!-- Panel: Heatmap -->
@@ -481,21 +500,21 @@
 <div id="chartTooltip"></div>
 <script>
 // ============================================================
-// CDN MODE: Always proxy API calls to Railway backend
+// CDN MODE: 仅在非本地访问时代理 API 到 Railway
 // ============================================================
 (function(){
-  window.API_BASE = 'https://stock-analysis-app-production-da60.up.railway.app';
-  var orig = window.fetch;
-  window.fetch = function(url, opts) {
-    opts = opts || {};
-    if (window.API_BASE && typeof url === 'string' && url.indexOf('/api/') === 0) {
-      url = window.API_BASE + url;
-      // Cross-origin needs credentials for session cookie
-      opts.credentials = 'include';
-    }
-    return orig.call(this, url, opts);
-  };
-  if (window.API_BASE) console.log('[CDN] API proxy active → ' + window.API_BASE);
+  var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.startsWith('172.16.');
+  if (!isLocal) {
+    window.API_BASE = 'https://stock-analysis-app-production-da60.up.railway.app';
+    var orig = window.fetch;
+    window.fetch = function(url, opts) {
+      if (typeof url === 'string' && url.indexOf('/api/') === 0) url = window.API_BASE + url;
+      return orig.call(this, url, opts);
+    };
+    console.log('[CDN] API proxy active → ' + window.API_BASE);
+  } else {
+    console.log('[LOCAL] Direct API calls — no proxy');
+  }
 })();
 
 // ============================================================
@@ -533,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (b.dataset.panel === 'calendar') loadCalendar();
       if (b.dataset.panel === 'bigdata') loadBigData();
       if (b.dataset.panel === 'retail') loadRetailPanel();
+      if (b.dataset.panel === 'aipick') {} // AI选股面板，手动点击评分
     });
   });
 
@@ -628,6 +648,8 @@ async function submitAuth() {
     var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     var d = await r.json();
     if (d.error) return showErr(d.error);
+    // Store token for cross-origin auth
+    if (d.token) { localStorage.setItem('stockai_token', d.token); }
     // Set login state immediately
     state.isLogin = true;
     state.user = { username: u };
@@ -661,7 +683,7 @@ async function submitAuth() {
   } catch(x) { showErr('网络错误'); }
 }
 function showErr(m) { const el = document.getElementById('authError'); el.textContent = m; el.classList.add('show'); }
-function logout() { fetch('/api/auth/logout', { method: 'POST' }).then(() => { state.isLogin = false; state.user = null; onLoginChange(); location.reload(); }); }
+function logout() { localStorage.removeItem('stockai_token'); fetch('/api/auth/logout', { method: 'POST' }).then(() => { state.isLogin = false; state.user = null; onLoginChange(); location.reload(); }); }
 function toggleDropdown() { /* simplified */ }
 function showForgotPassword() { showToast('请联系客服重置密码: support@stockai.com', 'info'); }
 
@@ -1198,11 +1220,19 @@ async function loadAnomalies() {
       if (s.change_pct < -7) alerts.push({code:s.code,name:s.name,msg:'暴跌 '+s.change_pct.toFixed(1)+'%',cls:'down',price:s.price});
     });
     var el = document.getElementById('anomalyContent');
-    if (!alerts.length) { el.innerHTML = '<span style="color:var(--text-tertiary)">暂无显著异动</span>'; return; }
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes();
+    var isTradeTime = (now.getDay()>=1 && now.getDay()<=5 && h>=9 && (h<15 || (h==15 && m==0)));
+    var timeStr = ' · '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+    if (!alerts.length) {
+      var msg = isTradeTime ? '盘中暂无显著异动' : '今日休市，无实时异动';
+      el.innerHTML = '<span style="color:var(--text-secondary)">'+msg+'</span><span style="color:var(--text-tertiary);font-size:10px">'+timeStr+'</span>';
+      return;
+    }
     el.innerHTML = alerts.slice(0,8).map(function(a){
       var cls = a.cls==='up'?'alert-flash-up':'alert-flash-down';
       return '<span class="'+cls+'" onclick="quickSearch(\''+a.code+'\',\'cn\')" title="'+a.price.toFixed(2)+'"><span class="alert-pulse-dot" style="background:'+(a.cls==='up'?'#22c55e':'#ef4444')+'"></span>'+a.name+' '+a.msg+'</span>';
-    }).join('');
+    }).join('') + '<span style="color:var(--text-tertiary);font-size:10px">'+timeStr+'</span>';
   } catch(e) { console.warn(e); }
 }
 
@@ -1368,8 +1398,12 @@ async function searchStock() {
     // Charts + Analysis
     loadIndicatorsChart(code, mkt);
     loadMoneyFlow();           // 预加载资金流向数据
-    runAnalysis('comprehensive');
     document.getElementById('analysisTabs').style.display = 'flex';
+    document.getElementById('analysisBox').classList.add('show');
+    document.getElementById('analysisTitle').textContent = 'AI 分析报告';
+    document.getElementById('analysisText').innerHTML = '<p style="text-align:center;padding:40px;color:var(--text-secondary)">点击上方标签开始 AI 分析<br><small>综合分析 · 技术面 · 基本面 · 估值 · 风险评估</small></p>';
+    document.getElementById('pdfBtn').style.display = 'none';
+    document.getElementById('saveHistoryBtn').style.display = 'none';
 
     document.getElementById('watchlistBtn').style.display = 'inline-block';
     if (state.isLogin) {
@@ -2164,6 +2198,51 @@ async function downloadPDF() {
   finally { btn.textContent = '下载 PDF 报告'; btn.disabled = false; }
 }
 async function saveToHistory() { if (state.isLogin && state.analysis) { showToast('分析已自动保存到历史', 'success'); loadHistory(); } }
+
+// ============================================================
+// AI智能选股
+// ============================================================
+async function runAIScreener() {
+  var sector = document.getElementById('aiSector').value;
+  var strategy = document.getElementById('aiStrategy').value;
+  var resultDiv = document.getElementById('aiScreenerResult');
+  var loading = document.getElementById('loadingAI');
+  loading.style.display = 'block';
+  resultDiv.innerHTML = '';
+  try {
+    var r = await fetch('/api/stock/ai-screener', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sector: sector, strategy: strategy, count: 5 })
+    });
+    var d = await r.json();
+    loading.style.display = 'none';
+    if (!d.stocks || !d.stocks.length) {
+      resultDiv.innerHTML = '<p style="color:var(--text-tertiary);text-align:center;padding:20px">暂无结果，请重试</p>';
+      return;
+    }
+    var bars = d.stocks.map(function(s, i) {
+      var color = s.score >= 85 ? '#22c55e' : s.score >= 75 ? '#eab308' : s.score >= 60 ? '#f97316' : '#ef4444';
+      var badge = s.score >= 85 ? '🔥 强烈推荐' : s.score >= 75 ? '⭐ 推荐' : s.score >= 60 ? '⚠ 谨慎' : '❌ 回避';
+      return '<div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:14px;margin-bottom:10px;border-left:3px solid '+color+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<span style="font-weight:700;font-size:15px">'+(i+1)+'. '+s.name+' <span style="font-size:11px;color:var(--text-tertiary)">'+s.code+'</span></span>'+
+        '<span style="font-size:11px;color:'+color+';font-weight:700">'+badge+'</span></div>'+
+        '<div style="display:flex;gap:6px;margin-bottom:6px;font-size:11px">'+
+        '<span style="background:rgba(59,130,246,0.1);color:#60a5fa;padding:2px 8px;border-radius:4px">技术:'+(s.technical||0)+'</span>'+
+        '<span style="background:rgba(34,197,94,0.1);color:#4ade80;padding:2px 8px;border-radius:4px">基本面:'+(s.fundamental||0)+'</span>'+
+        '<span style="background:rgba(234,179,8,0.1);color:#facc15;padding:2px 8px;border-radius:4px">资金:'+(s.capital||0)+'</span>'+
+        '<span style="background:rgba(168,85,247,0.1);color:#c084fc;padding:2px 8px;border-radius:4px">情绪:'+(s.sentiment||0)+'</span>'+
+        '<span style="font-weight:700;color:'+color+'">总分:'+s.score+'</span></div>'+
+        '<div style="font-size:12px;color:var(--text-secondary)">💡 '+s.reason+'</div>'+
+        '<div style="margin-top:6px"><div style="height:4px;background:var(--bg-secondary);border-radius:2px"><div style="width:'+s.score+'%;height:4px;background:'+color+';border-radius:2px"></div></div></div>'+
+        '</div>';
+    }).join('');
+    resultDiv.innerHTML = '<div style="background:rgba(59,130,246,0.05);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--text-secondary)">📊 '+ (d.summary || '') + (d.topPick ? ' &nbsp;👉 首推: <b style="color:var(--accent)">'+d.topPick+'</b>' : '') + '</div>' + bars;
+  } catch(e) {
+    loading.style.display = 'none';
+    resultDiv.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">网络错误，请重试</p>';
+  }
+}
 
 // ============================================================
 // WATCHLIST, ALERTS, HISTORY

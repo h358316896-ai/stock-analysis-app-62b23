@@ -1,6 +1,7 @@
 # auth_db.py - 用户认证 & 自选股 & 提醒数据库
 import sqlite3
 import hashlib
+import hmac
 import secrets
 import time
 import json
@@ -8,6 +9,44 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "app.db")
+
+# ==========================================================
+# Token 认证（跨域Cookie替代方案）
+# ==========================================================
+_SECRET = None
+
+def _get_secret():
+    global _SECRET
+    if _SECRET is None:
+        _SECRET = os.getenv("FLASK_SECRET_KEY", secrets.token_hex(32)).encode()
+    return _SECRET
+
+def create_token(user_id: int) -> str:
+    """Generate a signed token: user_id:timestamp:signature"""
+    ts = int(time.time())
+    payload = f"{user_id}:{ts}"
+    sig = hmac.new(_get_secret(), payload.encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{payload}:{sig}"
+
+def verify_token(token: str) -> int | None:
+    """Verify token and return user_id if valid. None if invalid."""
+    try:
+        parts = token.split(":")
+        if len(parts) != 3:
+            return None
+        user_id = int(parts[0])
+        ts = int(parts[1])
+        sig = parts[2]
+        payload = f"{user_id}:{ts}"
+        expected = hmac.new(_get_secret(), payload.encode(), hashlib.sha256).hexdigest()[:16]
+        if not hmac.compare_digest(sig, expected):
+            return None
+        # Token expires after 30 days
+        if time.time() - ts > 30 * 86400:
+            return None
+        return user_id
+    except (ValueError, IndexError):
+        return None
 
 # ==========================================================
 # 密码工具（不依赖外部包）

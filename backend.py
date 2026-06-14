@@ -48,9 +48,21 @@ def _set_secure_cookie():
 if not os.getenv("FLASK_SECRET_KEY"):
     print("[WARN] FLASK_SECRET_KEY env var not set — using random key. Sessions will be invalidated on restart.")
 
-# Session-based auth helper
+# Auth helper: supports both session cookie AND token (Authorization header)
 def current_user_id():
-    return session.get("user_id")
+    # Priority 1: Session cookie
+    uid = session.get("user_id")
+    if uid: return uid
+    # Priority 2: Token from Authorization header
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+        uid = auth_db.verify_token(token)
+        if uid:
+            # Sync token auth to session
+            session["user_id"] = uid
+            return uid
+    return None
 
 def login_required(fn):
     @wraps(fn)
@@ -2756,9 +2768,11 @@ def auth_register():
     result = auth_db.create_user(username, email, password)
     if "error" in result:
         return jsonify(result), 400
-    session["user_id"] = result["user_id"]
+    uid = result["user_id"]
+    session["user_id"] = uid
     session["username"] = result["username"]
-    return jsonify({"success": True, "username": result["username"]})
+    token = auth_db.create_token(uid)
+    return jsonify({"success": True, "username": result["username"], "token": token})
 
 @app.route("/api/auth/login", methods=["POST"])
 def auth_login():
@@ -2770,9 +2784,11 @@ def auth_login():
     result = auth_db.verify_user(username, password)
     if "error" in result:
         return jsonify(result), 401
-    session["user_id"] = result["user_id"]
+    uid = result["user_id"]
+    session["user_id"] = uid
     session["username"] = result["username"]
-    return jsonify({"success": True, "username": result["username"]})
+    token = auth_db.create_token(uid)
+    return jsonify({"success": True, "username": result["username"], "token": token})
 
 @app.route("/api/auth/me")
 def auth_me():

@@ -648,6 +648,8 @@ async function submitAuth() {
     var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     var d = await r.json();
     if (d.error) return showErr(d.error);
+    // Store token for cross-origin auth
+    if (d.token) { localStorage.setItem('stockai_token', d.token); }
     // Set login state immediately
     state.isLogin = true;
     state.user = { username: u };
@@ -681,7 +683,7 @@ async function submitAuth() {
   } catch(x) { showErr('网络错误'); }
 }
 function showErr(m) { const el = document.getElementById('authError'); el.textContent = m; el.classList.add('show'); }
-function logout() { fetch('/api/auth/logout', { method: 'POST' }).then(() => { state.isLogin = false; state.user = null; onLoginChange(); location.reload(); }); }
+function logout() { localStorage.removeItem('stockai_token'); fetch('/api/auth/logout', { method: 'POST' }).then(() => { state.isLogin = false; state.user = null; onLoginChange(); location.reload(); }); }
 function toggleDropdown() { /* simplified */ }
 function showForgotPassword() { showToast('请联系客服重置密码: support@stockai.com', 'info'); }
 
@@ -2265,7 +2267,7 @@ async function toggleWatchlist() {
   const { code, name, market } = state.stock;
   try {
     const inList = document.getElementById('watchlistBtn').classList.contains('active');
-    const r = await fetch(inList ? `/api/watchlist/${encodeURIComponent(code)}?market=${market}` : '/api/watchlist', {
+    const r = await fetch(inList ? `/api/watchlist/${encodeURIComponent(code)}?market=${market}` : '/api/watchlist/add', {
       method: inList ? 'DELETE' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: inList ? undefined : JSON.stringify({ code, name, market })
